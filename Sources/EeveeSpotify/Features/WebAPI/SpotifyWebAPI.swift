@@ -170,7 +170,8 @@ enum SpotifyWebAPI {
     ) async throws -> Data {
         var components = URLComponents(string: pathOrURL.hasPrefix("http") ? pathOrURL : base + pathOrURL)
         if !query.isEmpty {
-            components?.queryItems = (components?.queryItems ?? []) + query.map { URLQueryItem(name: $0.key, value: $0.value) }
+            let existing = components?.queryItems ?? []
+            components?.queryItems = existing + query.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
         guard let url = components?.url else {
             throw WebAPIError.decoding
