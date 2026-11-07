@@ -126,6 +126,10 @@ jobs:
 
       - name: Setup ivinject and ipapatch
         run: |
+          git clone --depth 1 https://github.com/Tyilo/insert_dylib.git
+          xcrun clang -x c -arch arm64 -O2 ./insert_dylib/insert_dylib/main.c -o insert-dylib
+          sudo mv insert-dylib /usr/local/bin/insert-dylib
+          sudo chmod +x /usr/local/bin/insert-dylib
           git clone --depth 1 https://github.com/whoeevee/ivinject.git
           cp -r ./ivinject/KnownFrameworks ~/.ivinject
           wget --no-verbose https://github.com/whoeevee/ivinject/releases/download/first/ivinject-arm64
