@@ -180,16 +180,6 @@ class SettingsListViewControllerHook: ClassHook<UIViewController> {
     func viewDidAppear(_ animated: Bool) {
         orig.viewDidAppear(animated)
         SPModulationEntry.attach(to: target)
-        if UserDefaults.hidePremiumUpsells {
-            PremiumUpsellHider.hidePremiumButtons(in: target.view)
-        }
-    }
-
-    func viewDidLayoutSubviews() {
-        orig.viewDidLayoutSubviews()
-        if UserDefaults.hidePremiumUpsells {
-            PremiumUpsellHider.hidePremiumButtons(in: target.view)
-        }
     }
 }
 

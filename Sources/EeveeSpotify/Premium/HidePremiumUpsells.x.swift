@@ -26,21 +26,21 @@ enum PremiumUpsellHider {
         }
         return false
     }
+}
 
-    static func hidePremiumButtons(in root: UIView) {
-        var stack: [UIView] = [root]
-        var visited = 0
-        while let current = stack.popLast(), visited < 3000 {
-            visited += 1
-            if let control = current as? UIControl, !(control is UISwitch) {
-                let title = (control as? UIButton)?.title(for: .normal)
-                if mentionsPremium(title) || mentionsPremium(control.accessibilityLabel) {
-                    control.isHidden = true
-                    continue
-                }
-            }
-            stack.append(contentsOf: current.subviews)
-        }
+class PremiumStatusRowSettingsHook: ClassHook<NSObject> {
+    typealias Group = PremiumUpsellGroup
+    static let targetName = "SPTEncorePremiumStatusRowSettings"
+
+    func uiView() -> UIView {
+        let view = orig.uiView()
+        let container = UIView()
+        container.isHidden = true
+        container.isUserInteractionEnabled = false
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.heightAnchor.constraint(equalToConstant: 0).isActive = true
+        _ = view
+        return container
     }
 }
 
