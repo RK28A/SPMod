@@ -3,10 +3,11 @@ import UIKit
 
 struct SPModDiagnosticsView: View {
     private let entries = SPModDiagnostics.failedHooks
+    private let requests = SPModDiagnostics.seenRequests
     private let spotifyVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
     
     private var report: String {
-        (["SPMod \(EeveeSpotify.version) · Spotify \(spotifyVersion) · iOS \(UIDevice.current.systemVersion)"] + entries)
+        (["SPMod \(EeveeSpotify.version) · Spotify \(spotifyVersion) · iOS \(UIDevice.current.systemVersion)", "patch: \(UserDefaults.patchType)", "-- hooks"] + entries + ["-- requests"] + requests)
             .joined(separator: "\n")
     }
     
@@ -35,6 +36,16 @@ struct SPModDiagnosticsView: View {
                     ForEach(entries, id: \.self) { entry in
                         Text(entry)
                             .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            
+            if !requests.isEmpty {
+                Section(header: Text("diagnostics_requests".localized)) {
+                    ForEach(requests.prefix(60), id: \.self) { entry in
+                        Text(entry)
+                            .font(.caption2)
                             .foregroundColor(.gray)
                     }
                 }

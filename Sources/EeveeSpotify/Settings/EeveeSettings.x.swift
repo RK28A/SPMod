@@ -74,12 +74,30 @@ enum SPModulationEntry {
         navigationController.pushViewController(controller, animated: true)
     }
 
+    private static func containsSettingsList(_ viewController: UIViewController) -> Bool {
+        if NSStringFromClass(type(of: viewController)).hasSuffix("SettingsListViewController") {
+            return true
+        }
+        return viewController.children.contains(where: containsSettingsList)
+    }
+
+    private static func isRootSettingsPage(_ viewController: UIViewController, in navigationController: UINavigationController) -> Bool {
+        var container: UIViewController? = viewController
+        while let current = container, !navigationController.viewControllers.contains(where: { $0 === current }) {
+            container = current.parent
+        }
+        guard let pageContainer = container else {
+            return true
+        }
+        let firstSettingsPage = navigationController.viewControllers.first(where: containsSettingsList)
+        return firstSettingsPage == nil || firstSettingsPage === pageContainer
+    }
+
     static func attach(to viewController: UIViewController) {
         guard let navigationController = viewController.navigationController else {
             return
         }
-        let settingsClass: AnyClass = type(of: viewController)
-        guard navigationController.viewControllers.first(where: { $0.isKind(of: settingsClass) }) === viewController else {
+        guard isRootSettingsPage(viewController, in: navigationController) else {
             return
         }
 
@@ -115,6 +133,7 @@ enum SPModulationEntry {
         button.addTarget(SPModulationEntryTarget.shared, action: #selector(SPModulationEntryTarget.open(_:)), for: .touchUpInside)
 
         viewController.view.addSubview(button)
+        viewController.view.bringSubviewToFront(button)
         NSLayoutConstraint.activate([
             button.heightAnchor.constraint(equalToConstant: 36),
             button.trailingAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
@@ -137,7 +156,21 @@ final class SPModulationEntryTarget: NSObject {
         }
         if let navigationController = WindowHelper.shared.findFirstViewController("SettingsListViewController")?.navigationController {
             SPModulationEntry.open(from: navigationController)
+            return
         }
+        SPModulationShortcut.presentModally()
+    }
+
+    @objc func shortcut(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began else {
+            return
+        }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        SPModulationShortcut.presentModally()
+    }
+
+    @objc func close(_ sender: Any) {
+        SPModSettingsNavigator.navigationController?.dismiss(animated: true)
     }
 }
 
@@ -147,5 +180,70 @@ class SettingsListViewControllerHook: ClassHook<UIViewController> {
     func viewDidAppear(_ animated: Bool) {
         orig.viewDidAppear(animated)
         SPModulationEntry.attach(to: target)
+        if UserDefaults.hidePremiumUpsells {
+            PremiumUpsellHider.hidePremiumButtons(in: target.view)
+        }
+    }
+
+    func viewDidLayoutSubviews() {
+        orig.viewDidLayoutSubviews()
+        if UserDefaults.hidePremiumUpsells {
+            PremiumUpsellHider.hidePremiumButtons(in: target.view)
+        }
+    }
+}
+
+enum SPModulationShortcut {
+    private static var installedWindows = NSHashTable<UIWindow>.weakObjects()
+    private static var observer: NSObjectProtocol?
+
+    static func start() {
+        DispatchQueue.main.async {
+            install()
+            observer = NotificationCenter.default.addObserver(
+                forName: UIApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { _ in
+                install()
+            }
+        }
+    }
+
+    private static func install() {
+        guard let window = WindowHelper.shared.window, !installedWindows.contains(window) else {
+            return
+        }
+        let recognizer = UILongPressGestureRecognizer(
+            target: SPModulationEntryTarget.shared,
+            action: #selector(SPModulationEntryTarget.shortcut(_:))
+        )
+        recognizer.numberOfTouchesRequired = 3
+        recognizer.minimumPressDuration = 0.8
+        recognizer.cancelsTouchesInView = false
+        window.addGestureRecognizer(recognizer)
+        installedWindows.add(window)
+    }
+
+    static func presentModally() {
+        let navigationController = UINavigationController()
+        navigationController.navigationBar.prefersLargeTitles = false
+        navigationController.overrideUserInterfaceStyle = .dark
+        navigationController.modalPresentationStyle = .fullScreen
+
+        SPModSettingsNavigator.navigationController = navigationController
+
+        let controller = EeveeSettingsViewController(
+            UIScreen.main.bounds,
+            settingsView: AnyView(EeveeSettingsView(navigationController: navigationController)),
+            navigationTitle: "SPModulation"
+        )
+        controller.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .close,
+            target: SPModulationEntryTarget.shared,
+            action: #selector(SPModulationEntryTarget.close(_:))
+        )
+        navigationController.viewControllers = [controller]
+        SPModAlertHelper.present(navigationController)
     }
 }

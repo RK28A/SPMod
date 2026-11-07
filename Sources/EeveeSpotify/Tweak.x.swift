@@ -75,6 +75,7 @@ struct EeveeSpotify: Tweak {
             PremiumUpsellGroup().activate()
         }
         
+        SPModulationShortcut.start()
         CopyTrackManager.start()
         ScreenAwakeManager.start()
         ListeningTracker.start()

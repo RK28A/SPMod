@@ -99,6 +99,7 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         completionHandler handler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
         SpotifyWebAPI.capture(from: task.currentRequest)
+        SPModDiagnostics.recordRequest(task.currentRequest?.url, source: "DL")
         
         guard
             let url = task.currentRequest?.url,
