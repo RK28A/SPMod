@@ -372,3 +372,23 @@ night_mode_accent_dimming = "Dim Accent Color";
 night_mode_faster_animations = "Shorter Animations";
 night_starting_toast = "Night mode will apply at next launch";
 night_ending_toast = "Day theme will apply at next launch";
+
+/* MARK: SPMod Vault */
+
+vault_section = "Automatic Backup";
+vault_description = "Your settings are also kept in the iOS Keychain, and your settings, stats and history are saved to the chosen folder (Files app, On My iPhone or iCloud Drive) every time you leave Spotify. When you install a new SPMod version, choose the same folder or backup file to get everything back. Backups stay compatible with future versions.";
+vault_folder = "Backup Folder";
+vault_no_folder = "Not Set";
+vault_auto = "Back Up Automatically";
+vault_backup_now = "Back Up Now";
+vault_never = "Never";
+vault_restore = "Restore From a Backup File";
+vault_backup_done = "Backup saved";
+vault_backup_failed = "Backup failed";
+vault_folder_failed = "This folder can't be used";
+vault_settings_restored = "SPMod settings restored";
+vault_restore_prompt_title = "Restore Your SPMod Data?";
+vault_restore_prompt_message = "If you had an SPMod backup, select the SPMod-Backup.json file to get back your stats, history and settings.";
+vault_restore_choose = "Choose File";
+vault_restore_success = "%1$d settings and %2$d plays restored. Restart Spotify to apply everything.";
+vault_restore_invalid = "This file isn't a valid SPMod backup.";

@@ -372,3 +372,23 @@ night_mode_accent_dimming = "Atténuer la couleur d'accent";
 night_mode_faster_animations = "Animations plus courtes";
 night_starting_toast = "Le mode nuit s'appliquera au prochain lancement";
 night_ending_toast = "Le thème de jour s'appliquera au prochain lancement";
+
+/* MARK: SPMod Vault */
+
+vault_section = "Sauvegarde automatique";
+vault_description = "Tes réglages sont aussi gardés dans le trousseau iOS, et tes réglages, stats et historique sont enregistrés dans le dossier choisi (app Fichiers, Sur mon iPhone ou iCloud Drive) à chaque fois que tu quittes Spotify. Quand tu installes une nouvelle version de SPMod, choisis le même dossier ou le fichier de sauvegarde pour tout récupérer. Les sauvegardes restent compatibles avec les futures versions.";
+vault_folder = "Dossier de sauvegarde";
+vault_no_folder = "Non défini";
+vault_auto = "Sauvegarder automatiquement";
+vault_backup_now = "Sauvegarder maintenant";
+vault_never = "Jamais";
+vault_restore = "Restaurer depuis un fichier";
+vault_backup_done = "Sauvegarde enregistrée";
+vault_backup_failed = "Échec de la sauvegarde";
+vault_folder_failed = "Ce dossier ne peut pas être utilisé";
+vault_settings_restored = "Réglages SPMod restaurés";
+vault_restore_prompt_title = "Restaurer tes données SPMod ?";
+vault_restore_prompt_message = "Si tu avais une sauvegarde SPMod, choisis le fichier SPMod-Backup.json pour récupérer tes stats, ton historique et tes réglages.";
+vault_restore_choose = "Choisir le fichier";
+vault_restore_success = "%1$d réglages et %2$d écoutes restaurés. Redémarre Spotify pour tout appliquer.";
+vault_restore_invalid = "Ce fichier n'est pas une sauvegarde SPMod valide.";
