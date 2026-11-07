@@ -83,6 +83,22 @@ enum ThemeEngine {
         palette?.accent
     }
 
+    private static var suspendDepth = 0
+
+    static func suspend() {
+        suspendDepth += 1
+    }
+
+    static func resume() {
+        if suspendDepth > 0 {
+            suspendDepth -= 1
+        }
+    }
+
+    static var isSuspended: Bool {
+        suspendDepth > 0
+    }
+
     private static func pack(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> UInt32? {
         guard r.isFinite, g.isFinite, b.isFinite else {
             return nil
@@ -108,15 +124,16 @@ enum ThemeEngine {
     }
 
     static func background(_ color: UIColor?) -> UIColor? {
-        replacement(for: color, in: backgroundMap)
+        isSuspended ? color : replacement(for: color, in: backgroundMap)
     }
 
     static func accent(_ color: UIColor?) -> UIColor? {
-        replacement(for: color, in: accentMap)
+        isSuspended ? color : replacement(for: color, in: accentMap)
     }
 
     static func background(_ color: CGColor?) -> CGColor? {
         guard
+            !isSuspended,
             let color = color,
             !backgroundMap.isEmpty,
             let components = color.components,

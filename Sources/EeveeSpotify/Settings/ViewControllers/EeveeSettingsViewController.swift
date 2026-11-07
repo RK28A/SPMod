@@ -17,15 +17,26 @@ class EeveeSettingsViewController: SPTPageViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        ThemeEngine.suspend()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        ThemeEngine.resume()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        let background = UIColor(spmodHex: UserDefaults.themeConfig.backgroundHex)
-        view.backgroundColor = background
+
+        overrideUserInterfaceStyle = .dark
+        view.backgroundColor = .systemBackground
 
         let hostingController = UIHostingController(rootView: settingsView)
         hostingController.view.frame = frame
-        hostingController.view.backgroundColor = background
+        hostingController.view.backgroundColor = .clear
+        hostingController.overrideUserInterfaceStyle = .dark
 
         view.addSubview(hostingController.view)
         addChild(hostingController)
