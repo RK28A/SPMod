@@ -1,0 +1,268 @@
+name: Create SPMod IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      ipa_url:
+        description: "URL to the decrypted Spotify IPA file"
+        default: ""
+        required: true
+        type: string
+
+      enable_safari_ext:
+        description: "Integrate OpenSpotifySafariExtension (open Spotify links in the app)"
+        type: boolean
+        required: true
+        default: true
+
+      create_patched:
+        description: "Also create a patched IPA with ipapatch (fixes sign-in on some sideload methods)"
+        type: boolean
+        required: true
+        default: true
+
+      display_name:
+        description: "App Name (Optional)"
+        default: "Spotify"
+        required: true
+        type: string
+
+      bundle_id:
+        description: "BundleID (Optional)"
+        default: "com.spotify.client"
+        required: true
+        type: string
+
+      info_note:
+        description: "TIP: Learn more in the README via the link below"
+        default: "https://github.com/RK28A/SPMod"
+        type: string
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SWIFTPROTOBUF_VERSION: "1.29.0"
+
+jobs:
+  build:
+    name: Build SPMod IPA
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    env:
+      THEOS: ${{ github.workspace }}/theos
+
+    steps:
+      - name: Hide sensitive inputs
+        uses: levibostian/action-hide-sensitive-inputs@v1
+        with:
+          exclude_inputs: bundle_id,display_name,enable_safari_ext,create_patched,info_note
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: src
+          fetch-depth: 1
+
+      - name: Start IPA download
+        env:
+          IPA_URL: ${{ inputs.ipa_url }}
+        run: |
+          mkdir -p .logs
+          nohup bash -c 'bash src/tools/fetch_ipa.sh "$IPA_URL" spotify.ipa > .logs/ipa.log 2>&1 && touch .ipa.done || touch .ipa.failed' >/dev/null 2>&1 &
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.2.0'
+
+      - name: Install dependencies
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1"
+        run: |
+          brew install make dpkg ldid
+          echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
+
+      - name: Setup Theos
+        uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          path: theos
+          submodules: recursive
+
+      - name: Setup SwiftProtobuf
+        run: |
+          deb="org.swift.protobuf.swiftprotobuf_${SWIFTPROTOBUF_VERSION}_iphoneos-arm.deb"
+          wget --no-verbose "https://github.com/whoeevee/swift-protobuf/releases/download/${SWIFTPROTOBUF_VERSION}/$deb"
+          mkdir -p swiftprotobuf
+          (cd swiftprotobuf && ar -x "../$deb" && tar -xf data.tar.*)
+          cp -r swiftprotobuf/Library/Frameworks/SwiftProtobuf.framework "$THEOS/lib"
+          echo "SWIFTPROTOBUF_DEB=$PWD/$deb" >> $GITHUB_ENV
+
+      - name: Build SPMod tweak
+        id: tweak
+        working-directory: src
+        run: |
+          make clean package FINALPACKAGE=1 -j"$(sysctl -n hw.ncpu)"
+          deb="$(find packages -name '*iphoneos-arm.deb' -not -name '*debug*' | head -n 1)"
+          if [ -z "$deb" ]; then
+            echo "::error::Tweak build produced no .deb"
+            exit 1
+          fi
+          cp "$deb" ../spmod.deb
+          version=$(grep '^Version:' control | awk '{print $2}')
+          echo "tweak_label=$version" >> $GITHUB_OUTPUT
+
+      - name: Setup OpenSpotifySafariExtension
+        if: ${{ inputs.enable_safari_ext }}
+        run: |
+          git clone --depth 1 https://github.com/BillyCurtis/OpenSpotifySafariExtension
+          echo "SAFARI_EXT=$PWD/OpenSpotifySafariExtension/OpenSpotifySafariExtension.appex" >> $GITHUB_ENV
+
+      - name: Setup ivinject and ipapatch
+        run: |
+          git clone --depth 1 https://github.com/whoeevee/ivinject.git
+          cp -r ./ivinject/KnownFrameworks ~/.ivinject
+          wget --no-verbose https://github.com/whoeevee/ivinject/releases/download/first/ivinject-arm64
+          sudo mv ivinject-arm64 /usr/local/bin/ivinject
+          sudo chmod +x /usr/local/bin/ivinject
+          wget --no-verbose https://github.com/asdfzxcvbn/ipapatch/releases/download/v2.1.0/ipapatch.macos-arm64
+          sudo mv ipapatch.macos-arm64 /usr/local/bin/ipapatch
+          sudo chmod +x /usr/local/bin/ipapatch
+
+      - name: Wait for IPA
+        run: |
+          for i in $(seq 1 900); do
+            [ -f .ipa.done ] && break
+            if [ -f .ipa.failed ]; then
+              echo "::error::IPA download failed"
+              cat .logs/ipa.log 2>/dev/null
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ ! -f .ipa.done ]; then
+            echo "::error::Timed out waiting for the IPA download"
+            exit 1
+          fi
+
+      - name: Check IPA download
+        run: |
+          size=$(stat -f%z spotify.ipa)
+          if [ "$size" -lt 20000000 ]; then
+            echo "::error::The IPA is only $size bytes. The link probably points to a web page, not the file."
+            exit 1
+          fi
+          if [ "$(head -c 2 spotify.ipa)" != "PK" ]; then
+            echo "::error::The downloaded file is not a zip/IPA."
+            exit 1
+          fi
+          if ! unzip -tqq spotify.ipa >/dev/null 2>.logs/unzip-test.log; then
+            echo "::error::The IPA is corrupted or truncated."
+            tail -5 .logs/unzip-test.log
+            exit 1
+          fi
+          if ! unzip -Z1 spotify.ipa | grep -qE '^Payload/[^/]+\.app/Info\.plist$'; then
+            echo "::error::No Payload/*.app/Info.plist in the IPA."
+            exit 1
+          fi
+          echo "IPA ok ($((size / 1048576)) MB)"
+
+      - name: Inspect and patch app
+        id: app
+        run: |
+          rm -rf ipa_tmp
+          unzip -q spotify.ipa -d ipa_tmp
+          app_dir="$(find ipa_tmp/Payload -maxdepth 1 -name '*.app' | head -n 1)"
+          plist="$app_dir/Info.plist"
+          pb() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist" 2>/dev/null; }
+
+          bundle_id=$(pb CFBundleIdentifier)
+          version=$(pb CFBundleShortVersionString)
+          executable="$app_dir/$(pb CFBundleExecutable)"
+
+          if [ "$bundle_id" != "com.spotify.client" ]; then
+            echo "::warning::Bundle id is '$bundle_id', expected com.spotify.client. Is this the Spotify app?"
+          fi
+          if [ ! -f "$executable" ]; then
+            echo "::error::Main executable not found."
+            exit 1
+          fi
+          if ! lipo -archs "$executable" 2>/dev/null | grep -qw arm64; then
+            echo "::error::The main executable has no arm64 slice."
+            exit 1
+          fi
+
+          encrypted=()
+          is_encrypted() { otool -l "$1" 2>/dev/null | grep -A4 -E "LC_ENCRYPTION_INFO(_64)?$" | grep -qE "cryptid +1"; }
+          is_encrypted "$executable" && encrypted+=("$(basename "$executable")")
+          while IFS= read -r -d '' bin; do
+            if file "$bin" | grep -q "Mach-O" && is_encrypted "$bin"; then
+              encrypted+=("${bin#"$app_dir"/}")
+            fi
+          done < <(find "$app_dir/Frameworks" -type f \( -name "*.dylib" -o -perm -u+x \) -print0 2>/dev/null)
+          if [ ${#encrypted[@]} -gt 0 ]; then
+            echo "::error::The IPA is still encrypted (${encrypted[*]}). Use a decrypted IPA."
+            exit 1
+          fi
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $DISPLAY_NAME" "$plist" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $DISPLAY_NAME" "$plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$plist"
+
+          (cd ipa_tmp && zip -qry ../spotify_patched_base.ipa Payload)
+          rm -rf ipa_tmp spotify.ipa
+          echo "spotify_version=$version" >> $GITHUB_OUTPUT
+          echo "::notice::Spotify $version ($bundle_id), decrypted"
+        env:
+          DISPLAY_NAME: ${{ inputs.display_name }}
+          BUNDLE_ID: ${{ inputs.bundle_id }}
+
+      - name: Inject SPMod
+        env:
+          OUTPUT: SPMod_${{ steps.tweak.outputs.tweak_label }}_${{ steps.app.outputs.spotify_version }}.ipa
+        run: |
+          items=(spmod.deb "$SWIFTPROTOBUF_DEB")
+          [ -n "${SAFARI_EXT:-}" ] && items+=("$SAFARI_EXT")
+          echo "Injecting: ${items[*]}"
+          ivinject spotify_patched_base.ipa "$OUTPUT" -i "${items[@]}" -s - -d --level Optimal
+          rm spotify_patched_base.ipa
+          echo "OUTPUT=$OUTPUT" >> $GITHUB_ENV
+
+      - name: Create patched IPA
+        if: ${{ inputs.create_patched }}
+        run: |
+          patched="${OUTPUT%.ipa}-patched.ipa"
+          ipapatch -input "$OUTPUT" -output "$patched"
+          echo "PATCHED=$patched" >> $GITHUB_ENV
+
+      - name: Verify output
+        run: |
+          for f in "$OUTPUT" ${PATCHED:-}; do
+            listing=$(unzip -Z1 "$f")
+            for required in "EeveeSpotify.dylib" "SwiftProtobuf.framework/"; do
+              if ! grep -q "$required" <<< "$listing"; then
+                echo "::error::$required missing from $f."
+                exit 1
+              fi
+            done
+            ls -lh "$f"
+          done
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: spmod-${{ github.run_number }}
+          name: SPMod v${{ steps.tweak.outputs.tweak_label }} - Spotify ${{ steps.app.outputs.spotify_version }} (${{ github.run_number }})
+          files: |
+            ${{ env.OUTPUT }}
+            ${{ env.PATCHED }}
+          draft: true
+
+      - name: Output Release URL
+        run: |
+          echo "::notice::Release available at: https://github.com/${{ github.repository }}/releases"
