@@ -7,31 +7,32 @@ struct NavigationSectionView: View {
     var subtitle: String? = nil
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 18) {
             Image(systemName: imageSystemName)
+                .font(.system(size: 22, weight: .regular))
                 .foregroundColor(.white)
-                .font(.system(size: 18, weight: .regular))
-                .frame(width: 26, height: 26)
+                .frame(width: 30)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 20, weight: .regular))
                     .foregroundColor(.white)
 
                 if let subtitle = subtitle {
                     Text(subtitle)
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(white: 0.6))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(Color(white: 0.66))
                         .lineLimit(1)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(white: 0.5))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(white: 0.62))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 }

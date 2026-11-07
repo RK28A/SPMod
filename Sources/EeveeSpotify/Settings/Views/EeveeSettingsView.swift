@@ -41,6 +41,9 @@ struct EeveeSettingsView: View {
                 subtitle: subtitle?.localized
             )
         }
+        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private func resetData() {
@@ -78,6 +81,7 @@ struct EeveeSettingsView: View {
     var body: some View {
         List {
             EeveeSettingsVersionView()
+                .listRowBackground(Color.clear)
 
             if !hasShownCommonIssuesTip {
                 CommonIssuesTipView(
@@ -86,15 +90,17 @@ struct EeveeSettingsView: View {
                         UserDefaults.hasShownCommonIssuesTip = true
                     }
                 )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
 
-            Section(header: Text("section_general".localized)) {
+            Section {
                 navigationRow("general", icon: "gearshape.fill", color: .gray, subtitle: "general_subtitle") {
                     SPModGeneralSettingsView()
                 }
             }
 
-            Section(header: Text("section_music".localized)) {
+            Section {
                 navigationRow("lyrics", icon: "quote.bubble", color: .blue, subtitle: "lyrics_subtitle") {
                     EeveeLyricsSettingsView()
                 }
@@ -109,13 +115,13 @@ struct EeveeSettingsView: View {
                 }
             }
 
-            Section(header: Text("section_appearance".localized)) {
+            Section {
                 navigationRow("themes", icon: "paintbrush", color: Color(hex: "#FF5FA2"), subtitle: "themes_subtitle") {
                     SPModThemeSettingsView()
                 }
             }
 
-            Section(header: Text("section_advanced".localized)) {
+            Section {
                 navigationRow("privacy", icon: "hand.raised", color: Color(hex: "#5E5CE6"), subtitle: "privacy_subtitle") {
                     SPModPrivacySettingsView()
                 }
@@ -140,9 +146,13 @@ struct EeveeSettingsView: View {
                     }
                 }
                 .disabled(isClearingData)
+                .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         }
-        .listStyle(GroupedListStyle())
+        .listStyle(PlainListStyle())
+        .environment(\.defaultMinListRowHeight, 0)
 
         .animation(.default, value: isClearingData)
         .animation(.default, value: hasShownCommonIssuesTip)
