@@ -96,6 +96,13 @@ extension UserDefaults {
 
     static let listeningCollectionEnabledKey = "listeningCollectionEnabled"
     static let hidePremiumUpsellsKey = "hidePremiumUpsells"
+    static let playerQuickAddButtonKey = "playerQuickAddButton"
+
+    static var playerQuickAddButton: Bool {
+        get { container.object(forKey: playerQuickAddButtonKey) as? Bool ?? true }
+        set { container.set(newValue, forKey: playerQuickAddButtonKey) }
+    }
+
 
     static var hidePremiumUpsells: Bool {
         get { container.object(forKey: hidePremiumUpsellsKey) as? Bool ?? true }
@@ -128,6 +135,7 @@ extension UserDefaults {
         themeConfigKey,
         listeningCollectionEnabledKey,
         hidePremiumUpsellsKey,
+        playerQuickAddButtonKey,
         "shakeAction",
         "smartShuffleOptions",
         "quickAddLastPlaylist",

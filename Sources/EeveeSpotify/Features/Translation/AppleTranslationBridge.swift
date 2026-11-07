@@ -19,7 +19,7 @@ final class AppleTranslationBridge {
         defer { exclusive.signal() }
 
         let semaphore = DispatchSemaphore(value: 0)
-        var output: [String]? = nil
+        let box = ResultBox()
 
         DispatchQueue.main.async {
             guard self.installHostIfNeeded() else {
@@ -27,7 +27,7 @@ final class AppleTranslationBridge {
                 return
             }
             self.model.request(lines: lines, target: target) { result in
-                output = result
+                box.value = result
                 semaphore.signal()
             }
         }
@@ -38,7 +38,7 @@ final class AppleTranslationBridge {
             }
             return nil
         }
-        return output
+        return box.value
     }
 
     private func installHostIfNeeded() -> Bool {
@@ -63,6 +63,10 @@ final class AppleTranslationBridge {
         host = controller
         return true
     }
+}
+
+private final class ResultBox {
+    var value: [String]?
 }
 
 @available(iOS 18.0, *)

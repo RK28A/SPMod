@@ -351,34 +351,46 @@ enum SPModVault {
 
     // MARK: Backup
 
+    private final class BackgroundTaskBox {
+        var identifier = UIBackgroundTaskIdentifier.invalid
+
+        func end() {
+            guard identifier != .invalid else {
+                return
+            }
+            UIApplication.shared.endBackgroundTask(identifier)
+            identifier = .invalid
+        }
+    }
+
     static func backupNow(completion: ((Bool) -> Void)? = nil) {
-        var task = UIBackgroundTaskIdentifier.invalid
-        task = UIApplication.shared.beginBackgroundTask(withName: "SPModVault") {
-            UIApplication.shared.endBackgroundTask(task)
-            task = .invalid
+        let box = BackgroundTaskBox()
+        box.identifier = UIApplication.shared.beginBackgroundTask(withName: "SPModVault") {
+            box.end()
         }
 
         queue.async {
-            var success = false
-            if let settingsData = try? makeBackupData(includeListening: false) {
-                saveToKeychain(settingsData)
-                success = true
-            }
-            if hasFolder, let fullData = try? makeBackupData(includeListening: true) {
-                success = writeToFolder(fullData)
-            }
-            if success {
-                lastBackup = Date()
-            }
-
+            let success = performBackup()
             DispatchQueue.main.async {
                 completion?(success)
-                if task != .invalid {
-                    UIApplication.shared.endBackgroundTask(task)
-                    task = .invalid
-                }
+                box.end()
             }
         }
+    }
+
+    private static func performBackup() -> Bool {
+        var success = false
+        if let settingsData = try? makeBackupData(includeListening: false) {
+            saveToKeychain(settingsData)
+            success = true
+        }
+        if hasFolder, let fullData = try? makeBackupData(includeListening: true) {
+            success = writeToFolder(fullData)
+        }
+        if success {
+            lastBackup = Date()
+        }
+        return success
     }
 
     static func autoBackup() {
