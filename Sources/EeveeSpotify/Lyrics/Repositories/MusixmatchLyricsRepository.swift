@@ -215,7 +215,7 @@ class MusixmatchLyricsRepository: LyricsRepository {
                     romanized = true
 
                     for (index, subtitleTranslated) in subtitlesTranslated.enumerated() {
-                        if !subtitleTranslated.text.isEmpty {
+                        if lyricsLines.indices.contains(index), !subtitleTranslated.text.isEmpty {
                             lyricsLines[index].content = subtitleTranslated.text
                         }
                     }

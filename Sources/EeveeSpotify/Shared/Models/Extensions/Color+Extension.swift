@@ -57,20 +57,27 @@ extension Color {
             : self.darker(by: max(brightness - by, 0))
     }
     
+    private static func byte(_ value: CGFloat) -> UInt32 {
+        guard value.isFinite else { return 0 }
+        return UInt32((min(max(value, 0), 1) * 255).rounded())
+    }
+    
     var hexString: String {
-         String(
+        let c = components
+        return String(
             format: "%02X%02X%02X",
-            Int(components.red * 255),
-            Int(components.green * 255),
-            Int(components.blue * 255)
-         )
+            Self.byte(c.red),
+            Self.byte(c.green),
+            Self.byte(c.blue)
+        )
     }
     
     var uInt32: UInt32 {
-        UInt32(components.alpha * 255) << 24
-            | UInt32(components.red * 255) << 16
-            | UInt32(components.green * 255) << 8
-            | UInt32(components.blue * 255)
+        let c = components
+        return Self.byte(c.alpha) << 24
+            | Self.byte(c.red) << 16
+            | Self.byte(c.green) << 8
+            | Self.byte(c.blue)
     }
 }
 
