@@ -49,3 +49,12 @@ class SPTCoreProductStateHook: ClassHook<NSObject> {
         return orig.objectForKeyedSubscript(key)
     }
 }
+
+class SPTAdsProductStateHook: ClassHook<NSObject> {
+    typealias Group = BasePremiumPatchingGroup
+    static let targetName = "SPTAdsProductState"
+
+    func adsEnabled() -> Bool {
+        false
+    }
+}
