@@ -53,21 +53,17 @@ jobs:
           path: theos
           submodules: recursive
 
-      - name: Setup SwiftProtobuf
-        run: |
-          deb="org.swift.protobuf.swiftprotobuf_${SWIFTPROTOBUF_VERSION}_iphoneos-arm.deb"
-          wget --no-verbose "https://github.com/whoeevee/swift-protobuf/releases/download/${SWIFTPROTOBUF_VERSION}/$deb"
-          mkdir -p swiftprotobuf
-          (cd swiftprotobuf && ar -x "../$deb" && tar -xf data.tar.*)
-          cp -r swiftprotobuf/Library/Frameworks/SwiftProtobuf.framework "$THEOS/lib"
-
       - name: Build
         id: build
-        working-directory: src
         continue-on-error: true
         run: |
           set -o pipefail
-          make clean package FINALPACKAGE=1 2>&1 | tee ../build.log
+          {
+            framework="$(bash src/tools/build_swiftprotobuf.sh "$SWIFTPROTOBUF_VERSION" "$PWD" | tail -1)"
+            cp -R "$framework" "$THEOS/lib/"
+            cd src
+            make clean package FINALPACKAGE=1
+          } 2>&1 | tee build.log
 
       - name: Publish log
         if: always()
