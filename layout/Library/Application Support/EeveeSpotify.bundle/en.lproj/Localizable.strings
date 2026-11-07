@@ -505,3 +505,13 @@ quick_add_destination_is = "Destination: %@";
 quick_add_change = "Choose Another Playlist";
 
 diagnostics_requests = "Network Requests Seen";
+
+general_subtitle = "Language · Diagnostics";
+lyrics_subtitle = "Sources · Translation · Cache";
+playback_subtitle = "Canvas · Screen · Shake";
+listening_subtitle = "Stats · History";
+playlists_subtitle = "Manage · Smart Shuffle · Quick Add";
+themes_subtitle = "Themes · Accent · Night Mode";
+privacy_subtitle = "Tracking · Local data";
+backup_subtitle = "Auto backup · Export · Import";
+experiments_subtitle = "Instagram · LiveContainer";

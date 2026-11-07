@@ -28,6 +28,7 @@ struct EeveeSettingsView: View {
         _ titleKey: String,
         icon: String,
         color: Color,
+        subtitle: String? = nil,
         view: @escaping () -> any View
     ) -> some View {
         Button {
@@ -36,7 +37,8 @@ struct EeveeSettingsView: View {
             NavigationSectionView(
                 color: color,
                 title: titleKey.localized,
-                imageSystemName: icon
+                imageSystemName: icon,
+                subtitle: subtitle?.localized
             )
         }
     }
@@ -87,40 +89,40 @@ struct EeveeSettingsView: View {
             }
 
             Section(header: Text("section_general".localized)) {
-                navigationRow("general", icon: "gearshape.fill", color: .gray) {
+                navigationRow("general", icon: "gearshape.fill", color: .gray, subtitle: "general_subtitle") {
                     SPModGeneralSettingsView()
                 }
             }
 
             Section(header: Text("section_music".localized)) {
-                navigationRow("lyrics", icon: "quote.bubble.fill", color: .blue) {
+                navigationRow("lyrics", icon: "quote.bubble", color: .blue, subtitle: "lyrics_subtitle") {
                     EeveeLyricsSettingsView()
                 }
-                navigationRow("playback", icon: "play.circle.fill", color: .green) {
+                navigationRow("playback", icon: "play.circle", color: .green, subtitle: "playback_subtitle") {
                     SPModPlaybackSettingsView()
                 }
-                navigationRow("listening", icon: "chart.bar.fill", color: Color(hex: "#FF9F0A")) {
+                navigationRow("listening", icon: "chart.bar", color: Color(hex: "#FF9F0A"), subtitle: "listening_subtitle") {
                     SPModListeningSettingsView()
                 }
-                navigationRow("playlists", icon: "music.note.list", color: Color(hex: "#30D158")) {
+                navigationRow("playlists", icon: "music.note.list", color: Color(hex: "#30D158"), subtitle: "playlists_subtitle") {
                     SPModPlaylistsView()
                 }
             }
 
             Section(header: Text("section_appearance".localized)) {
-                navigationRow("themes", icon: "paintpalette.fill", color: Color(hex: "#FF5FA2")) {
+                navigationRow("themes", icon: "paintbrush", color: Color(hex: "#FF5FA2"), subtitle: "themes_subtitle") {
                     SPModThemeSettingsView()
                 }
             }
 
             Section(header: Text("section_advanced".localized)) {
-                navigationRow("privacy", icon: "hand.raised.fill", color: Color(hex: "#5E5CE6")) {
+                navigationRow("privacy", icon: "hand.raised", color: Color(hex: "#5E5CE6"), subtitle: "privacy_subtitle") {
                     SPModPrivacySettingsView()
                 }
-                navigationRow("backup", icon: "externaldrive.fill", color: Color(hex: "#64D2FF")) {
+                navigationRow("backup", icon: "externaldrive", color: Color(hex: "#64D2FF"), subtitle: "backup_subtitle") {
                     SPModBackupSettingsView()
                 }
-                navigationRow("experiments", icon: "sparkle", color: .purple) {
+                navigationRow("experiments", icon: "sparkles", color: .purple, subtitle: "experiments_subtitle") {
                     EeveeExperimentsSettingsView()
                 }
             }

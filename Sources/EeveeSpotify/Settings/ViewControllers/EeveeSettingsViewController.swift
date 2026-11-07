@@ -20,9 +20,13 @@ class EeveeSettingsViewController: SPTPageViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        let background = UIColor(spmodHex: UserDefaults.themeConfig.backgroundHex)
+        view.backgroundColor = background
+
         let hostingController = UIHostingController(rootView: settingsView)
         hostingController.view.frame = frame
-        
+        hostingController.view.backgroundColor = background
+
         view.addSubview(hostingController.view)
         addChild(hostingController)
         hostingController.didMove(toParent: self)
