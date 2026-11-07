@@ -5,9 +5,7 @@ private var shouldOverrideLocalTrackURI = false
 
 class SPTPlayerTrackHook: ClassHook<NSObject> {
     typealias Group = BaseLyricsGroup
-    static let targetName = EeveeSpotify.hookTarget == .latest
-        ? "SPTPlayerTrackImplementation"
-        : "SPTPlayerTrack"
+    static let targetName = "SPTPlayerTrack"
 
     func metadata() -> [String: String] {
         var meta = orig.metadata()
