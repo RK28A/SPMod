@@ -98,6 +98,8 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         didReceiveResponse response: HTTPURLResponse,
         completionHandler handler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
+        SpotifyWebAPI.capture(from: task.currentRequest)
+        
         guard
             let url = task.currentRequest?.url,
             url.isLyrics,

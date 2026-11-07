@@ -116,6 +116,41 @@ struct SPModHistoryView: View {
         return order.map { HistoryGroup(start: $0, records: map[$0] ?? []) }
     }
 
+    private func createPlaylist(from records: [PlayRecord]) {
+        var seen = Set<String>()
+        let uris = records
+            .sorted { $0.start < $1.start }
+            .compactMap { $0.trackId.isEmpty ? nil : "spotify:track:\($0.trackId)" }
+            .filter { seen.insert($0).inserted }
+        guard !uris.isEmpty else {
+            return
+        }
+        let alert = UIAlertController(
+            title: "playlist_create".localized,
+            message: "history_create_playlist_preview".localizeWithFormat(uris.count),
+            preferredStyle: .alert
+        )
+        alert.addTextField { field in
+            field.placeholder = "playlist_name".localized
+            field.text = "SPMod – \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .none))"
+        }
+        alert.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "confirm".localized, style: .default) { _ in
+            let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces) ?? ""
+            Task {
+                do {
+                    let playlist = try await SpotifyWebAPI.createPlaylist(named: name.isEmpty ? "SPMod" : name, uris: uris)
+                    QuickAddStore.remember(id: playlist.id, name: playlist.name)
+                    ToastHelper.show("playlist_done".localized)
+                }
+                catch {
+                    ToastHelper.show(error.localizedDescription)
+                }
+            }
+        })
+        SPModAlertHelper.present(alert)
+    }
+
     private func actions(for record: PlayRecord) {
         let sheet = UIAlertController(title: record.title, message: record.artist, preferredStyle: .actionSheet)
         if !record.trackId.isEmpty {
@@ -129,6 +164,26 @@ struct SPModHistoryView: View {
                 : "https://open.spotify.com/track/\(record.trackId)"
             ToastHelper.show("copied_to_clipboard".localized)
         })
+        if !record.trackId.isEmpty {
+            sheet.addAction(UIAlertAction(title: "history_add_to_playlist".localized, style: .default) { _ in
+                let uri = "spotify:track:\(record.trackId)"
+                SPModSettingsNavigator.push(
+                    SPModPlaylistPickerView(excluding: nil) { playlist in
+                        Task {
+                            do {
+                                try await SpotifyWebAPI.add([uri], to: playlist.id)
+                                QuickAddStore.remember(id: playlist.id, name: playlist.name)
+                                ToastHelper.show("quick_add_done".localizeWithFormat(playlist.name))
+                            }
+                            catch {
+                                ToastHelper.show(error.localizedDescription)
+                            }
+                        }
+                    },
+                    title: "playlist_choose_destination".localized
+                )
+            })
+        }
         sheet.addAction(UIAlertAction(title: "history_delete_entry".localized, style: .destructive) { _ in
             ListeningStore.shared.delete(ids: [record.id])
         })
@@ -180,6 +235,12 @@ struct SPModHistoryView: View {
                         .foregroundColor(.gray)
                 }
                 .font(.footnote)
+                Button {
+                    createPlaylist(from: records)
+                } label: {
+                    Label("history_create_playlist".localized, systemImage: "music.note.list")
+                }
+                .disabled(records.allSatisfy { $0.trackId.isEmpty })
             }
 
             if records.isEmpty {

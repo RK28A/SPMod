@@ -59,6 +59,14 @@ struct EeveeSpotify: Tweak {
             ThemeGroup().activate()
         }
 
+        if UserDefaults.disableCanvas {
+            CanvasFlagsGroup().activate()
+        }
+        
+        if UserDefaults.lyricsSource.isReplacingLyrics {
+            LyricsFlagsGroup().activate()
+        }
+        
         if UserDefaults.hidePremiumUpsells {
             PremiumUpsellGroup().activate()
         }
