@@ -90,9 +90,7 @@ struct EeveeSpotify: Tweak {
             DarkPopUps().activate()
         }
         
-        if UserDefaults.patchType.isPatching {
-            activatePremiumPatchingGroup()
-        }
+        activatePremiumPatchingGroup()
         
         if UserDefaults.lyricsSource.isReplacingLyrics {
             BaseLyricsGroup().activate()

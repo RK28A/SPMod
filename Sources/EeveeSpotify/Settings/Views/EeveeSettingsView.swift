@@ -90,9 +90,6 @@ struct EeveeSettingsView: View {
                 navigationRow("general", icon: "gearshape.fill", color: .gray) {
                     SPModGeneralSettingsView()
                 }
-                navigationRow("patching", icon: "hammer.fill", color: .orange) {
-                    EeveePatchingSettingsView()
-                }
             }
 
             Section(header: Text("section_music".localized)) {

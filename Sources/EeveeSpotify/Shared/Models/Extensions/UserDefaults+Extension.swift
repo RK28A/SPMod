@@ -35,7 +35,7 @@ extension UserDefaults {
                 return EeveePatchType(rawValue: rawValue) ?? .requests
             }
 
-            return .notSet
+            return .requests
         }
         set (patchType) {
             container.set(patchType.rawValue, forKey: patchTypeKey)
