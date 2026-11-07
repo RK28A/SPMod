@@ -4,9 +4,16 @@ struct EeveeSettingsVersionView: View {
     @State private var latestVersion: String?
     @State private var isPresentingContributorsSheet = false
     
-    private func loadVersion() async throws {
-        let release = try await GitHubHelper.shared.getLatestRelease()
-        latestVersion = String(release.tagName.dropFirst(5)) // swiftX.X
+    private func loadVersion() async {
+        guard
+            let release = try? await GitHubHelper.shared.getLatestRelease(),
+            release.tagName.hasPrefix("spmod-v"),
+            let version = release.tagName.dropFirst(7).split(separator: "-").first
+        else {
+            latestVersion = EeveeSpotify.version
+            return
+        }
+        latestVersion = String(version)
     }
     
     private var isUpdateAvailable: Bool {
@@ -48,7 +55,7 @@ struct EeveeSettingsVersionView: View {
         
         .onAppear {
             Task {
-                try await loadVersion()
+                await loadVersion()
             }
         }
     }
