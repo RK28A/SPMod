@@ -392,3 +392,13 @@ vault_restore_prompt_message = "If you had an SPMod backup, select the SPMod-Bac
 vault_restore_choose = "Choose File";
 vault_restore_success = "%1$d settings and %2$d plays restored. Restart Spotify to apply everything.";
 vault_restore_invalid = "This file isn't a valid SPMod backup.";
+
+/* MARK: SPMod Diagnostics */
+
+diagnostics = "Diagnostics";
+diagnostics_description = "Parts of the tweak that don't match this Spotify version are skipped instead of crashing the app. Copy the report and send it to get them fixed.";
+diagnostics_skipped_hooks = "Skipped Hooks";
+diagnostics_details = "Details";
+diagnostics_copy = "Copy Report";
+hide_premium_upsells = "Hide Premium Banners";
+hide_premium_upsells_description = "Hides the Premium upgrade banners shown in the app.";

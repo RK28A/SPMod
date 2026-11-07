@@ -7,6 +7,7 @@ struct SPModThemeSettingsView: View {
     @State private var darkPopUps = UserDefaults.darkPopUps
     @State private var hasPendingChanges = false
     @State private var nightMode = UserDefaults.nightModeConfig
+    @State private var hidePremiumUpsells = UserDefaults.hidePremiumUpsells
     
     private func timeBinding(_ keyPath: WritableKeyPath<NightModeConfig, Int>) -> Binding<Date> {
         Binding<Date>(
@@ -221,6 +222,10 @@ struct SPModThemeSettingsView: View {
             Section(footer: Text("restart_is_required_description".localized)) {
                 Toggle("dark_popups".localized, isOn: $darkPopUps)
             }
+            
+            Section(footer: Text("hide_premium_upsells_description".localized)) {
+                Toggle("hide_premium_upsells".localized, isOn: $hidePremiumUpsells)
+            }
 
             NonIPadSpacerView()
         }
@@ -241,6 +246,10 @@ struct SPModThemeSettingsView: View {
             hasPendingChanges = true
         }
         .animation(.default, value: nightMode)
+        .onChange(of: hidePremiumUpsells) { value in
+            UserDefaults.hidePremiumUpsells = value
+            hasPendingChanges = true
+        }
         .onChange(of: darkPopUps) { value in
             UserDefaults.darkPopUps = value
             hasPendingChanges = true

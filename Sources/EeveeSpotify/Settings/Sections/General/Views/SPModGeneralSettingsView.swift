@@ -31,6 +31,18 @@ struct SPModGeneralSettingsView: View {
                 }
             }
 
+            Section {
+                Button {
+                    SPModSettingsNavigator.push(SPModDiagnosticsView(), title: "diagnostics".localized)
+                } label: {
+                    NavigationSectionView(
+                        color: .gray,
+                        title: "diagnostics".localized,
+                        imageSystemName: "stethoscope"
+                    )
+                }
+            }
+            
             NonIPadSpacerView()
         }
         .listStyle(GroupedListStyle())
