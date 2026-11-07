@@ -107,7 +107,7 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 
 ## Workflow « Create SPMod IPA »
 
-Compile le tweak depuis le code de ce repo, l'injecte dans ton IPA Spotify décryptée avec SwiftProtobuf et l'extension Safari, puis publie une release brouillon avec l'IPA (et une version patchée si l'option est cochée). Paramètres : lien de l'IPA, extension Safari, IPA patchée, nom de l'app, bundle ID.
+Compile le tweak depuis le code de ce repo, l'injecte dans ton IPA Spotify décryptée avec SwiftProtobuf et l'extension Safari, puis publie une release brouillon avec l'IPA. Paramètres : lien de l'IPA, extension Safari, nom de l'app, bundle ID. L'IPA produite est déjà patchée avec ipapatch pour une meilleure compatibilité de sideload.
 
 ---
 

@@ -59,7 +59,7 @@ jobs:
       - name: Hide sensitive inputs
         uses: levibostian/action-hide-sensitive-inputs@v1
         with:
-          exclude_inputs: bundle_id,display_name,enable_safari_ext,create_patched,info_note
+          exclude_inputs: bundle_id,display_name,enable_safari_ext,info_note
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -234,20 +234,15 @@ jobs:
           items=(spmod.deb "$SWIFTPROTOBUF_FRAMEWORK")
           [ -n "${SAFARI_EXT:-}" ] && items+=("$SAFARI_EXT")
           echo "Injecting: ${items[*]}"
-          ivinject spotify_patched_base.ipa "$OUTPUT" -i "${items[@]}" -s - -d --level Optimal
+          ivinject spotify_patched_base.ipa unpatched.ipa -i "${items[@]}" -s - -d --level Optimal
           rm spotify_patched_base.ipa
+          ipapatch -input unpatched.ipa -output "$OUTPUT"
+          rm unpatched.ipa
           echo "OUTPUT=$OUTPUT" >> $GITHUB_ENV
-
-      - name: Create patched IPA
-        if: ${{ inputs.create_patched }}
-        run: |
-          patched="${OUTPUT%.ipa}-patched.ipa"
-          ipapatch -input "$OUTPUT" -output "$patched"
-          echo "PATCHED=$patched" >> $GITHUB_ENV
 
       - name: Verify output
         run: |
-          for f in "$OUTPUT" ${PATCHED:-}; do
+          for f in "$OUTPUT"; do
             listing=$(unzip -Z1 "$f")
             for required in "EeveeSpotify.dylib" "SwiftProtobuf.framework/"; do
               if ! grep -q "$required" <<< "$listing"; then
@@ -265,7 +260,6 @@ jobs:
           name: SPMod v${{ steps.tweak.outputs.tweak_label }} - Spotify ${{ steps.app.outputs.spotify_version }} (${{ github.run_number }})
           files: |
             ${{ env.OUTPUT }}
-            ${{ env.PATCHED }}
           draft: true
 
       - name: Output Release URL
