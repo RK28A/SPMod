@@ -25,7 +25,12 @@ class URLSessionHelper {
         return "CFNetwork/\(version)"
     }
     
+    private let lock = NSLock()
+    
     func setOrAppend(_ data: Data, for url: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        
         var loadedData = requestsMap[url] ?? Data()
         loadedData.append(data)
         
@@ -33,6 +38,9 @@ class URLSessionHelper {
     }
     
     func obtainData(for url: URL) -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        
         return requestsMap.removeValue(forKey: url)
     }
 }

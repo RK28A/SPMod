@@ -27,6 +27,7 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         didCompleteWithError error: Error?
     ) {
         guard let url = task.currentRequest?.url else {
+            orig.URLSession(session, task: task, didCompleteWithError: error)
             return
         }
         
@@ -41,6 +42,7 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         }
         
         guard let buffer = URLSessionHelper.shared.obtainData(for: url) else {
+            orig.URLSession(session, task: task, didCompleteWithError: nil)
             return
         }
         
@@ -125,6 +127,7 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         didReceiveData data: Data
     ) {
         guard let url = task.currentRequest?.url else {
+            orig.URLSession(session, dataTask: task, didReceiveData: data)
             return
         }
 
