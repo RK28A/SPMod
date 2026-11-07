@@ -58,6 +58,7 @@ struct EeveeSpotify: Tweak {
         CopyTrackManager.start()
         ScreenAwakeManager.start()
         ListeningTracker.start()
+        SPModVault.start()
         NightMode.start()
 
         if UserDefaults.experimentsOptions.showInstagramDestination {
