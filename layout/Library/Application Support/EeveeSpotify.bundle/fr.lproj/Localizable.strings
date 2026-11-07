@@ -503,3 +503,5 @@ player_quick_add = "Bouton d'ajout rapide dans le lecteur";
 player_quick_add_description = "Ajoute un bouton + dans le lecteur. Touche-le pour ajouter le titre en cours à ta playlist d'ajout rapide, maintiens-le pour voir ou changer la destination. Le bouton d'ajout de Spotify fonctionne toujours normalement.";
 quick_add_destination_is = "Destination : %@";
 quick_add_change = "Choisir une autre playlist";
+
+diagnostics_requests = "Requêtes réseau vues";

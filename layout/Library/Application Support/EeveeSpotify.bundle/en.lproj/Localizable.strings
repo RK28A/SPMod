@@ -503,3 +503,5 @@ player_quick_add = "Quick Add Button in Player";
 player_quick_add_description = "Adds a + button to the player. Tap to add the current track to your Quick Add playlist, hold to see or change the destination. Spotify's own add button keeps working as usual.";
 quick_add_destination_is = "Destination: %@";
 quick_add_change = "Choose Another Playlist";
+
+diagnostics_requests = "Network Requests Seen";

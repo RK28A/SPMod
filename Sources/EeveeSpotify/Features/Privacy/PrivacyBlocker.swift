@@ -191,7 +191,8 @@ final class SPModPrivacyProtocol: URLProtocol {
     }
 
     override class func canInit(with request: URLRequest) -> Bool {
-        category(for: request.url) != nil
+        SPModDiagnostics.recordRequest(request.url, source: "NS")
+        return category(for: request.url) != nil
     }
 
     override class func canInit(with task: URLSessionTask) -> Bool {
