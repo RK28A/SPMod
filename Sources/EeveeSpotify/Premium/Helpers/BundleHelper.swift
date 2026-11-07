@@ -11,24 +11,26 @@ class BundleHelper {
     static let shared = BundleHelper()
     
     private init() {
-        self.bundle = Bundle(
+        let bundle = Bundle(
             path: Bundle.main.path(
                 forResource: bundleName,
                 ofType: "bundle"
             )
             ?? jbRootPath("/Library/Application Support/\(bundleName).bundle")
-        )!
+        ) ?? Bundle.main
         
-        enBundle = Bundle(path: bundle.path(forResource: "en", ofType: "lproj")!)!
+        self.bundle = bundle
+        enBundle = bundle.path(forResource: "en", ofType: "lproj").flatMap { Bundle(path: $0) } ?? bundle
     }
     
     func uiImage(_ name: String) -> UIImage {
-        return UIImage(
-            contentsOfFile: self.bundle.path(
-                forResource: name,
-                ofType: "png"
-            )!
-        )!
+        guard
+            let path = self.bundle.path(forResource: name, ofType: "png"),
+            let image = UIImage(contentsOfFile: path)
+        else {
+            return UIImage()
+        }
+        return image
     }
     
     func localizedString(_ key: String) -> String {
@@ -42,13 +44,9 @@ class BundleHelper {
     }
     
     func resolveConfiguration() throws -> ResolveConfiguration {
-        return try ResolveConfiguration(
-            serializedBytes: try Data(
-                contentsOf: self.bundle.url(
-                    forResource: "resolveconfiguration",
-                    withExtension: "bnk"
-                )!
-            )
-        )
+        guard let url = self.bundle.url(forResource: "resolveconfiguration", withExtension: "bnk") else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        return try ResolveConfiguration(serializedBytes: try Data(contentsOf: url))
     }
 }

@@ -32,7 +32,10 @@ class LrclibLyricsRepository: LyricsRepository {
             stringUrl += "?\(queryString)"
         }
         
-        let request = URLRequest(url: URL(string: stringUrl)!)
+        guard let requestUrl = URL(string: stringUrl) else {
+            throw LyricsError.unknownError
+        }
+        let request = URLRequest(url: requestUrl)
 
         let semaphore = DispatchSemaphore(value: 0)
         var data: Data?
@@ -51,7 +54,10 @@ class LrclibLyricsRepository: LyricsRepository {
             throw error
         }
 
-        return data!
+        guard let data = data else {
+            throw LyricsError.decodingError
+        }
+        return data
     }
     
     private func getSong(trackName: String, artistName: String) throws -> LrclibSong {
@@ -80,9 +86,13 @@ class LrclibLyricsRepository: LyricsRepository {
                 }
             }
             
-            let minute = Int(captures["minute"]!)!
-            let seconds = Float(captures["seconds"]!)!
-            let content = captures["content"]!
+            guard
+                let seconds = captures["seconds"].flatMap(Float.init)
+            else {
+                return nil
+            }
+            let minute = captures["minute"].flatMap { Int($0) } ?? 0
+            let content = captures["content"] ?? ""
             
             return LyricsLineDto(
                 content: content.lyricsNoteIfEmpty,

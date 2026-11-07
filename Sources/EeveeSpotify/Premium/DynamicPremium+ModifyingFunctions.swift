@@ -4,8 +4,9 @@ import UIKit
 func modifyRemoteConfiguration(_ configuration: inout UcsResponse) {
     modifyAttributes(&configuration.attributes.accountAttributes)
     
-    if UserDefaults.overwriteConfiguration {
-        configuration.resolve.configuration = try! BundleHelper.shared.resolveConfiguration()
+    if UserDefaults.overwriteConfiguration,
+       let resolveConfiguration = try? BundleHelper.shared.resolveConfiguration() {
+        configuration.resolve.configuration = resolveConfiguration
     }
     else {
         modifyAssignedValues(&configuration.assignedValues)
@@ -61,7 +62,7 @@ private func modifyAssignedValues(_ values: inout [AssignedValue]) {
 }
 
 private func modifyAttributes(_ attributes: inout [String: AccountAttribute]) {
-    let oneYearFromNow = Calendar.current.date(byAdding: .year, value: 1, to: Date())!
+    let oneYearFromNow = (Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date().addingTimeInterval(31_536_000))
     
     let formatter = ISO8601DateFormatter()
     formatter.timeZone = TimeZone(abbreviation: "UTC")

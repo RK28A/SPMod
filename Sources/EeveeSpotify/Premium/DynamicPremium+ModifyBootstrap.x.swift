@@ -57,8 +57,7 @@ class SpotifySessionDelegateBootstrapHook: ClassHook<NSObject>, SpotifySessionDe
             return
         }
         
-        if error == nil && url.isBootstrap {
-            let buffer = URLSessionHelper.shared.obtainData(for: url)!
+        if error == nil && url.isBootstrap, let buffer = URLSessionHelper.shared.obtainData(for: url) {
             
             do {
                 var bootstrapMessage = try BootstrapMessage(serializedBytes: buffer)

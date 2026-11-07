@@ -30,7 +30,10 @@ class GeniusLyricsRepository: LyricsRepository {
             stringUrl += "?\(queryString)"
         }
         
-        let request = URLRequest(url: URL(string: stringUrl)!)
+        guard let requestUrl = URL(string: stringUrl) else {
+            throw LyricsError.unknownError
+        }
+        let request = URLRequest(url: requestUrl)
 
         let semaphore = DispatchSemaphore(value: 0)
         var data: Data?
@@ -49,7 +52,7 @@ class GeniusLyricsRepository: LyricsRepository {
             throw error
         }
 
-        guard let rootResponse = try? jsonDecoder.decode(GeniusRootResponse.self, from: data!) else {
+        guard let data = data, let rootResponse = try? jsonDecoder.decode(GeniusRootResponse.self, from: data) else {
             throw LyricsError.decodingError
         }
         return rootResponse.response
@@ -94,8 +97,12 @@ class GeniusLyricsRepository: LyricsRepository {
             { $0.title.containsInsensitive(strippedTitle) }
         )
         
+        guard let fallback = results.first else {
+            return hits[0].result
+        }
+        
         if matchingByTitle.isEmpty {
-            return results.first!
+            return fallback
         }
         
         if romanized, let romanizedSong = matchingByTitle.first(
@@ -105,7 +112,7 @@ class GeniusLyricsRepository: LyricsRepository {
             return romanizedSong
         }
         
-        return matchingByTitle.first!
+        return matchingByTitle.first ?? fallback
     }
     
     private func mapLyricsLines(_ rawLines: [String]) -> [String] {

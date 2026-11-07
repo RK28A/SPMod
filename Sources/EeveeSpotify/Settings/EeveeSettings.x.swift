@@ -11,11 +11,14 @@ class ProfileSettingsSectionHook: ClassHook<NSObject> {
 
     func didSelectRow(_ row: Int) {
         if row == 1 {
-            let rootSettingsController = WindowHelper.shared.findFirstViewController(
-                "RootSettingsViewController"
-            )!
-            
-            let navigationController = rootSettingsController.navigationController!
+            guard
+                let rootSettingsController = WindowHelper.shared.findFirstViewController(
+                    "RootSettingsViewController"
+                ),
+                let navigationController = rootSettingsController.navigationController
+            else {
+                return
+            }
 
             let eeveeSettingsController = EeveeSettingsViewController(
                 rootSettingsController.view.bounds,

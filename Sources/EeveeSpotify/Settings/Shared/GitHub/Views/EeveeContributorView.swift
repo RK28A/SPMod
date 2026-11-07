@@ -6,7 +6,7 @@ struct EeveeContributorView: View {
     
     var body: some View {
         VStack {
-            Link(destination: URL(string: githubUser.htmlUrl)!) {
+            Link(destination: URL(string: githubUser.htmlUrl) ?? URL(string: "https://github.com")!) {
                 HStack(spacing: 10) {
                     ImageView(urlString: githubUser.avatarUrl)
                         .frame(width: 48, height: 48)
