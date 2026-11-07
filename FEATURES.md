@@ -63,7 +63,7 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 | 🔵 | Couleurs des paroles | Couleurs d'origine, couleur fixe ou couleur tirée de la pochette avec facteur de normalisation. |
 | 🔵 | Popups sombres | Popups de Spotify en mode sombre. |
 | 🟡 | Masquer des sections de l'accueil | En attente de l'IPA. |
-| 🟡 | Masquer les boutons Premium | En attente de l'IPA. |
+| 🟢 | Masquer les bannières Premium | Masque les bannières qui proposent de passer à Premium. Activé par défaut. |
 
 ## Confidentialité
 
@@ -91,6 +91,9 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 |---|---|---|
 | 🟢 | Corrections de plantages | Suppression des déballages forcés risqués, protection des index, conversions de couleurs bornées, requêtes réseau toujours terminées, tampon réseau protégé entre threads. |
 | 🔵 | Correctif de défilement des paroles | Évite un plantage connu lors du défilement des paroles. |
+| 🟢 | Hooks tolérants | Si une partie du tweak ne correspond pas à la version de Spotify installée, elle est ignorée au lieu de faire planter l'app au lancement. |
+| 🟢 | Diagnostic | Général → Diagnostic : versions, liste des hooks ignorés et rapport à copier. |
+| 🟢 | Accès à SPModulation sur Spotify 9.1+ | Bouton « SPMod » dans les réglages de Spotify (le menu d'origine n'existe plus dans les versions récentes). |
 
 ---
 

@@ -392,3 +392,13 @@ vault_restore_prompt_message = "Si tu avais une sauvegarde SPMod, choisis le fic
 vault_restore_choose = "Choisir le fichier";
 vault_restore_success = "%1$d réglages et %2$d écoutes restaurés. Redémarre Spotify pour tout appliquer.";
 vault_restore_invalid = "Ce fichier n'est pas une sauvegarde SPMod valide.";
+
+/* MARK: SPMod Diagnostics */
+
+diagnostics = "Diagnostic";
+diagnostics_description = "Les parties du tweak qui ne correspondent pas à cette version de Spotify sont ignorées au lieu de faire planter l'app. Copie le rapport et envoie-le pour les faire corriger.";
+diagnostics_skipped_hooks = "Hooks ignorés";
+diagnostics_details = "Détails";
+diagnostics_copy = "Copier le rapport";
+hide_premium_upsells = "Masquer les bannières Premium";
+hide_premium_upsells_description = "Masque les bannières qui proposent de passer à Premium dans l'app.";

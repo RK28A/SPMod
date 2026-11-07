@@ -95,6 +95,13 @@ extension UserDefaults {
     static var themeConfig: ThemeConfig
 
     static let listeningCollectionEnabledKey = "listeningCollectionEnabled"
+    static let hidePremiumUpsellsKey = "hidePremiumUpsells"
+
+    static var hidePremiumUpsells: Bool {
+        get { container.object(forKey: hidePremiumUpsellsKey) as? Bool ?? true }
+        set { container.set(newValue, forKey: hidePremiumUpsellsKey) }
+    }
+
 
     static var listeningCollectionEnabled: Bool {
         get { container.object(forKey: listeningCollectionEnabledKey) as? Bool ?? true }
@@ -120,6 +127,7 @@ extension UserDefaults {
         keepScreenOnKey,
         themeConfigKey,
         listeningCollectionEnabledKey,
+        hidePremiumUpsellsKey,
         lyricsTranslationEnabledKey,
         lyricsTranslationConsentKey,
         lyricsTranslationTargetKey,

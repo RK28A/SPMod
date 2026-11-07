@@ -37,6 +37,10 @@ func activatePremiumPatchingGroup() {
 struct EeveeSpotify: Tweak {
     static let version = "6.2.2"
     
+    static func handleError(_ error: OrionHookError) {
+        SPModDiagnostics.record(error.description)
+    }
+    
     static var hookTarget: VersionHookTarget {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         
@@ -55,6 +59,10 @@ struct EeveeSpotify: Tweak {
             ThemeGroup().activate()
         }
 
+        if UserDefaults.hidePremiumUpsells {
+            PremiumUpsellGroup().activate()
+        }
+        
         CopyTrackManager.start()
         ScreenAwakeManager.start()
         ListeningTracker.start()
