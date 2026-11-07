@@ -102,6 +102,9 @@ struct EeveeSettingsView: View {
                 navigationRow("playback", icon: "play.circle.fill", color: .green) {
                     SPModPlaybackSettingsView()
                 }
+                navigationRow("listening", icon: "chart.bar.fill", color: Color(hex: "#FF9F0A")) {
+                    SPModListeningSettingsView()
+                }
             }
 
             Section(header: Text("section_appearance".localized)) {
@@ -111,6 +114,9 @@ struct EeveeSettingsView: View {
             }
 
             Section(header: Text("section_advanced".localized)) {
+                navigationRow("privacy", icon: "hand.raised.fill", color: Color(hex: "#5E5CE6")) {
+                    SPModPrivacySettingsView()
+                }
                 navigationRow("backup", icon: "externaldrive.fill", color: Color(hex: "#64D2FF")) {
                     SPModBackupSettingsView()
                 }

@@ -96,6 +96,8 @@ enum SPModBackupHelper {
             return true
         case let array as [Any]:
             return array.allSatisfy { $0 is NSNumber || $0 is String }
+        case let dictionary as [String: Any]:
+            return dictionary.values.allSatisfy { $0 is NSNumber || $0 is String }
         default:
             return false
         }

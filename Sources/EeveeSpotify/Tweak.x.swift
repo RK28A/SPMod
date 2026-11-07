@@ -51,12 +51,14 @@ struct EeveeSpotify: Tweak {
     }
     
     init() {
-        if UserDefaults.themeConfig.isEnabled {
+        if ThemeEngine.isActive {
             ThemeGroup().activate()
         }
 
         CopyTrackManager.start()
         ScreenAwakeManager.start()
+        ListeningTracker.start()
+        NightMode.start()
 
         if UserDefaults.experimentsOptions.showInstagramDestination {
             InstgramDestinationGroup().activate()

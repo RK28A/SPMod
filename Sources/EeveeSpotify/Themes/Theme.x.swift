@@ -18,8 +18,9 @@ enum ThemeEngine {
     }
 
     private static let palette: Palette? = {
-        let config = UserDefaults.themeConfig
-        guard config.isEnabled else {
+        let config = NightMode.effectiveThemeConfig
+        let dimming = NightMode.accentDimming
+        guard config.isEnabled || dimming > 0 else {
             return nil
         }
         let surface = UIColor(spmodHex: config.surfaceHex)
@@ -27,7 +28,7 @@ enum ThemeEngine {
             background: UIColor(spmodHex: config.backgroundHex),
             surface: surface,
             elevated: surface.spmodAdjusted(by: 0.06),
-            accent: UIColor(spmodHex: config.accentHex),
+            accent: UIColor(spmodHex: config.accentHex).spmodDimmed(by: dimming),
             isAccentOnly: config.preset == .spotify
         )
     }()

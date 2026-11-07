@@ -6,6 +6,62 @@ struct SPModThemeSettingsView: View {
     @State private var lyricsColors = UserDefaults.lyricsColors
     @State private var darkPopUps = UserDefaults.darkPopUps
     @State private var hasPendingChanges = false
+    @State private var nightMode = UserDefaults.nightModeConfig
+    
+    private func timeBinding(_ keyPath: WritableKeyPath<NightModeConfig, Int>) -> Binding<Date> {
+        Binding<Date>(
+            get: {
+                let minutes = nightMode[keyPath: keyPath]
+                return Calendar.current.date(
+                    bySettingHour: minutes / 60,
+                    minute: minutes % 60,
+                    second: 0,
+                    of: Date()
+                ) ?? Date()
+            },
+            set: { date in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+                nightMode[keyPath: keyPath] = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+            }
+        )
+    }
+    
+    @ViewBuilder private func nightModeSection() -> some View {
+        Section(
+            header: Text("night_mode".localized),
+            footer: Text("night_mode_description".localized)
+        ) {
+            Toggle("night_mode_enabled".localized, isOn: $nightMode.enabled)
+            
+            if nightMode.enabled {
+                Picker("night_mode_trigger".localized, selection: $nightMode.trigger) {
+                    ForEach(NightModeTrigger.allCases, id: \.self) { trigger in
+                        Text(trigger.title).tag(trigger)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                
+                if nightMode.trigger == .schedule {
+                    DatePicker("night_mode_start".localized, selection: timeBinding(\.startMinutes), displayedComponents: .hourAndMinute)
+                    DatePicker("night_mode_end".localized, selection: timeBinding(\.endMinutes), displayedComponents: .hourAndMinute)
+                }
+                
+                Picker("night_mode_theme".localized, selection: $nightMode.preset) {
+                    ForEach(ThemePreset.allCases.filter { $0 != .spotify }, id: \.self) { preset in
+                        Text(preset.title).tag(preset)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("night_mode_accent_dimming".localized)
+                    Slider(value: $nightMode.accentDimming, in: 0...0.7, step: 0.1)
+                }
+                
+                Toggle("night_mode_faster_animations".localized, isOn: $nightMode.fasterAnimations)
+            }
+        }
+    }
 
     private func color(_ hex: String) -> Color {
         Color(UIColor(spmodHex: hex))
@@ -113,6 +169,8 @@ struct SPModThemeSettingsView: View {
                 }
             }
 
+            nightModeSection()
+            
             if hasPendingChanges {
                 Section(footer: Text("restart_is_required_description".localized)) {
                     Button("restart_now".localized) {
@@ -178,6 +236,11 @@ struct SPModThemeSettingsView: View {
         .onChange(of: lyricsColors) { newColors in
             UserDefaults.lyricsColors = newColors
         }
+        .onChange(of: nightMode) { value in
+            UserDefaults.nightModeConfig = value
+            hasPendingChanges = true
+        }
+        .animation(.default, value: nightMode)
         .onChange(of: darkPopUps) { value in
             UserDefaults.darkPopUps = value
             hasPendingChanges = true

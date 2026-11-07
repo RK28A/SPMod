@@ -94,6 +94,13 @@ extension UserDefaults {
     @UserDefault(key: "themeConfig", defaultValue: ThemeConfig.default)
     static var themeConfig: ThemeConfig
 
+    static let listeningCollectionEnabledKey = "listeningCollectionEnabled"
+
+    static var listeningCollectionEnabled: Bool {
+        get { container.object(forKey: listeningCollectionEnabledKey) as? Bool ?? true }
+        set { container.set(newValue, forKey: listeningCollectionEnabledKey) }
+    }
+
     static let spmodBackupKeys: [String] = [
         "musixmatchToken",
         "darkPopUps",
@@ -111,6 +118,15 @@ extension UserDefaults {
         copyTrackFormatKey,
         disableCanvasKey,
         keepScreenOnKey,
-        themeConfigKey
+        themeConfigKey,
+        listeningCollectionEnabledKey,
+        lyricsTranslationEnabledKey,
+        lyricsTranslationConsentKey,
+        lyricsTranslationTargetKey,
+        lyricsTranslationModeKey,
+        privacyModeKey,
+        privacyCustomCategoriesKey,
+        spmodLogsEnabledKey,
+        "nightModeConfig"
     ]
 }

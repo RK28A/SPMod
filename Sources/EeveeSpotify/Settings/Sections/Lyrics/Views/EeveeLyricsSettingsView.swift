@@ -5,6 +5,9 @@ struct EeveeLyricsSettingsView: View {
     @State var fallbackOrder = UserDefaults.lyricsFallbackOrder
     @State var cacheEnabled = UserDefaults.lyricsCacheEnabled
     @State var cacheSize: Int64 = 0
+    @State var translationEnabled = LyricsTranslator.isActive
+    @State var translationTarget = UserDefaults.lyricsTranslationTarget
+    @State var translationMode = UserDefaults.lyricsTranslationMode
     
     var body: some View {
         List {
@@ -13,6 +16,7 @@ struct EeveeLyricsSettingsView: View {
             if viewModel.lyricsSource != .notReplaced {
                 fallbackOrderSection()
                 cacheSection()
+                translationSection()
                 
                 hideOnErrorSection()
                 romanizedLyricsSection()
@@ -38,6 +42,12 @@ struct EeveeLyricsSettingsView: View {
         }
         .onChange(of: cacheEnabled) { enabled in
             UserDefaults.lyricsCacheEnabled = enabled
+        }
+        .onChange(of: translationTarget) { value in
+            UserDefaults.lyricsTranslationTarget = value
+        }
+        .onChange(of: translationMode) { value in
+            UserDefaults.lyricsTranslationMode = value
         }
         .onAppear {
             refreshCacheSize()
