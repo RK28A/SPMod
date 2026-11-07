@@ -40,7 +40,7 @@ class ErrorViewControllerHook: ClassHook<UIViewController> {
             let dataSource = Ivars<__UIDiffableDataSource>(collectionDataSource)._impl
             
             let itemIdentifiers = dataSource.itemIdentifiers()
-            guard itemIdentifiers.indices.contains(lyricsProviderIndex) else {
+            guard lyricsProviderIndex >= 0, lyricsProviderIndex < itemIdentifiers.count else {
                 return
             }
             let lyricsProviderItemIdentifier = itemIdentifiers[lyricsProviderIndex]
