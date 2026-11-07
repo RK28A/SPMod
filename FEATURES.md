@@ -11,6 +11,7 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 | | Fonctionnalité | Description |
 |---|---|---|
 | 🔵 | Premium dynamique | Intercepte les données de compte envoyées par Spotify et les modifie en temps réel pour débloquer les fonctions Premium côté app (lecture dans l'ordre, sauts illimités, pas de pubs audio). |
+| 🟢 | Patch Premium au niveau product state | Force les attributs du compte (ads, catalogue, type, on-demand…) directement là où l'app les lit, pour que le Premium et le blocage des pubs s'appliquent même quand Spotify change son transport réseau (cas de la 9.1+). |
 | 🔵 | Ne pas patcher Premium | Désactive le patch si tu as un vrai abonnement. Détecté automatiquement au premier lancement. |
 | 🔵 | Écraser la configuration | Remplace la configuration distante par une configuration Premium enregistrée, qui contrôle une grande partie de l'interface. |
 | 🔵 | Titres likés sur les pages artiste | Ajoute la ligne « Titres likés » et la liste complète des titres sur les pages artiste. |
