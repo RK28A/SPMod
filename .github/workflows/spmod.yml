@@ -15,12 +15,6 @@ on:
         required: true
         default: true
 
-      create_patched:
-        description: "Also create a patched IPA with ipapatch (fixes sign-in on some sideload methods)"
-        type: boolean
-        required: true
-        default: true
-
       display_name:
         description: "App Name (Optional)"
         default: "Spotify"
