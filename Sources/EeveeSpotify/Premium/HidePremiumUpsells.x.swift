@@ -33,13 +33,13 @@ class PremiumStatusRowSettingsHook: ClassHook<NSObject> {
     static let targetName = "SPTEncorePremiumStatusRowSettings"
 
     func uiView() -> UIView {
-        let view = orig.uiView()
         let container = UIView()
         container.isHidden = true
         container.isUserInteractionEnabled = false
         container.translatesAutoresizingMaskIntoConstraints = false
-        container.heightAnchor.constraint(equalToConstant: 0).isActive = true
-        _ = view
+        let height = container.heightAnchor.constraint(equalToConstant: 0)
+        height.priority = .defaultHigh
+        height.isActive = true
         return container
     }
 }
