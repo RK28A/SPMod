@@ -2,15 +2,17 @@ import SwiftUI
 
 struct EeveeLyricsSettingsView: View {
     @StateObject var viewModel = EeveeLyricsSettingsViewModel()
+    @State var fallbackOrder = UserDefaults.lyricsFallbackOrder
+    @State var cacheEnabled = UserDefaults.lyricsCacheEnabled
+    @State var cacheSize: Int64 = 0
     
     var body: some View {
         List {
             lyricsSourceSection()
             
             if viewModel.lyricsSource != .notReplaced {
-                if viewModel.lyricsSource != .genius {
-                    geniusFallbackSection()
-                }
+                fallbackOrderSection()
+                cacheSection()
                 
                 hideOnErrorSection()
                 romanizedLyricsSection()
@@ -28,24 +30,17 @@ struct EeveeLyricsSettingsView: View {
         .listStyle(GroupedListStyle())
         .disabled(viewModel.isRequestingMusixmatchToken)
         .animation(.default, value: viewModel.animationValues)
-    }
-    
-    @ViewBuilder private func geniusFallbackSection() -> some View {
-        Section {
-            Toggle(
-                "genius_fallback".localized,
-                isOn: $viewModel.lyricsOptions.geniusFallback
-            )
-            
-            if viewModel.lyricsOptions.geniusFallback {
-                Toggle(
-                    "show_fallback_reasons".localized,
-                    isOn: $viewModel.lyricsOptions.showFallbackReasons
-                )
-            }
-        } footer: {
-            Text("genius_fallback_description"
-                .localizeWithFormat(viewModel.lyricsSource.description))
+        .animation(.default, value: fallbackOrder)
+        .animation(.default, value: cacheEnabled)
+        .onChange(of: fallbackOrder) { order in
+            UserDefaults.lyricsFallbackOrder = order
+            viewModel.lyricsOptions.geniusFallback = order.contains(.genius)
+        }
+        .onChange(of: cacheEnabled) { enabled in
+            UserDefaults.lyricsCacheEnabled = enabled
+        }
+        .onAppear {
+            refreshCacheSize()
         }
     }
     

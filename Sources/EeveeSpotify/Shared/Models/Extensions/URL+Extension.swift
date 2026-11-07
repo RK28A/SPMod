@@ -25,6 +25,10 @@ extension URL {
         self.path.contains("v1/customize")
     }
     
+    var isCanvas: Bool {
+        self.path.contains("canvaz-cache") || (self.host?.contains("canvaz") ?? false)
+    }
+    
     var isBootstrap: Bool {
         self.path.contains("v1/bootstrap")
     }

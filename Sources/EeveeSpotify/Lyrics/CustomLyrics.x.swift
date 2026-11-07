@@ -18,6 +18,67 @@ private let petitLyricsRepository = PetitLyricsRepository()
 
 //
 
+private func lyricsRepository(for source: LyricsSource) throws -> LyricsRepository {
+    switch source {
+    case .genius:
+        return geniusLyricsRepository
+    case .lrclib:
+        return LrclibLyricsRepository.shared
+    case .musixmatch:
+        return MusixmatchLyricsRepository.shared
+    case .petit:
+        return petitLyricsRepository
+    case .notReplaced:
+        throw LyricsError.invalidSource
+    }
+}
+
+func lyricsSourceChain(primary: LyricsSource) -> [LyricsSource] {
+    var chain = [primary]
+    
+    for source in UserDefaults.lyricsFallbackOrder where !chain.contains(source) {
+        if source == .musixmatch && UserDefaults.musixmatchToken.isEmpty {
+            continue
+        }
+        chain.append(source)
+    }
+    
+    return chain
+}
+
+private func handleLyricsErrorPopUp(_ error: Error) {
+    guard let error = error as? LyricsError else {
+        return
+    }
+    
+    switch error {
+    case .invalidMusixmatchToken:
+        if !hasShownUnauthorizedPopUp {
+            PopUpHelper.showPopUp(
+                delayed: false,
+                message: "musixmatch_unauthorized_popup".localized,
+                buttonText: "OK".uiKitLocalized
+            )
+            
+            hasShownUnauthorizedPopUp = true
+        }
+        
+    case .musixmatchRestricted:
+        if !hasShownRestrictedPopUp {
+            PopUpHelper.showPopUp(
+                delayed: false,
+                message: "musixmatch_restricted_popup".localized,
+                buttonText: "OK".uiKitLocalized
+            )
+            
+            hasShownRestrictedPopUp = true
+        }
+        
+    default:
+        break
+    }
+}
+
 private func loadCustomLyricsForCurrentTrack() throws -> Lyrics {
     guard
         let track = statefulPlayer?.currentTrack() ??
@@ -35,75 +96,60 @@ private func loadCustomLyricsForCurrentTrack() throws -> Lyrics {
     )
     
     let options = UserDefaults.lyricsOptions
-    var source = UserDefaults.lyricsSource
+    let primarySource = UserDefaults.lyricsSource
     
-    // switched to swift 5.8 syntax to compile with Theos on Linux.
-    var repository: LyricsRepository
-
-    switch source {
-    case .genius:
-        repository = geniusLyricsRepository
-    case .lrclib:
-        repository = LrclibLyricsRepository.shared
-    case .musixmatch:
-        repository = MusixmatchLyricsRepository.shared
-    case .petit:
-        repository = petitLyricsRepository
-    case .notReplaced:
+    guard primarySource.isReplacingLyrics else {
         throw LyricsError.invalidSource
     }
     
-    let lyricsDto: LyricsDto
+    let sources = lyricsSourceChain(primary: primarySource)
+    let cacheKey = UserDefaults.lyricsCacheEnabled
+        ? LyricsCache.key(trackId: searchQuery.spotifyTrackId, sources: sources, options: options)
+        : nil
     
     lyricsState = LyricsLoadingState()
     
-    do {
-        lyricsDto = try repository.getLyrics(searchQuery, options: options)
+    var loadedDto: LyricsDto? = nil
+    var source = primarySource
+    
+    if let cacheKey = cacheKey,
+       let cached = LyricsCache.load(cacheKey),
+       let cachedSource = LyricsSource(rawValue: cached.source) {
+        loadedDto = cached.dto
+        source = cachedSource
     }
-    catch let error {
-        if let error = error as? LyricsError {
-            lyricsState.fallbackError = error
-            
-            switch error {
-                
-            case .invalidMusixmatchToken:
-                if !hasShownUnauthorizedPopUp {
-                    PopUpHelper.showPopUp(
-                        delayed: false,
-                        message: "musixmatch_unauthorized_popup".localized,
-                        buttonText: "OK".uiKitLocalized
-                    )
-                    
-                    hasShownUnauthorizedPopUp.toggle()
-                }
-            
-            case .musixmatchRestricted:
-                if !hasShownRestrictedPopUp {
-                    PopUpHelper.showPopUp(
-                        delayed: false,
-                        message: "musixmatch_restricted_popup".localized,
-                        buttonText: "OK".uiKitLocalized
-                    )
-                    
-                    hasShownRestrictedPopUp.toggle()
-                }
-                
-            default:
+    
+    var lastError: Error? = nil
+    
+    if loadedDto == nil {
+        for candidate in sources {
+            do {
+                loadedDto = try lyricsRepository(for: candidate).getLyrics(searchQuery, options: options)
+                source = candidate
                 break
             }
-        }
-        else {
-            lyricsState.fallbackError = .unknownError
+            catch let error {
+                lastError = error
+                
+                if lyricsState.fallbackError == nil {
+                    lyricsState.fallbackError = (error as? LyricsError) ?? .unknownError
+                }
+                
+                handleLyricsErrorPopUp(error)
+            }
         }
         
-        if source == .genius || !UserDefaults.lyricsOptions.geniusFallback {
-            throw error
+        if let loadedDto = loadedDto, let cacheKey = cacheKey {
+            LyricsCache.store(loadedDto, source: source, for: cacheKey)
         }
-        
-        source = .genius
-        repository = GeniusLyricsRepository()
-        
-        lyricsDto = try repository.getLyrics(searchQuery, options: options)
+    }
+    
+    guard let lyricsDto = loadedDto else {
+        throw lastError ?? LyricsError.unknownError
+    }
+    
+    if source == primarySource {
+        lyricsState.fallbackError = nil
     }
     
     lyricsState.isEmpty = lyricsDto.lines.isEmpty
