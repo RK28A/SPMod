@@ -115,6 +115,10 @@ jobs:
           fi
           cp "$deb" ../spmod.deb
           version=$(grep '^Version:' control | awk '{print $2}')
+          code_version=$(grep -oE 'static let version = "[^"]+"' Sources/EeveeSpotify/Tweak.x.swift | cut -d'"' -f2)
+          if [ "$version" != "$code_version" ]; then
+            echo "::warning::control Version ($version) differs from EeveeSpotify.version ($code_version)"
+          fi
           echo "tweak_label=$version" >> $GITHUB_OUTPUT
 
       - name: Setup OpenSpotifySafariExtension
@@ -256,7 +260,7 @@ jobs:
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: spmod-${{ github.run_number }}
+          tag_name: spmod-v${{ steps.tweak.outputs.tweak_label }}-${{ github.run_number }}
           name: SPMod v${{ steps.tweak.outputs.tweak_label }} - Spotify ${{ steps.app.outputs.spotify_version }} (${{ github.run_number }})
           files: |
             ${{ env.OUTPUT }}
