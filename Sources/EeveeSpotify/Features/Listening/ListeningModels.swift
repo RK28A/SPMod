@@ -121,8 +121,12 @@ struct StatsSummary {
 }
 
 extension TimeInterval {
+    private var spmodSafeSeconds: Double {
+        (isFinite ? self : 0)
+    }
+
     var spmodDuration: String {
-        let totalMinutes = Int((self / 60).rounded())
+        let totalMinutes = Int((spmodSafeSeconds / 60).rounded())
         if totalMinutes < 60 {
             return "\(totalMinutes) min"
         }
@@ -132,7 +136,7 @@ extension TimeInterval {
     }
 
     var spmodClock: String {
-        let seconds = max(Int(self.rounded()), 0)
+        let seconds = max(Int(spmodSafeSeconds.rounded()), 0)
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 }

@@ -41,13 +41,6 @@ class SPTCoreProductStateHook: ClassHook<NSObject> {
         }
         return orig.stringForKey(key)
     }
-
-    func objectForKeyedSubscript(_ key: String) -> String? {
-        if let override = ProductStatePatch.value(for: key) {
-            return override
-        }
-        return orig.objectForKeyedSubscript(key)
-    }
 }
 
 class SPTAdsProductStateHook: ClassHook<NSObject> {
