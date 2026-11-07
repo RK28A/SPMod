@@ -30,18 +30,26 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 | 🟢 | Sources de secours ordonnées | Choisis quelles sources essayer et dans quel ordre si la principale échoue. |
 | 🟢 | Cache des paroles | Les paroles chargées sont gardées 30 jours sur l'appareil : ouverture plus rapide et utilisables hors ligne. |
 | 🟢 | Traduction des paroles | Traduction sur l'appareil avec Apple Traduction (iOS 18+), avec secours en ligne seulement si tu l'autorises. Modes « original + traduction » ou « traduction seule », synchronisation conservée ligne par ligne, cache des traductions. |
-| 🟡 | Taille du texte des paroles | En attente de l'analyse de l'IPA. |
+| 🔵 | Paroles pour tous les titres (9.1+) | Rétabli sur les versions récentes en forçant les interrupteurs internes de Spotify. |
 
 ## Lecture
 
 | | Fonctionnalité | Description |
 |---|---|---|
 | 🟢 | Garder l'écran allumé | L'écran reste allumé pendant la lecture quand des paroles sont visibles. Activé par défaut. |
-| 🟢 | Désactiver les Canvas | Bloque les vidéos Canvas du lecteur pour économiser batterie et données. Désactivé par défaut. |
+| 🟢 | Désactiver les Canvas | Coupe les Canvas via l'interrupteur interne de Spotify, avec blocage réseau en secours. Désactivé par défaut. |
 | 🟢 | Secouer pour copier | Secoue le téléphone pour copier le titre en cours : lien, titre – artiste, les deux ou l'ID. |
 | 🔵 | Ouvrir les liens dans l'app | Compatible avec l'extension Safari OpenSpotifySafariExtension (intégrée à l'IPA si l'option est cochée dans le workflow). |
-| 🟡 | Smart Shuffle amélioré | Modes pur, sans répétition, variété, découverte et favoris. En attente de l'IPA. |
-| 🟡 | Ajout rapide à la dernière playlist | Bouton dans le lecteur, playlist épinglable, anti-doublons. En attente de l'IPA. |
+| 🟢 | Smart Shuffle (expérimental) | Modes pur, sans répétition, variété, découverte et favoris, écart minimum entre un même artiste, exclusion des titres récents, niveau d'aléatoire. Ne modifie jamais l'ordre des playlists. |
+| 🟢 | Ajout rapide (expérimental) | Ajoute le titre en cours à la playlist épinglée ou à la dernière utilisée, en secouant le téléphone ou depuis SPModulation. Anti-doublons, confirmation avec le nom de la playlist. |
+
+## Playlists (expérimental)
+
+| | Fonctionnalité | Description |
+|---|---|---|
+| 🟢 | Gestionnaire de playlists | Doublons (en gardant une occurrence), tri par titre, artiste, album, durée, date d'ajout, année ou aléatoire, recherche et filtre par artiste, sélection multiple pour copier, déplacer, retirer ou créer une nouvelle playlist, aperçu avant confirmation, annulation de la dernière modification. |
+| 🟢 | Fusion de playlists | Choix des playlists sources et de la destination, doublons ignorés en option. |
+| ℹ️ | Fonctionnement | Utilise l'API Web officielle de Spotify avec la session de l'app. Si Spotify refuse, une erreur s'affiche et rien n'est modifié. |
 
 ## Statistiques et historique
 
@@ -51,6 +59,7 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 | 🟢 | Graphiques | Écoute par jour, évolution, heures de la journée, répartition par artiste. |
 | 🟢 | Tops 10 / 25 / 50 / 100 | Titres, artistes et albums avec pochette, lectures, temps cumulé et pourcentage, et une fiche détaillée pour chacun. |
 | 🟢 | Historique d'écoute | Chronologie groupée par jour, semaine ou mois, recherche, filtres, calendrier, ouverture du titre dans Spotify, suppression d'une entrée, d'une période ou de tout. |
+| 🟢 | Playlists depuis l'historique | Ajouter un titre de l'historique à une playlist, ou créer une playlist avec les résultats filtrés (expérimental). |
 | 🟢 | Export / import | JSON et CSV. Seul le temps réellement écouté sur l'appareil est compté, sans doublons. La collecte peut être coupée. |
 
 ## Apparence
@@ -62,7 +71,6 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 | 🟢 | Mode nuit | Toujours actif, sur horaires ou selon le mode sombre d'iOS, avec thème de nuit, accent atténué et animations plus courtes. Appliqué au prochain lancement. |
 | 🔵 | Couleurs des paroles | Couleurs d'origine, couleur fixe ou couleur tirée de la pochette avec facteur de normalisation. |
 | 🔵 | Popups sombres | Popups de Spotify en mode sombre. |
-| 🟡 | Masquer des sections de l'accueil | En attente de l'IPA. |
 | 🟢 | Masquer les bannières Premium | Masque les bannières qui proposent de passer à Premium. Activé par défaut. |
 
 ## Confidentialité
@@ -100,3 +108,17 @@ Légende : 🟢 ajouté par SPMod · 🔵 repris du projet de base (EeveeSpotify
 ## Workflow « Create SPMod IPA »
 
 Compile le tweak depuis le code de ce repo, l'injecte dans ton IPA Spotify décryptée avec SwiftProtobuf et l'extension Safari, puis publie une release brouillon avec l'IPA (et une version patchée si l'option est cochée). Paramètres : lien de l'IPA, extension Safari, IPA patchée, nom de l'app, bundle ID.
+
+---
+
+## Non réalisable
+
+| Fonctionnalité | Raison |
+|---|---|
+| Masquer des sections de l'accueil | L'accueil des versions récentes est entièrement en Swift, sans point d'accroche fiable : le filtrage casserait la mise en page. |
+| Taille du texte des paroles | Les lignes sont dessinées par le moteur de texte de Spotify : changer la police casse la mise en page et le défilement. |
+| Style du texte traduit (taille, couleur) | L'affichage de la traduction est géré par Spotify. |
+| Limite de volume du mode nuit | iOS n'autorise pas une app à changer le volume du système, et le volume du lecteur Spotify n'est pas accessible. |
+| Changement de thème en direct | Les couleurs sont appliquées au chargement des écrans : le changement se fait au prochain lancement. |
+| Bouton d'ajout rapide dans le lecteur | Le lecteur est en Swift sans point d'accroche : l'ajout rapide se fait en secouant le téléphone ou depuis SPModulation. |
+| Ne pas compter les écoutes d'autres appareils | iOS ne distingue pas la lecture locale du contrôle à distance via Spotify Connect. |

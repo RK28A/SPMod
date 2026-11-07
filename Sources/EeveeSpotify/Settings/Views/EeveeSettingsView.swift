@@ -105,6 +105,9 @@ struct EeveeSettingsView: View {
                 navigationRow("listening", icon: "chart.bar.fill", color: Color(hex: "#FF9F0A")) {
                     SPModListeningSettingsView()
                 }
+                navigationRow("playlists", icon: "music.note.list", color: Color(hex: "#30D158")) {
+                    SPModPlaylistsView()
+                }
             }
 
             Section(header: Text("section_appearance".localized)) {

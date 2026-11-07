@@ -71,7 +71,12 @@ enum CopyTrackManager {
             object: nil,
             queue: .main
         ) { _ in
-            copyCurrentTrack()
+            if UserDefaults.container.integer(forKey: "shakeAction") == 1 {
+                QuickAddStore.addCurrentTrack()
+            }
+            else {
+                copyCurrentTrack()
+            }
         }
     }
 
