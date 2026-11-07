@@ -34,6 +34,7 @@ class SpotifySessionDelegateBootstrapHook: ClassHook<NSObject>, SpotifySessionDe
             let request = task.currentRequest,
             let url = request.url
         else {
+            orig.URLSession(session, dataTask: task, didReceiveData: data)
             return
         }
         
@@ -54,6 +55,7 @@ class SpotifySessionDelegateBootstrapHook: ClassHook<NSObject>, SpotifySessionDe
             let request = task.currentRequest,
             let url = request.url
         else {
+            orig.URLSession(session, task: task, didCompleteWithError: error)
             return
         }
         

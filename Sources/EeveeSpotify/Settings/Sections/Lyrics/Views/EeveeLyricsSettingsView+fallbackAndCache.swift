@@ -14,14 +14,16 @@ extension EeveeLyricsSettingsView {
     }
     
     private func move(_ source: LyricsSource, by offset: Int) {
-        guard let index = fallbackOrder.firstIndex(of: source) else {
+        var visible = fallbackOrder.filter { $0 != viewModel.lyricsSource }
+        guard let index = visible.firstIndex(of: source) else {
             return
         }
         let target = index + offset
-        guard fallbackOrder.indices.contains(target) else {
+        guard visible.indices.contains(target) else {
             return
         }
-        fallbackOrder.swapAt(index, target)
+        visible.swapAt(index, target)
+        fallbackOrder = visible
     }
     
     private func toggleBinding(_ source: LyricsSource) -> Binding<Bool> {
