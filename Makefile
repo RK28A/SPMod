@@ -1,4 +1,4 @@
-TARGET := iphone:clang:latest:14.0
+TARGET := iphone:clang:latest:15.0
 INSTALL_TARGET_PROCESSES = Spotify
 ARCHS = arm64
 
@@ -10,6 +10,7 @@ EeveeSpotify_FILES = $(shell find Sources/EeveeSpotify -name '*.swift') $(shell 
 EeveeSpotify_SWIFTFLAGS = -ISources/EeveeSpotifyC/include -Osize
 EeveeSpotify_EXTRA_FRAMEWORKS = SwiftProtobuf
 EeveeSpotify_FRAMEWORKS = UIKit AVFoundation MediaPlayer
+EeveeSpotify_LDFLAGS += -weak_framework Translation -weak_framework SwiftUI
 EeveeSpotify_CFLAGS = -fobjc-arc -ISources/EeveeSpotifyC/include -Os
 
 include $(THEOS_MAKE_PATH)/tweak.mk

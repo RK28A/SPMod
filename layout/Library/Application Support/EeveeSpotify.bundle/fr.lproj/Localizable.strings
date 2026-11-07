@@ -498,3 +498,8 @@ history_create_playlist_preview = "%d titres différents";
 webapi_error_no_token = "La session Spotify n'est pas encore prête. Navigue quelques secondes dans l'app et réessaie.";
 webapi_error_decoding = "Réponse inattendue de Spotify.";
 webapi_error_no_device = "Cet appareil n'a pas été trouvé dans Spotify Connect. Lance d'abord une lecture.";
+
+player_quick_add = "Bouton d'ajout rapide dans le lecteur";
+player_quick_add_description = "Ajoute un bouton + dans le lecteur. Touche-le pour ajouter le titre en cours à ta playlist d'ajout rapide, maintiens-le pour voir ou changer la destination. Le bouton d'ajout de Spotify fonctionne toujours normalement.";
+quick_add_destination_is = "Destination : %@";
+quick_add_change = "Choisir une autre playlist";

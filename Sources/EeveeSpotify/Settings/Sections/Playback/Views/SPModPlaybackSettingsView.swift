@@ -6,11 +6,16 @@ struct SPModPlaybackSettingsView: View {
     @State private var copyOnShake = UserDefaults.copyTrackOnShake
     @State private var copyFormat = UserDefaults.copyTrackFormat
     @State private var shakeAction = UserDefaults.container.integer(forKey: "shakeAction")
+    @State private var playerButton = UserDefaults.playerQuickAddButton
 
     var body: some View {
         List {
             Section(footer: Text("keep_screen_on_description".localized)) {
                 Toggle("keep_screen_on".localized, isOn: $keepScreenOn)
+            }
+
+            Section(footer: Text("player_quick_add_description".localized)) {
+                Toggle("player_quick_add".localized, isOn: $playerButton)
             }
 
             Section(footer: Text("disable_canvas_description".localized)) {
@@ -56,6 +61,10 @@ struct SPModPlaybackSettingsView: View {
         }
         .onChange(of: copyOnShake) { value in
             UserDefaults.copyTrackOnShake = value
+            SPModAlertHelper.askRestart()
+        }
+        .onChange(of: playerButton) { value in
+            UserDefaults.playerQuickAddButton = value
             SPModAlertHelper.askRestart()
         }
         .onChange(of: shakeAction) { value in

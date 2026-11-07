@@ -67,6 +67,10 @@ struct EeveeSpotify: Tweak {
             LyricsFlagsGroup().activate()
         }
         
+        if UserDefaults.playerQuickAddButton {
+            PlayerButtonsGroup().activate()
+        }
+        
         if UserDefaults.hidePremiumUpsells {
             PremiumUpsellGroup().activate()
         }
