@@ -219,3 +219,156 @@ backup_export_failed = "Échec de l'export";
 backup_import_success = "%d réglages restaurés. Redémarre Spotify pour les appliquer.";
 backup_import_failed = "Échec de l'import";
 backup_import_failed_description = "Ce fichier n'est pas une sauvegarde de réglages SPMod valide.";
+
+/* MARK: SPMod Listening */
+
+listening = "Statistiques d'écoute";
+stats = "Statistiques";
+history = "Historique";
+listening_collection = "Collecter les écoutes";
+listening_collection_description = "Seul le temps réellement écouté sur cet appareil est compté. Tout reste sur ton appareil.";
+listening_collection_disabled_notice = "La collecte est désactivée. Les nouvelles écoutes ne sont plus enregistrées.";
+listening_data = "Données";
+listening_data_description = "Exporte, importe ou supprime ton historique et tes statistiques.";
+listening_export_json = "Exporter en JSON";
+listening_export_csv = "Exporter en CSV";
+listening_import = "Importer (JSON ou CSV)";
+listening_import_done = "Import terminé";
+listening_import_count = "%d écoutes ajoutées.";
+listening_import_invalid = "Ce fichier n'est pas un export d'écoutes valide.";
+listening_delete_title = "Supprimer les données d'écoute ?";
+listening_delete_period = "Supprimer une période";
+listening_delete_period_message = "Toutes les écoutes de la période choisie seront supprimées.";
+listening_delete_all = "Tout supprimer";
+listening_delete_all_message = "Tout ton historique et toutes tes statistiques seront supprimés.";
+listening_deleted = "Supprimé";
+listening_open_in_spotify = "Ouvrir dans Spotify";
+listening_no_track_link = "Pas de lien Spotify pour ce titre";
+listening_plays_count = "%d écoutes";
+copy_on_shake_copy = "Copier le lien";
+
+period_today = "Aujourd'hui";
+period_yesterday = "Hier";
+period_7_days = "7 derniers jours";
+period_30_days = "30 derniers jours";
+period_month = "Mois en cours";
+period_year = "Année en cours";
+period_all = "Depuis l'installation";
+period_custom = "Personnalisée";
+period_from = "Du";
+period_to = "Au";
+
+stats_period = "Période";
+stats_overview = "Vue d'ensemble";
+stats_listening_time = "Temps d'écoute";
+stats_minutes = "Minutes";
+stats_hours = "Heures";
+stats_plays = "Lectures";
+stats_tracks = "Titres";
+stats_artists = "Artistes";
+stats_albums = "Albums";
+stats_per_day = "Par jour";
+stats_sessions = "Sessions";
+stats_avg_session = "Session moyenne";
+stats_completed = "Écoutés en entier";
+stats_skipped = "Passés";
+stats_compare = "Par rapport à la période précédente";
+stats_daily_chart = "Écoute par jour";
+stats_trend_chart = "Évolution";
+stats_hours_chart = "Heures de la journée";
+stats_artist_share = "Répartition par artiste";
+stats_ranking = "Top";
+stats_ranking_size = "Afficher";
+stats_first_play = "Première écoute";
+stats_last_play = "Dernière écoute";
+stats_empty = "Aucune écoute enregistrée pour cette période.";
+chart_tap_hint = "Touche une barre pour le détail";
+ranking_tracks = "Titres";
+ranking_artists = "Artistes";
+ranking_albums = "Albums";
+
+history_search = "Rechercher un titre, artiste ou album";
+history_grouping = "Regrouper par";
+history_group_day = "Jour";
+history_group_week = "Semaine";
+history_group_month = "Mois";
+history_week_of = "Semaine du %@";
+history_filter = "Filtre";
+history_filter_all = "Toutes les écoutes";
+history_filter_completed = "Écoutés en entier";
+history_filter_skipped = "Passés";
+history_filter_over_minute = "Plus d'une minute";
+history_results = "%d écoutes";
+history_calendar = "Calendrier";
+history_day_total = "Total : %@";
+history_empty = "Aucune écoute trouvée.";
+history_delete_entry = "Supprimer";
+history_show_more = "Afficher plus";
+
+/* MARK: SPMod Translation */
+
+translation = "Traduction";
+translation_enabled = "Traduire les paroles";
+translation_target = "Traduire en";
+translation_mode = "Affichage";
+translation_mode_bilingual = "Original + traduction";
+translation_mode_only = "Traduction uniquement";
+translation_description = "Les paroles sont envoyées à un service de traduction en ligne. La synchronisation est conservée ligne par ligne.";
+translation_description_local = "Les paroles sont traduites sur ton appareil avec Apple Traduction. La synchronisation est conservée ligne par ligne. Utilise le bouton de traduction de Spotify dans les paroles pour changer d'affichage.";
+translation_online_fallback = "Secours en ligne";
+translation_consent_title = "Envoyer les paroles en ligne ?";
+translation_consent_message = "Pour traduire, le texte des paroles est envoyé à un service de traduction en ligne. Rien d'autre n'est envoyé.";
+translation_consent_accept = "Autoriser";
+translation_revoke = "Désactiver et retirer l'autorisation";
+
+/* MARK: SPMod Privacy */
+
+privacy = "Confidentialité";
+privacy_mode = "Niveau de protection";
+privacy_mode_description = "Bloque les requêtes inutiles au fonctionnement de Spotify. Les requêtes nécessaires à la connexion, la lecture, la synchronisation et les playlists ne sont jamais bloquées.";
+privacy_mode_off = "Désactivé";
+privacy_mode_standard = "Standard";
+privacy_mode_strong = "Renforcé";
+privacy_mode_custom = "Personnalisé";
+privacy_categories = "Catégories";
+privacy_category_ads = "Mesure publicitaire";
+privacy_category_analytics = "Analytique tierce";
+privacy_category_attribution = "Attribution publicitaire";
+privacy_category_diagnostics = "Diagnostics facultatifs";
+privacy_category_marketing = "Suivi marketing";
+privacy_category_spotifyEvents = "Télémétrie Spotify";
+privacy_effect_ads = "Aucun effet connu.";
+privacy_effect_analytics = "Aucun effet connu.";
+privacy_effect_attribution = "Aucun effet connu.";
+privacy_effect_diagnostics = "Les rapports de plantage ne sont plus envoyés aux développeurs.";
+privacy_effect_marketing = "Aucun effet connu.";
+privacy_effect_spotifyEvents = "Les recommandations peuvent moins s'adapter à tes écoutes.";
+privacy_dashboard = "Requêtes bloquées";
+privacy_dashboard_description = "Comptées sur cet appareil depuis la dernière remise à zéro. Les données déjà stockées sur les serveurs de Spotify ne sont pas concernées.";
+privacy_total_blocked = "Total";
+privacy_last_blocked = "Dernier : %@";
+privacy_never_blocked = "Jamais";
+privacy_reset_counters = "Remettre les compteurs à zéro";
+privacy_local_data = "Données locales";
+privacy_local_data_description = "Supprime les données facultatives enregistrées par SPMod sur cet appareil.";
+privacy_delete_listening = "Supprimer l'historique et les statistiques";
+privacy_delete_lyrics_cache = "Supprimer le cache des paroles et traductions";
+privacy_revoke_translation = "Retirer l'autorisation de traduction en ligne";
+privacy_logs = "Journaux SPMod";
+
+/* MARK: SPMod Night Mode */
+
+night_mode = "Mode nuit";
+night_mode_enabled = "Mode nuit";
+night_mode_description = "Passe sur un thème plus sombre la nuit. Le changement s'applique au prochain lancement de Spotify, sans couper ta musique.";
+night_mode_trigger = "Activation";
+night_trigger_manual = "Toujours actif";
+night_trigger_schedule = "Horaires";
+night_trigger_system = "Suivre le mode sombre d'iOS";
+night_mode_start = "Début";
+night_mode_end = "Fin";
+night_mode_theme = "Thème de nuit";
+night_mode_accent_dimming = "Atténuer la couleur d'accent";
+night_mode_faster_animations = "Animations plus courtes";
+night_starting_toast = "Le mode nuit s'appliquera au prochain lancement";
+night_ending_toast = "Le thème de jour s'appliquera au prochain lancement";

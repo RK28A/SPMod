@@ -19,6 +19,8 @@ class ProfileSettingsSectionHook: ClassHook<NSObject> {
             else {
                 return
             }
+            
+            SPModSettingsNavigator.navigationController = navigationController
 
             let eeveeSettingsController = EeveeSettingsViewController(
                 rootSettingsController.view.bounds,

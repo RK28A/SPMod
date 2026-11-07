@@ -144,9 +144,11 @@ private func loadCustomLyricsForCurrentTrack() throws -> Lyrics {
         }
     }
     
-    guard let lyricsDto = loadedDto else {
+    guard let baseDto = loadedDto else {
         throw lastError ?? LyricsError.unknownError
     }
+    
+    let lyricsDto = LyricsTranslator.apply(to: baseDto)
     
     if source == primarySource {
         lyricsState.fallbackError = nil
