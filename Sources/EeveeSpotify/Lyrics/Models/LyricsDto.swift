@@ -1,6 +1,6 @@
 import Foundation
 
-struct LyricsDto {
+struct LyricsDto: Codable {
     var lines: [LyricsLineDto]
     var timeSynced: Bool
     var romanization: LyricsRomanizationStatus
@@ -10,7 +10,7 @@ struct LyricsDto {
         var lyricsData = LyricsData.with {
             $0.timeSynchronized = timeSynced
             $0.restriction = .unrestricted
-            $0.providedBy = "\(source) (EeveeSpotify)"
+            $0.providedBy = "\(source) (SPMod)"
         }
         
         let shouldRomanize = UserDefaults.lyricsOptions.romanization

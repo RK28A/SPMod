@@ -13,7 +13,7 @@ func getPremiumPlanBadge() throws -> Data {
 func getPremiumPlanRowData(originalPremiumPlanRow: PremiumPlanRow) throws -> Data {
     var premiumPlanRow = originalPremiumPlanRow
     
-    premiumPlanRow.planName = "EeveeSpotify"
+    premiumPlanRow.planName = "SPMod"
     premiumPlanRow.planIdentifier = "Eevee"
     premiumPlanRow.colorCode = "#FFD2D7"
     
@@ -28,7 +28,7 @@ func getPlanOverviewData() throws -> Data {
         }
         $0.subscription = SpotifyPlan.SubscriptionInfo.with {
             $0.planVariant = 2
-            $0.planName = "EeveeSpotify"
+            $0.planName = "SPMod"
             $0.planCategory = "Eevee"
             $0.colorCode = "#FFD2D7"
             $0.features = [

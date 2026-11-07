@@ -7,9 +7,10 @@ class BundleHelper {
     
     private let bundle: Bundle
     private let enBundle: Bundle
-    
+    private let frBundle: Bundle
+
     static let shared = BundleHelper()
-    
+
     private init() {
         let bundle = Bundle(
             path: Bundle.main.path(
@@ -18,9 +19,18 @@ class BundleHelper {
             )
             ?? jbRootPath("/Library/Application Support/\(bundleName).bundle")
         ) ?? Bundle.main
-        
+
         self.bundle = bundle
         enBundle = bundle.path(forResource: "en", ofType: "lproj").flatMap { Bundle(path: $0) } ?? bundle
+        frBundle = bundle.path(forResource: "fr", ofType: "lproj").flatMap { Bundle(path: $0) } ?? enBundle
+    }
+
+    private var preferredBundle: Bundle {
+        switch UserDefaults.spmodLanguage {
+        case .automatic: return bundle
+        case .english: return enBundle
+        case .french: return frBundle
+        }
     }
     
     func uiImage(_ name: String) -> UIImage {
@@ -34,7 +44,7 @@ class BundleHelper {
     }
     
     func localizedString(_ key: String) -> String {
-        let value = bundle.localizedString(forKey: key, value: "No translation", table: nil)
+        let value = preferredBundle.localizedString(forKey: key, value: "No translation", table: nil)
         
         if value != "No translation" {
             return value

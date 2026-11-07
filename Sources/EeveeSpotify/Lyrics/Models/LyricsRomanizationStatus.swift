@@ -1,6 +1,6 @@
 import Foundation
 
-enum LyricsRomanizationStatus {
+enum LyricsRomanizationStatus: String, Codable {
     case romanized
     case canBeRomanized
     case original

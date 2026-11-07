@@ -89,7 +89,7 @@ livecontainer_sharing_description = "Partagez à LiveContainer et copiez l'URL s
 
 /* MARK: Premium PopUps */
 
-have_premium_popup = "Il semble que vous avez un abonnement Premium actif, donc le tweak ne modifiera pas les données ni ne restreindra l'utilisation des fonctionnalités Premium côté serveur. Vous pouvez gérer cela dans les paramètres de EeveeSpotify.";
+have_premium_popup = "Il semble que vous avez un abonnement Premium actif, donc le tweak ne modifiera pas les données ni ne restreindra l'utilisation des fonctionnalités Premium côté serveur. Vous pouvez gérer cela dans les paramètres de SPMod.";
 
 high_audio_quality_popup = "La qualité audio très élevée est gérée côté serveur et n'est pas disponible avec ce tweak.";
 playlist_downloading_popup = "Le téléchargement natif de playlists est géré côté serveur et n'est pas disponible avec ce tweak. Vous pouvez cependant télécharger des épisodes de podcast.";
@@ -138,4 +138,84 @@ ad_free_music_listening = "Musique sans pub";
 play_songs_in_any_order = "Choisissez l'ordre de vos titres";
 organize_listening_queue = "Organisez la file d'attente de lecture";
 
-payment_notice = "EeveeSpotify applique des patches pour débloquer certaines fonctionnalités Premium. C'est gratuit.";
+payment_notice = "SPMod applique des patches pour débloquer certaines fonctionnalités Premium. C'est gratuit.";
+
+/* MARK: SPMod */
+
+section_general = "Général";
+section_music = "Musique";
+section_appearance = "Apparence";
+section_advanced = "Avancé";
+
+general = "Général";
+playback = "Lecture";
+themes = "Thèmes";
+backup = "Sauvegarde";
+
+language = "Langue";
+language_automatic = "Automatique (système)";
+language_description = "Langue des paramètres SPModulation et des messages du tweak.";
+
+cancel = "Annuler";
+later = "Plus tard";
+restart_now = "Redémarrer maintenant";
+restart_prompt_title = "Redémarrage nécessaire";
+restart_prompt_message = "Redémarre Spotify pour appliquer ce changement.";
+
+reset_confirm_title_1 = "Réinitialiser les données ?";
+reset_confirm_message_1 = "Le cache de Spotify, sa configuration et le cache des paroles seront effacés.";
+reset_confirm_button_1 = "Continuer";
+reset_confirm_title_2 = "Êtes-vous bien sûr ?";
+reset_confirm_message_2 = "Le contenu téléchargé et les caches seront supprimés, puis l'app se fermera.";
+reset_confirm_button_2 = "Oui, j'en suis sûr";
+reset_confirm_title_3 = "Dernière confirmation";
+reset_confirm_message_3 = "Cette action est irréversible. Réinitialiser maintenant ?";
+
+keep_screen_on = "Garder l'écran allumé";
+keep_screen_on_description = "Empêche l'écran de s'éteindre pendant la lecture quand les paroles sont affichées.";
+disable_canvas = "Désactiver les Canvas";
+disable_canvas_description = "Ne charge plus les vidéos Canvas du lecteur pour économiser la batterie et les données.";
+copy_track_section = "Copier les infos du titre";
+copy_on_shake = "Secouer pour copier";
+copy_on_shake_description = "Secoue ton appareil pour copier les infos du titre en cours.";
+copy_format = "Contenu copié";
+copy_format_link = "Lien";
+copy_format_title_artist = "Titre – Artiste";
+copy_format_both = "Titre – Artiste + lien";
+copy_format_track_id = "ID du titre";
+copied_to_clipboard = "Copié dans le presse-papiers";
+copy_no_track = "Aucun titre en cours de lecture";
+
+theme_preview = "Aperçu";
+theme_presets = "Thèmes";
+theme_presets_description = "Les thèmes remplacent les couleurs de fond, des surfaces et d'accent de Spotify.";
+theme_custom_colors = "Couleurs personnalisées";
+theme_background = "Fond";
+theme_surface = "Surfaces";
+theme_accent = "Accent";
+theme_spotify = "Spotify (par défaut)";
+theme_midnight = "Minuit";
+theme_violet = "Violet";
+theme_forest = "Forêt";
+theme_sunset = "Coucher de soleil";
+theme_rose = "Rose";
+theme_custom = "Personnalisé";
+custom_accent_color = "Couleur d'accent personnalisée";
+accent_color = "Couleur d'accent";
+accent_color_description = "Remplace le vert de Spotify par la couleur de ton choix, par-dessus le thème choisi.";
+
+lyrics_fallback_order = "Sources de secours";
+lyrics_fallback_order_description = "Si %@ n'arrive pas à charger les paroles, les sources activées sont essayées dans cet ordre. Musixmatch nécessite un token utilisateur.";
+lyrics_cache = "Cache";
+lyrics_cache_enabled = "Enregistrer les paroles";
+lyrics_cache_description = "Les paroles chargées sont gardées sur l'appareil pendant 30 jours pour s'ouvrir plus vite et fonctionner hors ligne.";
+lyrics_cache_clear = "Vider le cache des paroles";
+
+backup_export = "Exporter les réglages";
+backup_export_description = "Crée un fichier avec tous tes réglages SPModulation, y compris ton token Musixmatch. Garde-le privé.";
+backup_import = "Importer des réglages";
+backup_import_description = "Restaure les réglages depuis un fichier exporté. Spotify devra redémarrer.";
+backup_export_failed = "Échec de l'export";
+backup_import_success = "%d réglages restaurés. Redémarre Spotify pour les appliquer.";
+backup_import_failed = "Échec de l'import";
+backup_import_failed_description = "Ce fichier n'est pas une sauvegarde de réglages SPMod valide.";

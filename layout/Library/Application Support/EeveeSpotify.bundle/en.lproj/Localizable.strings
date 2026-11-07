@@ -21,7 +21,7 @@ restart_is_required_description = "App restart is required after changing.";
 // Patching
 
 do_not_patch_premium = "Do Not Patch Premium";
-patching_description = "EeveeSpotify intercepts requests to load user data, deserializes it, and modifies the parameters in real-time.
+patching_description = "SPMod intercepts requests to load user data, deserializes it, and modifies the parameters in real-time.
 
 If you have an active Premium subscription, you can turn on Do Not Patch Premium. The tweak won't patch the data or restrict the use of Premium server-sided features.
 
@@ -41,7 +41,7 @@ Genius: Offers the best quality lyrics, provides the most songs, and updates lyr
 LRCLIB: The most open service, offering time-synced lyrics. However, it lacks lyrics for many songs.
 
 Musixmatch: The service Spotify uses. Provides time-synced lyrics for many songs, but you'll need a user token to use this source.";
-lyrics_additional_info = "If EeveeSpotify is unable to find a song or process the lyrics, you'll see a \"Couldn't load the lyrics for this song\" message. The lyrics might be wrong for some songs when using Genius due to how the tweak searches songs. I've made it work in most cases.";
+lyrics_additional_info = "If SPMod is unable to find a song or process the lyrics, you'll see a \"Couldn't load the lyrics for this song\" message. The lyrics might be wrong for some songs when using Genius due to how the tweak searches songs. I've made it work in most cases.";
 petitlyrics_description = "PetitLyrics: Offers plenty of time-synced Japanese and some international lyrics.";
 
 musixmatch_user_token = "Musixmatch User Token";
@@ -89,7 +89,7 @@ livecontainer_sharing_description = "Share to LiveContainer and copy the URL if 
 
 /* MARK: Premium PopUps */
 
-have_premium_popup = "It looks like you have an active Premium subscription, so the tweak won't patch the data or restrict the use of Premium server-sided features. You can manage this in the EeveeSpotify settings.";
+have_premium_popup = "It looks like you have an active Premium subscription, so the tweak won't patch the data or restrict the use of Premium server-sided features. You can manage this in the SPMod settings.";
 
 high_audio_quality_popup = "Very high audio quality is server-sided and is not available with this tweak.";
 playlist_downloading_popup = "Native playlist downloading is server-sided and is not available with this tweak. You can download podcast episodes and local playlists though.";
@@ -138,4 +138,84 @@ ad_free_music_listening = "Ad-free music listening";
 play_songs_in_any_order = "Play songs in any order";
 organize_listening_queue = "Organize listening queue";
 
-payment_notice = "EeveeSpotify applies patches to unlock certain Premium features. It's free.";
+payment_notice = "SPMod applies patches to unlock certain Premium features. It's free.";
+
+/* MARK: SPMod */
+
+section_general = "General";
+section_music = "Music";
+section_appearance = "Appearance";
+section_advanced = "Advanced";
+
+general = "General";
+playback = "Playback";
+themes = "Themes";
+backup = "Backup";
+
+language = "Language";
+language_automatic = "Automatic (System)";
+language_description = "Language of the SPModulation settings and tweak messages.";
+
+cancel = "Cancel";
+later = "Later";
+restart_now = "Restart Now";
+restart_prompt_title = "Restart Required";
+restart_prompt_message = "Restart Spotify to apply this change.";
+
+reset_confirm_title_1 = "Reset Data?";
+reset_confirm_message_1 = "Spotify's cached data, its configuration and the lyrics cache will be cleared.";
+reset_confirm_button_1 = "Continue";
+reset_confirm_title_2 = "Are You Sure?";
+reset_confirm_message_2 = "Downloaded content and caches will be removed and the app will close.";
+reset_confirm_button_2 = "I'm Sure";
+reset_confirm_title_3 = "Last Confirmation";
+reset_confirm_message_3 = "This can't be undone. Reset now?";
+
+keep_screen_on = "Keep Screen On";
+keep_screen_on_description = "Prevent the screen from turning off while music is playing and lyrics are visible.";
+disable_canvas = "Disable Canvas";
+disable_canvas_description = "Stop loading Canvas videos on the player to save battery and data.";
+copy_track_section = "Copy Track Info";
+copy_on_shake = "Shake to Copy";
+copy_on_shake_description = "Shake your device to copy information about the current track.";
+copy_format = "Copied Content";
+copy_format_link = "Link";
+copy_format_title_artist = "Title – Artist";
+copy_format_both = "Title – Artist + Link";
+copy_format_track_id = "Track ID";
+copied_to_clipboard = "Copied to Clipboard";
+copy_no_track = "No track is playing";
+
+theme_preview = "Preview";
+theme_presets = "Themes";
+theme_presets_description = "Themes replace Spotify's background, surface and accent colors.";
+theme_custom_colors = "Custom Colors";
+theme_background = "Background";
+theme_surface = "Surfaces";
+theme_accent = "Accent";
+theme_spotify = "Spotify (Default)";
+theme_midnight = "Midnight";
+theme_violet = "Violet";
+theme_forest = "Forest";
+theme_sunset = "Sunset";
+theme_rose = "Rose";
+theme_custom = "Custom";
+custom_accent_color = "Custom Accent Color";
+accent_color = "Accent Color";
+accent_color_description = "Replace Spotify green with the color of your choice, on top of the selected theme.";
+
+lyrics_fallback_order = "Fallback Sources";
+lyrics_fallback_order_description = "If %@ can't load the lyrics, the enabled sources are tried in this order. Musixmatch requires a user token.";
+lyrics_cache = "Cache";
+lyrics_cache_enabled = "Save Lyrics";
+lyrics_cache_description = "Loaded lyrics are kept on the device for 30 days so they open faster and work offline.";
+lyrics_cache_clear = "Clear Lyrics Cache";
+
+backup_export = "Export Settings";
+backup_export_description = "Create a file with all your SPModulation settings, including your Musixmatch token. Keep it private.";
+backup_import = "Import Settings";
+backup_import_description = "Restore settings from an exported file. Spotify will need to restart.";
+backup_export_failed = "Export Failed";
+backup_import_success = "%d settings restored. Restart Spotify to apply them.";
+backup_import_failed = "Import Failed";
+backup_import_failed_description = "This file isn't a valid SPMod settings backup.";

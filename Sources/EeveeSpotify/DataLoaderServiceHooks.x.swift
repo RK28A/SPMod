@@ -1,6 +1,8 @@
 import Foundation
 import Orion
 
+private let canvasDisabled = UserDefaults.disableCanvas
+
 class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
     static let targetName = "SPTDataLoaderService"
     
@@ -25,6 +27,11 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         didCompleteWithError error: Error?
     ) {
         guard let url = task.currentRequest?.url else {
+            return
+        }
+        
+        if canvasDisabled && url.isCanvas {
+            orig.URLSession(session, task: task, didCompleteWithError: URLError(.cancelled))
             return
         }
         
@@ -121,6 +128,10 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
             return
         }
 
+        if canvasDisabled && url.isCanvas {
+            return
+        }
+        
         if shouldModify(url) {
             URLSessionHelper.shared.setOrAppend(data, for: url)
             return
