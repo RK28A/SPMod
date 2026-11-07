@@ -4,11 +4,11 @@ class OfflineHelper {
     static private let applicationSupportDirectory = FileManager.default.urls(
         for: .applicationSupportDirectory, in: .userDomainMask
     )
-    .first!
+    .first ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
     
     static private let cachesDirectory = FileManager.default.urls(
         for: .cachesDirectory, in: .userDomainMask
-    ).first!
+    ).first ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Caches")
     
     //
     

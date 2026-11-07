@@ -5,7 +5,9 @@ struct AnonymousTokenHelper {
     private static let apiUrl = "https://apic.musixmatch.com"
     
     static func requestAnonymousMusixmatchToken() -> AnyPublisher<String, Error> {
-        let url = URL(string: "\(apiUrl)/ws/1.1/token.get?app_id=\(UIDevice.current.musixmatchAppId)")!
+        guard let url = URL(string: "\(apiUrl)/ws/1.1/token.get?app_id=\(UIDevice.current.musixmatchAppId)") else {
+            return Fail(error: URLError(.badURL)).eraseToAnyPublisher()
+        }
         
         return URLSession.shared.dataTaskPublisher(for: url)
             .map(\.data)

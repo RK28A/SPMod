@@ -46,17 +46,17 @@ extension String {
     }
 
     func firstMatch(_ pattern: String) -> NSTextCheckingResult? {
-        try! NSRegularExpression(pattern: pattern)
+        (try? NSRegularExpression(pattern: pattern))?
             .firstMatch(in: self, range: self.range)
     }
 
     func removeMatches(_ pattern: String) -> String {
-        try! NSRegularExpression(pattern: pattern)
+        (try? NSRegularExpression(pattern: pattern))?
             .stringByReplacingMatches(
                 in: self, 
                 range: self.range,
                 withTemplate: ""
-            )
+            ) ?? self
     }
     
     var isCanBeRomanizedLanguage: Bool {
@@ -66,10 +66,16 @@ extension String {
     var hexadecimal: Data? {
         var data = Data(capacity: count / 2)
         
-        let regex = try! NSRegularExpression(pattern: "[0-9a-f]{1,2}", options: .caseInsensitive)
+        guard let regex = try? NSRegularExpression(pattern: "[0-9a-f]{1,2}", options: .caseInsensitive) else {
+            return nil
+        }
         regex.enumerateMatches(in: self, range: NSRange(startIndex..., in: self)) { match, _, _ in
-            let byteString = (self as NSString).substring(with: match!.range)
-            let num = UInt8(byteString, radix: 16)!
+            guard
+                let match = match,
+                let num = UInt8((self as NSString).substring(with: match.range), radix: 16)
+            else {
+                return
+            }
             data.append(num)
         }
         

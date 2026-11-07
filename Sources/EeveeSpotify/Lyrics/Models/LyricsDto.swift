@@ -35,7 +35,7 @@ struct LyricsDto {
             lyricsData.lines = sortedLines.map { line in
                 LyricsLine.with {
                     $0.content = (shouldRomanize && romanization == .canBeRomanized)
-                        ? line.content.applyingTransform(.toLatin, reverse: false)!
+                        ? (line.content.applyingTransform(.toLatin, reverse: false) ?? line.content)
                         : line.content
                     $0.offsetMs = Int32(line.offsetMs ?? 0)
                 }

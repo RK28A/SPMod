@@ -5,8 +5,9 @@ extension UserDefaults {
     
     static var lyricsSource: LyricsSource {
         get {
-            if let rawValue = container.object(forKey: lyricsSourceKey) as? Int {
-                return LyricsSource(rawValue: rawValue)!
+            if let rawValue = container.object(forKey: lyricsSourceKey) as? Int,
+               let source = LyricsSource(rawValue: rawValue) {
+                return source
             }
 
             return LyricsSource.defaultSource

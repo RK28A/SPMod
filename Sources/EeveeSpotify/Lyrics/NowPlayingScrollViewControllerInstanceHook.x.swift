@@ -13,8 +13,9 @@ class LegacyNowPlayingPlatformSwiftServiceImplementationHook: ClassHook<NSObject
     static let targetName = "NowPlaying_PlatformImpl.NowPlayingPlatformSwiftServiceImplementation"
     
     func provideStatefulPlayer() -> StatefulPlayerImplementation {
-        statefulPlayer = orig.provideStatefulPlayer()
-        return statefulPlayer!
+        let player = orig.provideStatefulPlayer()
+        statefulPlayer = player
+        return player
     }
 }
 
@@ -23,8 +24,9 @@ class NowPlayingPlatformSwiftServiceImplementationHook: ClassHook<NSObject> {
     static let targetName = "NowPlaying_PlatformImpl.NowPlayingPlatformSwiftServiceImplementation"
     
     func provideStatefulPlayerWithFeatureIdentifier(_ identifier: NSString) -> StatefulPlayerImplementation {
-        statefulPlayer = orig.provideStatefulPlayerWithFeatureIdentifier(identifier)
-        return statefulPlayer!
+        let player = orig.provideStatefulPlayerWithFeatureIdentifier(identifier)
+        statefulPlayer = player
+        return player
     }
 }
 

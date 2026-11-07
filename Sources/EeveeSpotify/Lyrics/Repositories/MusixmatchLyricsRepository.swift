@@ -45,7 +45,10 @@ class MusixmatchLyricsRepository: LyricsRepository {
         let queryString = finalQuery.queryString
         stringUrl += "?\(queryString)"
 
-        let request = URLRequest(url: URL(string: stringUrl)!)
+        guard let requestUrl = URL(string: stringUrl) else {
+            throw LyricsError.unknownError
+        }
+        let request = URLRequest(url: requestUrl)
 
         let semaphore = DispatchSemaphore(value: 0)
         var data: Data?
@@ -64,7 +67,10 @@ class MusixmatchLyricsRepository: LyricsRepository {
             throw error
         }
 
-        return data!
+        guard let data = data else {
+            throw LyricsError.decodingError
+        }
+        return data
     }
 
     //
@@ -132,8 +138,9 @@ class MusixmatchLyricsRepository: LyricsRepository {
         }
 
         return translations.reduce(into: [:]) { dictionary, translation in
-            dictionary[translation["subtitle_matched_line"] as! String] =
-                translation["description"] as? String
+            if let matchedLine = translation["subtitle_matched_line"] as? String {
+                dictionary[matchedLine] = translation["description"] as? String
+            }
         }
     }
 
@@ -176,8 +183,9 @@ class MusixmatchLyricsRepository: LyricsRepository {
             let subtitleLanguage = subtitle["subtitle_language"] as? String,
             let subtitleBody = subtitle["subtitle_body"] as? String,
             let subtitles = try? JSONDecoder().decode(
-                [MusixmatchSubtitle].self, from: subtitleBody.data(using: .utf8)!
-            )
+                [MusixmatchSubtitle].self, from: Data(subtitleBody.utf8)
+            ),
+            let lastSubtitle = subtitles.last
         {
 
             let romanizationLanguage = "r\(subtitleLanguage.prefix(1))"
@@ -192,7 +200,7 @@ class MusixmatchLyricsRepository: LyricsRepository {
             lyricsLines.append(
                 LyricsLineDto(
                     content: "",
-                    offsetMs: Int(subtitles.last!.time.total * 1000)
+                    offsetMs: Int(lastSubtitle.time.total * 1000)
                 )
             )
 
@@ -200,7 +208,7 @@ class MusixmatchLyricsRepository: LyricsRepository {
                 let subtitleTranslated = subtitle["subtitle_translated"] as? [String: Any],
                 let subtitleTranslatedBody = subtitleTranslated["subtitle_body"] as? String,
                 let subtitlesTranslated = try? JSONDecoder().decode(
-                    [MusixmatchSubtitle].self, from: subtitleTranslatedBody.data(using: .utf8)!
+                    [MusixmatchSubtitle].self, from: Data(subtitleTranslatedBody.utf8)
                 )
             {
                 if selectedLanguage == romanizationLanguage {

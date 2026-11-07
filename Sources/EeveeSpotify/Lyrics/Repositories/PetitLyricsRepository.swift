@@ -19,7 +19,10 @@ class PetitLyricsRepository: LyricsRepository {
         finalData["clientAppId"] = "p1110417"
         finalData["terminalType"] = 10
         
-        var request = URLRequest(url: URL(string: url)!)
+        guard let requestUrl = URL(string: url) else {
+            throw LyricsError.unknownError
+        }
+        var request = URLRequest(url: requestUrl)
         
         request.httpMethod = "POST"
         request.httpBody = finalData.queryString.data(using: .utf8)
@@ -41,7 +44,7 @@ class PetitLyricsRepository: LyricsRepository {
             throw error
         }
         
-        guard let response = try? XMLDecoder().decode(PetitResponse.self, from: data!) else {
+        guard let data = data, let response = try? XMLDecoder().decode(PetitResponse.self, from: data) else {
             throw LyricsError.decodingError
         }
 
@@ -110,7 +113,7 @@ class PetitLyricsRepository: LyricsRepository {
                 lines: lyrics.lines.map {
                     LyricsLineDto(
                         content: $0.linestring,
-                        offsetMs: $0.words.first!.starttime
+                        offsetMs: $0.words.first?.starttime ?? 0
                     )
                 },
                 timeSynced: true,
@@ -120,7 +123,7 @@ class PetitLyricsRepository: LyricsRepository {
             )
             
         case .plain:
-            let stringLyrics = String(data: lyricsData, encoding: .utf8)!
+            let stringLyrics = String(decoding: lyricsData, as: UTF8.self)
             let lines = stringLyrics.components(separatedBy: "\n")
             
             return LyricsDto(
