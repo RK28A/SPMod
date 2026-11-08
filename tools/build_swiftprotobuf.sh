@@ -4,7 +4,11 @@ version="$1"
 out="$2"
 
 work="$(mktemp -d)"
-git clone --quiet --depth 1 --branch "$version" https://github.com/apple/swift-protobuf.git "$work/swift-protobuf"
+n=1
+until git clone --quiet --depth 1 --branch "$version" https://github.com/apple/swift-protobuf.git "$work/swift-protobuf"; do
+  [ $n -ge 5 ] && echo "swift-protobuf clone failed after $n attempts" && exit 1
+  echo "swift-protobuf clone attempt $n failed, retrying in 10s"; n=$((n+1)); sleep 10
+done
 
 sdk="$(xcrun --sdk iphoneos --show-sdk-path)"
 framework="$out/SwiftProtobuf.framework"

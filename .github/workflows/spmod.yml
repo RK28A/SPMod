@@ -120,16 +120,29 @@ jobs:
 
       - name: Setup ivinject and ipapatch
         run: |
-          git clone --depth 1 https://github.com/Tyilo/insert_dylib.git
+          retry() {
+            local n=1
+            until "$@"; do
+              if [ $n -ge 5 ]; then
+                echo "::error::Command failed after $n attempts: $*"
+                return 1
+              fi
+              echo "Attempt $n failed, retrying in 10s: $*"
+              n=$((n + 1))
+              sleep 10
+            done
+          }
+
+          retry git clone --depth 1 https://github.com/Tyilo/insert_dylib.git
           xcrun clang -x c -arch arm64 -O2 ./insert_dylib/insert_dylib/main.c -o insert-dylib
           sudo mv insert-dylib /usr/local/bin/insert-dylib
           sudo chmod +x /usr/local/bin/insert-dylib
-          git clone --depth 1 https://github.com/whoeevee/ivinject.git
+          retry git clone --depth 1 https://github.com/whoeevee/ivinject.git
           cp -r ./ivinject/KnownFrameworks ~/.ivinject
-          wget --no-verbose https://github.com/whoeevee/ivinject/releases/download/first/ivinject-arm64
+          retry wget --no-verbose -O ivinject-arm64 https://github.com/whoeevee/ivinject/releases/download/first/ivinject-arm64
           sudo mv ivinject-arm64 /usr/local/bin/ivinject
           sudo chmod +x /usr/local/bin/ivinject
-          wget --no-verbose https://github.com/asdfzxcvbn/ipapatch/releases/download/v2.1.0/ipapatch.macos-arm64
+          retry wget --no-verbose -O ipapatch.macos-arm64 https://github.com/asdfzxcvbn/ipapatch/releases/download/v2.1.0/ipapatch.macos-arm64
           sudo mv ipapatch.macos-arm64 /usr/local/bin/ipapatch
           sudo chmod +x /usr/local/bin/ipapatch
 
