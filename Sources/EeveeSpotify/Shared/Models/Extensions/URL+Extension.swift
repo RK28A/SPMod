@@ -34,11 +34,15 @@ extension URL {
     }
 
     var isAd: Bool {
+        if let host = self.host?.lowercased(), host == "aet.spotify.com" || host.hasPrefix("adeventreceiver") {
+            return true
+        }
         let path = self.path.lowercased()
-        return path.contains("/ads/v3")
-            || path.contains("/ads/v2")
+        return path.contains("/ads/")
+            || path.hasSuffix("/ads")
             || path.contains("/ad-logic")
             || path.contains("/adeventreceiver")
             || path.contains("/sponsored")
+            || path.contains("spotify:ad:")
     }
 }
