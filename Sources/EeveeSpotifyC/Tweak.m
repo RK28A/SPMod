@@ -125,8 +125,6 @@ __attribute__((constructor)) static void init() {
         spmod_installCanvasHook();
     }
 
-    NSString *privacyMode = [defaults stringForKey:@"privacyMode"];
-    if (![privacyMode isEqualToString:@"off"]) {
-        spmod_installPrivacyHook();
-    }
+    // Ad blocking is always on, so the privacy protocol is always installed.
+    spmod_installPrivacyHook();
 }

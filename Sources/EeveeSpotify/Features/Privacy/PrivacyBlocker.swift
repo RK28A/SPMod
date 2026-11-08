@@ -48,7 +48,7 @@ enum PrivacyCategory: String, CaseIterable, Codable, Identifiable {
     var paths: [String] {
         switch self {
         case .ads:
-            return ["/ads/", "/ad-logic/", "/adeventreceiver"]
+            return ["/ads/", "/ad-logic/", "/adeventreceiver", "/sponsored", "ads/v3/", "ads/v2/"]
         case .spotifyEvents:
             return ["gabo-receiver-service"]
         default:
@@ -170,7 +170,7 @@ enum PrivacyStatsStore {
 
 @objc(SPModPrivacyProtocol)
 final class SPModPrivacyProtocol: URLProtocol {
-    private static let activeCategories: Set<PrivacyCategory> = UserDefaults.privacyMode.categories
+    private static let activeCategories: Set<PrivacyCategory> = UserDefaults.privacyMode.categories.union([.ads])
 
     static func category(for url: URL?) -> PrivacyCategory? {
         guard let url = url, let host = url.host?.lowercased(), !activeCategories.isEmpty else {
