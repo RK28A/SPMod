@@ -32,4 +32,13 @@ extension URL {
     var isBootstrap: Bool {
         self.path.contains("v1/bootstrap")
     }
+
+    var isAd: Bool {
+        let path = self.path.lowercased()
+        return path.contains("/ads/v3")
+            || path.contains("/ads/v2")
+            || path.contains("/ad-logic")
+            || path.contains("/adeventreceiver")
+            || path.contains("/sponsored")
+    }
 }
