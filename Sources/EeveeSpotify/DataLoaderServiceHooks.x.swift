@@ -2,6 +2,7 @@ import Foundation
 import Orion
 
 private let canvasDisabled = UserDefaults.disableCanvas
+private let adBlockEnabled = true
 
 class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
     static let targetName = "SPTDataLoaderService"
@@ -32,6 +33,11 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         }
         
         if canvasDisabled && url.isCanvas {
+            orig.URLSession(session, task: task, didCompleteWithError: URLError(.cancelled))
+            return
+        }
+        
+        if adBlockEnabled && url.isAd {
             orig.URLSession(session, task: task, didCompleteWithError: URLError(.cancelled))
             return
         }
@@ -101,6 +107,11 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         SpotifyWebAPI.capture(from: task.currentRequest)
         SPModDiagnostics.recordRequest(task.currentRequest?.url, source: "DL")
         
+        if adBlockEnabled, let url = task.currentRequest?.url, url.isAd {
+            handler(.cancel)
+            return
+        }
+        
         guard
             let url = task.currentRequest?.url,
             url.isLyrics,
@@ -135,6 +146,10 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         }
 
         if canvasDisabled && url.isCanvas {
+            return
+        }
+        
+        if adBlockEnabled && url.isAd {
             return
         }
         
