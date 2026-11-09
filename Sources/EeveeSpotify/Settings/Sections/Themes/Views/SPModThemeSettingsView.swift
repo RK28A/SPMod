@@ -9,6 +9,7 @@ struct SPModThemeSettingsView: View {
     @State private var nightMode = UserDefaults.nightModeConfig
     @State private var hidePremiumUpsells = UserDefaults.hidePremiumUpsells
     @State private var presets = SPModPresetStore.presets
+    @State private var animatedTheme = UserDefaults.animatedTheme
     
     private func timeBinding(_ keyPath: WritableKeyPath<NightModeConfig, Int>) -> Binding<Date> {
         Binding<Date>(
@@ -225,6 +226,13 @@ struct SPModThemeSettingsView: View {
                     ColorPicker("theme_surface".localized, selection: hexBinding(\.customSurface), supportsOpacity: false)
                     ColorPicker("theme_accent".localized, selection: hexBinding(\.customAccent), supportsOpacity: false)
                 }
+            }
+
+            Section(footer: Text("animated_theme_description".localized)) {
+                Toggle("animated_theme".localized, isOn: $animatedTheme)
+                    .onChange(of: animatedTheme) { value in
+                        UserDefaults.animatedTheme = value
+                    }
             }
 
             Section(footer: Text("accent_color_description".localized)) {

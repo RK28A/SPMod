@@ -557,3 +557,5 @@ preset_save_message = "Save the current theme under a name.";
 preset_name_placeholder = "Preset name";
 preset_saved = "Preset saved";
 preset_applied = "Applied %@";
+animated_theme = "Animated background";
+animated_theme_description = "Slowly moving gradient of your theme colours behind the SPMod menu. Colours reacting to the music's rhythm aren't possible.";

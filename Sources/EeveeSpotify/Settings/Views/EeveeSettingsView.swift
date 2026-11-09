@@ -210,7 +210,15 @@ struct EeveeSettingsView: View {
             .padding(.top, 8)
             .padding(.bottom, 24)
         }
-        .background(Color.black.ignoresSafeArea())
+        .background(
+            Group {
+                if UserDefaults.animatedTheme {
+                    SPModAnimatedBackground()
+                } else {
+                    Color.black.ignoresSafeArea()
+                }
+            }
+        )
         .sheet(isPresented: $isPresentingContributorsSheet) {
             EeveeContributorsSheetView()
         }
