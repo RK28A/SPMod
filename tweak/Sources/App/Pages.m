@@ -28,12 +28,12 @@
 #import "Redesigned/Player/Player.h"
 #import "Redesigned/Kit/SGRAccent.h"
 
-NSString *const SGRedesignedUIInfo = @"Taurus's redesigned look, leaning towards Apple Music's style. It is not compatible with the legacy look's settings.\n\nThe legacy look gives you more freedom, yet still looks like Spotify.";
+NSString *const SGRedesignedUIInfo = @"SPMod's redesigned look, leaning towards Apple Music's style. It is not compatible with the legacy look's settings.\n\nThe legacy look gives you more freedom, yet still looks like Spotify.";
 NSNotificationName const SGSidebarBadgeTextDidChangeNotification = @"spotifyglass.sidebarBadgeTextDidChange";
 
 static NSString *sidebarBadgeText(void) {
     NSString *text = [NSUserDefaults.standardUserDefaults stringForKey:SGKeySidebarBadgeText];
-    return text.length ? text : @"Taurus";
+    return text.length ? text : @"SPMod";
 }
 
 static SGModRow *sidebarBadgeTextRow(void) {
@@ -41,7 +41,7 @@ static SGModRow *sidebarBadgeTextRow(void) {
         ^NSString *{ return sidebarBadgeText(); }, ^{
             UIViewController *top = SGTopController();
             UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Sidebar badge text"
-                message:@"Leave the field empty to use Taurus." preferredStyle:UIAlertControllerStyleAlert];
+                message:@"Leave the field empty to use SPMod." preferredStyle:UIAlertControllerStyleAlert];
             [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
                 field.text = sidebarBadgeText();
                 field.clearButtonMode = UITextFieldViewModeWhileEditing;
