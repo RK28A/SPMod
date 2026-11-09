@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIDesignRequiresCompatibility</key>
+	<false/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
+	<key>MusicHapticsSupported</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Share the player and lyrics with a browser on the same Wi-Fi, discover nearby playback devices, and host a Local Jam to listen together.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_spotify-ln-check._tcp</string>
+		<string>_spotify-connect._tcp</string>
+		<string>_googlecast._tcp</string>
+		<string>_taurusjam._tcp</string>
+		<string>_taurusjam._udp</string>
+	</array>
+	<key>NSMotionUsageDescription</key>
+	<string>Head gestures, spatial voice and motion-reactive effects use motion to respond to how you move.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Stream the current Spotify album artwork to an iDotMatrix display over Bluetooth.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Connect to an iDotMatrix display and stream the current Spotify album artwork.</string>
+</dict>
+</plist>
