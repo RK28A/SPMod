@@ -3,6 +3,45 @@
 #import "SGPageStyle.h"
 #import "SGGlowSwitch.h"
 #import "Core/SGCore.h"
+#import "Core/SGPrefs.h"
+
+static void installAnimatedBackground(UITableViewController *controller) {
+    if (!SGHidden(@"spotifyglass.animatedbg")) return;
+
+    CGRect screen = UIScreen.mainScreen.bounds;
+    UIView *background = [[UIView alloc] initWithFrame:screen];
+    background.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+
+    NSInteger stored = SGInt(@"spotifyglass.accent", -1);
+    UIColor *accent = stored < 0
+        ? [UIColor colorWithRed:0.11 green:0.84 blue:0.38 alpha:1]
+        : [UIColor colorWithRed:((stored >> 16) & 0xFF) / 255.0
+                          green:((stored >> 8) & 0xFF) / 255.0
+                           blue:(stored & 0xFF) / 255.0
+                          alpha:1];
+
+    CAGradientLayer *gradient = [CAGradientLayer layer];
+    gradient.frame = CGRectMake(0, 0, CGRectGetWidth(screen), CGRectGetHeight(screen));
+    gradient.colors = @[
+        (id)UIColor.blackColor.CGColor,
+        (id)[accent colorWithAlphaComponent:0.45].CGColor,
+        (id)UIColor.blackColor.CGColor,
+    ];
+    gradient.startPoint = CGPointMake(0, 0);
+    gradient.endPoint = CGPointMake(1, 1);
+    gradient.locations = @[@0, @0.5, @1];
+    [background.layer addSublayer:gradient];
+
+    CABasicAnimation *move = [CABasicAnimation animationWithKeyPath:@"locations"];
+    move.fromValue = @[@(-0.3), @0, @0.3];
+    move.toValue = @[@0.7, @1, @1.3];
+    move.duration = 7;
+    move.autoreverses = YES;
+    move.repeatCount = HUGE_VALF;
+    [gradient addAnimation:move forKey:@"spmodAnimatedBackground"];
+
+    controller.tableView.backgroundView = background;
+}
 
 NSString *const SGRestartNote = @"Changes apply after you restart Spotify.";
 
@@ -527,6 +566,7 @@ static void showProgress(UITableViewCell *cell, SGModRow *row, BOOL animated) {
     [super viewDidLoad];
     self.tableView.tableHeaderView = _intro;
     self.tableView.tableFooterView = _footer;
+    installAnimatedBackground(self);
 }
 
 - (void)viewWillLayoutSubviews {
