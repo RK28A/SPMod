@@ -9,6 +9,8 @@ struct EeveeSettingsView: View {
 
     @State private var hasShownCommonIssuesTip = UserDefaults.hasShownCommonIssuesTip
     @State private var isClearingData = false
+    @State private var latestVersion: String?
+    @State private var isPresentingContributorsSheet = false
 
     private func pushSettingsController(with view: any View, title: String) {
         let viewController = EeveeSettingsViewController(
@@ -24,26 +26,35 @@ struct EeveeSettingsView: View {
         UIView.appearance().tintColor = UIColor(EeveeSettingsView.spotifyAccentColor)
     }
 
-    @ViewBuilder private func navigationRow(
+    private func navRow(
         _ titleKey: String,
         icon: String,
         color: Color,
         subtitle: String? = nil,
+        showsDivider: Bool = true,
         view: @escaping () -> any View
-    ) -> some View {
-        Button {
+    ) -> SPModNavRow {
+        SPModNavRow(
+            title: titleKey.localized,
+            subtitle: subtitle?.localized,
+            icon: icon,
+            color: color,
+            showsDivider: showsDivider
+        ) {
             pushSettingsController(with: view(), title: titleKey.localized)
-        } label: {
-            NavigationSectionView(
-                color: color,
-                title: titleKey.localized,
-                imageSystemName: icon,
-                subtitle: subtitle?.localized
-            )
         }
-        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+    }
+
+    private func loadVersion() async {
+        guard
+            let release = try? await GitHubHelper.shared.getLatestRelease(),
+            release.tagName.hasPrefix("spmod-v"),
+            let version = release.tagName.dropFirst(7).split(separator: "-").first
+        else {
+            latestVersion = EeveeSpotify.version
+            return
+        }
+        latestVersion = String(version)
     }
 
     private func resetData() {
@@ -78,87 +89,129 @@ struct EeveeSettingsView: View {
         }
     }
 
+    @ViewBuilder private func sectionLabel(_ key: String) -> some View {
+        Text(key.localized)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(SPModPalette.secondaryText)
+            .textCase(.uppercase)
+            .padding(.leading, 6)
+            .padding(.bottom, 2)
+    }
+
     var body: some View {
-        List {
-            EeveeSettingsVersionView()
-                .listRowBackground(Color.clear)
-
-            if !hasShownCommonIssuesTip {
-                CommonIssuesTipView(
-                    onDismiss: {
-                        hasShownCommonIssuesTip = true
-                        UserDefaults.hasShownCommonIssuesTip = true
-                    }
+        ScrollView {
+            VStack(spacing: 22) {
+                SPModHeroHeader(
+                    version: EeveeSpotify.version,
+                    latestVersion: latestVersion,
+                    premiumActive: UserDefaults.patchType.isPatching,
+                    adBlockActive: true,
+                    onContributors: { isPresentingContributorsSheet = true }
                 )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
 
-            Section {
-                navigationRow("general", icon: "gearshape.fill", color: .gray, subtitle: "general_subtitle") {
-                    SPModGeneralSettingsView()
+                if !hasShownCommonIssuesTip {
+                    CommonIssuesTipView(
+                        onDismiss: {
+                            hasShownCommonIssuesTip = true
+                            UserDefaults.hasShownCommonIssuesTip = true
+                        }
+                    )
                 }
-            }
 
-            Section {
-                navigationRow("lyrics", icon: "quote.bubble", color: .blue, subtitle: "lyrics_subtitle") {
-                    EeveeLyricsSettingsView()
-                }
-                navigationRow("playback", icon: "play.circle", color: .green, subtitle: "playback_subtitle") {
-                    SPModPlaybackSettingsView()
-                }
-                navigationRow("listening", icon: "chart.bar", color: Color(hex: "#FF9F0A"), subtitle: "listening_subtitle") {
-                    SPModListeningSettingsView()
-                }
-                navigationRow("playlists", icon: "music.note.list", color: Color(hex: "#30D158"), subtitle: "playlists_subtitle") {
-                    SPModPlaylistsView()
-                }
-            }
-
-            Section {
-                navigationRow("themes", icon: "paintbrush", color: Color(hex: "#FF5FA2"), subtitle: "themes_subtitle") {
-                    SPModThemeSettingsView()
-                }
-            }
-
-            Section {
-                navigationRow("privacy", icon: "hand.raised", color: Color(hex: "#5E5CE6"), subtitle: "privacy_subtitle") {
-                    SPModPrivacySettingsView()
-                }
-                navigationRow("backup", icon: "externaldrive", color: Color(hex: "#64D2FF"), subtitle: "backup_subtitle") {
-                    SPModBackupSettingsView()
-                }
-                navigationRow("experiments", icon: "sparkles", color: .purple, subtitle: "experiments_subtitle") {
-                    EeveeExperimentsSettingsView()
-                }
-            }
-
-            Section(footer: Text("reset_data_description".localized)) {
-                Button {
-                    resetData()
-                } label: {
-                    if isClearingData {
-                        ProgressView()
-                    }
-                    else {
-                        Text("reset_data".localized)
-                            .foregroundColor(.red)
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionLabel("general")
+                    SPModCard {
+                        navRow("general", icon: "gearshape.fill", color: .gray, subtitle: "general_subtitle", showsDivider: false) {
+                            SPModGeneralSettingsView()
+                        }
                     }
                 }
-                .disabled(isClearingData)
-                .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionLabel("lyrics")
+                    SPModCard {
+                        navRow("lyrics", icon: "quote.bubble.fill", color: .blue, subtitle: "lyrics_subtitle") {
+                            EeveeLyricsSettingsView()
+                        }
+                        navRow("playback", icon: "play.circle.fill", color: .green, subtitle: "playback_subtitle") {
+                            SPModPlaybackSettingsView()
+                        }
+                        navRow("listening", icon: "chart.bar.fill", color: Color(hex: "#FF9F0A"), subtitle: "listening_subtitle") {
+                            SPModListeningSettingsView()
+                        }
+                        navRow("playlists", icon: "music.note.list", color: Color(hex: "#30D158"), subtitle: "playlists_subtitle", showsDivider: false) {
+                            SPModPlaylistsView()
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionLabel("themes")
+                    SPModCard {
+                        navRow("themes", icon: "paintbrush.fill", color: Color(hex: "#FF5FA2"), subtitle: "themes_subtitle", showsDivider: false) {
+                            SPModThemeSettingsView()
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionLabel("privacy")
+                    SPModCard {
+                        navRow("privacy", icon: "hand.raised.fill", color: Color(hex: "#5E5CE6"), subtitle: "privacy_subtitle") {
+                            SPModPrivacySettingsView()
+                        }
+                        navRow("backup", icon: "externaldrive.fill", color: Color(hex: "#64D2FF"), subtitle: "backup_subtitle") {
+                            SPModBackupSettingsView()
+                        }
+                        navRow("experiments", icon: "sparkles", color: .purple, subtitle: "experiments_subtitle", showsDivider: false) {
+                            EeveeExperimentsSettingsView()
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Button(action: resetData) {
+                        HStack {
+                            Spacer()
+                            if isClearingData {
+                                ProgressView()
+                            } else {
+                                Text("reset_data".localized)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.red)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(SPModPalette.cardBackground)
+                        )
+                    }
+                    .disabled(isClearingData)
+
+                    Text("reset_data_description".localized)
+                        .font(.system(size: 12))
+                        .foregroundColor(SPModPalette.secondaryText)
+                        .padding(.horizontal, 6)
+                }
+
+                NonIPadSpacerView()
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
         }
-        .listStyle(PlainListStyle())
-        .environment(\.defaultMinListRowHeight, 0)
-
+        .background(Color.black.ignoresSafeArea())
+        .sheet(isPresented: $isPresentingContributorsSheet) {
+            EeveeContributorsSheetView()
+        }
         .animation(.default, value: isClearingData)
         .animation(.default, value: hasShownCommonIssuesTip)
-
+        .animation(.default, value: latestVersion)
         .onAppear {
             WindowHelper.shared.overrideUserInterfaceStyle(.dark)
+            Task { await loadVersion() }
         }
     }
 }
