@@ -1,4 +1,4 @@
-name: Build IPA from your own Spotify IPA
+name: Build SPMod IPA
 
 on:
   workflow_dispatch:
@@ -7,11 +7,16 @@ on:
         description: "Direct link to a decrypted Spotify IPA"
         required: true
         type: string
+      display_name:
+        description: "App name"
+        default: "SPMod"
+        required: true
+        type: string
       upload_method:
         description: "Where to put the result"
-        default: artifacts
+        default: both
         type: choice
-        options: [artifacts, filebin, both]
+        options: [artifacts, filebin, both, release]
 
 env:
   THEOS: ${{ github.workspace }}/theos
@@ -19,10 +24,14 @@ env:
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
       - uses: levibostian/action-hide-sensitive-inputs@v1
+        with:
+          exclude_inputs: display_name,upload_method
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -45,22 +54,37 @@ jobs:
           curl -fsSL "${{ inputs.ipa_url }}" -o ipa/spotify.ipa
           case "$(file --mime-type -b ipa/spotify.ipa)" in application/zip|application/x-ios-app) ;; *) echo "::error::Not an IPA"; exit 1 ;; esac
 
-      - run: make release
+      - name: Build SPMod IPA
+        env:
+          DISPLAY_NAME: ${{ inputs.display_name }}
+        run: |
+          mkdir -p out
+          bash ./scripts/pipeline.sh ipa/spotify.ipa --no-flex --name "$DISPLAY_NAME" -o "out/${DISPLAY_NAME}.ipa"
+          ls -lh out/*.ipa
 
       - uses: actions/upload-artifact@v5
-        if: inputs.upload_method != 'filebin'
+        if: inputs.upload_method == 'artifacts' || inputs.upload_method == 'both'
         with:
-          name: spoti.ipa
+          name: SPMod.ipa
           path: out/*.ipa
           if-no-files-found: error
 
       - name: Upload to filebin.net
-        if: inputs.upload_method != 'artifacts'
+        if: inputs.upload_method == 'filebin' || inputs.upload_method == 'both'
         run: |
-          BIN="spotifyglass-${{ github.run_id }}"
+          BIN="spmod-${{ github.run_id }}"
           echo "### filebin.net download" >> "$GITHUB_STEP_SUMMARY"
           for f in out/*.ipa; do
             curl -fsS -X POST -H "Content-Type: application/octet-stream" --data-binary "@$f" "https://filebin.net/$BIN/$(basename "$f")" >/dev/null
             echo "- https://filebin.net/$BIN/$(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
           done
           echo "- _filebin deletes bins after a few days of inactivity, download promptly._" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Draft GitHub release
+        if: inputs.upload_method == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: spmod-${{ github.run_number }}
+          name: SPMod (${{ github.run_number }})
+          files: out/*.ipa
+          draft: true
