@@ -3,7 +3,7 @@ name: Build check
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, better-SPMod]
     paths:
       - "Sources/**"
       - "Makefile"
