@@ -2,6 +2,7 @@
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "Appearance.h"
+#import "Shared/Presets/SGPresets.h"
 
 static void chooseAccent(void) {
     if (!SGAccentColor()) {
@@ -24,5 +25,6 @@ NSArray<SGModRow *> *SGNativeAppearanceRows(void) {
     return @[
         SGWithSymbol(SGOptionRow(@"AMOLED background", nil, SGKeyAmoled), @"moon"),
         SGWithSymbol(SGStatActionRow(@"Accent colour", nil, ^NSString *{ return SGAccentLabel(); }, ^{ chooseAccent(); }), @"paintpalette"),
+        SGPresetsRow(),
     ];
 }

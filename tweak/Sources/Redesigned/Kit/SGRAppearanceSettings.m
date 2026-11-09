@@ -4,6 +4,7 @@
 #import "SGRAccent.h"
 #import "Redesigned/Home/Home.h"
 #import "Redesigned/Navbar/Navbar.h"
+#import "Shared/Presets/SGPresets.h"
 
 static void chooseAccent(void) {
     if (!SGRAccentColor() && ![[NSUserDefaults.standardUserDefaults arrayForKey:SGRKeyAccentRecent] count]) {
@@ -57,5 +58,6 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
         plainCheck,
         prettier,
         explicitMark,
+        SGPresetsRow(),
     ];
 }
