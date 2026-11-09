@@ -2,9 +2,37 @@ import SwiftUI
 
 struct SPModGeneralSettingsView: View {
     @State private var language = UserDefaults.spmodLanguage
+    @State private var playerLiquidGlass = UserDefaults.playerLiquidGlass
+    @State private var glassOpacity = UserDefaults.glassOpacity
 
     var body: some View {
         List {
+            Section(
+                header: Text("interface".localized),
+                footer: Text("player_liquid_glass_description".localized)
+            ) {
+                Toggle("player_liquid_glass".localized, isOn: $playerLiquidGlass)
+                    .onChange(of: playerLiquidGlass) { newValue in
+                        UserDefaults.playerLiquidGlass = newValue
+                        SPModAlertHelper.askRestart()
+                    }
+
+                if playerLiquidGlass {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("glass_tint_opacity".localized)
+                            Spacer()
+                            Text("\(Int(glassOpacity * 100))%")
+                                .foregroundColor(.gray)
+                        }
+                        Slider(value: $glassOpacity, in: 0.0...0.6, step: 0.02)
+                            .onChange(of: glassOpacity) { newValue in
+                                UserDefaults.glassOpacity = newValue
+                            }
+                    }
+                }
+            }
+
             Section(
                 header: Text("language".localized),
                 footer: Text("language_description".localized)

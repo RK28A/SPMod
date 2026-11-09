@@ -79,6 +79,7 @@ struct EeveeSpotify: Tweak {
         
         SPModulationShortcut.start()
         activateEeveeAdBlockerExtended()
+        activatePlayerRedesign()
         CopyTrackManager.start()
         ScreenAwakeManager.start()
         ListeningTracker.start()

@@ -97,10 +97,26 @@ extension UserDefaults {
     static let listeningCollectionEnabledKey = "listeningCollectionEnabled"
     static let hidePremiumUpsellsKey = "hidePremiumUpsells"
     static let playerQuickAddButtonKey = "playerQuickAddButton"
+    static let playerLiquidGlassKey = "playerLiquidGlass"
 
     static var playerQuickAddButton: Bool {
         get { container.object(forKey: playerQuickAddButtonKey) as? Bool ?? true }
         set { container.set(newValue, forKey: playerQuickAddButtonKey) }
+    }
+
+    static var playerLiquidGlass: Bool {
+        get { container.object(forKey: playerLiquidGlassKey) as? Bool ?? true }
+        set { container.set(newValue, forKey: playerLiquidGlassKey) }
+    }
+
+    static let glassOpacityKey = "glassOpacity"
+
+    static var glassOpacity: Double {
+        get {
+            let value = container.object(forKey: glassOpacityKey) as? Double ?? 0.22
+            return min(max(value, 0.0), 0.6)
+        }
+        set { container.set(min(max(newValue, 0.0), 0.6), forKey: glassOpacityKey) }
     }
 
 
@@ -136,6 +152,7 @@ extension UserDefaults {
         listeningCollectionEnabledKey,
         hidePremiumUpsellsKey,
         playerQuickAddButtonKey,
+        playerLiquidGlassKey,
         "shakeAction",
         "smartShuffleOptions",
         "quickAddLastPlaylist",

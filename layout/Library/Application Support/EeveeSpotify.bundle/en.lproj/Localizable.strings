@@ -515,3 +515,7 @@ themes_subtitle = "Themes · Accent · Night Mode";
 privacy_subtitle = "Tracking · Local data";
 backup_subtitle = "Auto backup · Export · Import";
 experiments_subtitle = "Instagram · LiveContainer";
+interface = "Interface";
+player_liquid_glass = "Liquid Glass player";
+player_liquid_glass_description = "A frosted glass background and rounded artwork on the Now Playing screen. The glass is tinted with your current theme accent colour. Restart required.";
+glass_tint_opacity = "Tint opacity";
