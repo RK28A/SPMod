@@ -5,6 +5,7 @@ struct SPModPrivacySettingsView: View {
     @State private var custom = UserDefaults.privacyCustomCategories
     @State private var stats = PrivacyStatsStore.snapshot()
     @State private var logsEnabled = UserDefaults.spmodLogsEnabled
+    @State private var declutter = UserDefaults.declutterEnabled
     @State private var hasPendingChanges = false
 
     private let dateFormatter: DateFormatter = {
@@ -68,6 +69,13 @@ struct SPModPrivacySettingsView: View {
                     }
                     .padding(.vertical, 2)
                 }
+            }
+
+            Section(
+                header: Text("declutter".localized),
+                footer: Text("declutter_description".localized)
+            ) {
+                Toggle("declutter_enabled".localized, isOn: $declutter)
             }
 
             if hasPendingChanges {
@@ -163,6 +171,10 @@ struct SPModPrivacySettingsView: View {
         }
         .onChange(of: logsEnabled) { value in
             UserDefaults.spmodLogsEnabled = value
+        }
+        .onChange(of: declutter) { value in
+            UserDefaults.declutterEnabled = value
+            hasPendingChanges = true
         }
     }
 }

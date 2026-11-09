@@ -109,6 +109,13 @@ extension UserDefaults {
         set { container.set(newValue, forKey: playerLiquidGlassKey) }
     }
 
+    static let declutterEnabledKey = "declutterEnabled"
+
+    static var declutterEnabled: Bool {
+        get { container.object(forKey: declutterEnabledKey) as? Bool ?? false }
+        set { container.set(newValue, forKey: declutterEnabledKey) }
+    }
+
     static let glassOpacityKey = "glassOpacity"
 
     static var glassOpacity: Double {
@@ -157,6 +164,7 @@ extension UserDefaults {
         enabledLabGroupsKey,
         artistBlockEnabledKey,
         "spmodBlockedArtists",
+        declutterEnabledKey,
         "shakeAction",
         "smartShuffleOptions",
         "quickAddLastPlaylist",
