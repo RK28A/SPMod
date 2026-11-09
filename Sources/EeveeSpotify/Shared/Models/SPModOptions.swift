@@ -173,6 +173,7 @@ extension UserDefaults {
         "spmodBlockedArtists",
         declutterEnabledKey,
         lockScreenLyricsEnabledKey,
+        SPModPresetStore.key,
         "shakeAction",
         "smartShuffleOptions",
         "quickAddLastPlaylist",
