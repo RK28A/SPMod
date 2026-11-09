@@ -28,7 +28,7 @@
 #import "Shared/Lossless/SLDownloadsPage.h"
 #import "Shared/ListeningStats/ListeningStats.h"
 #import "App/About/About.h"
-#import "App/Developer/Developer.h"
+#import "App/DevTools/Developer.h"
 #import "Pages.h"
 
 static const CGFloat kRowHeight = 56;
