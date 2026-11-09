@@ -546,3 +546,5 @@ artist_block_added = "%@ bloqué";
 declutter = "Épurer";
 declutter_enabled = "Masquer le superflu";
 declutter_description = "Masque les compteurs d'écoutes (social proof) et le carrousel vidéo dans la recherche, ainsi que les bulles d'incitation de Spotify. Redémarrage requis.";
+lock_screen_lyrics = "Paroles sur l'écran verrouillé";
+lock_screen_lyrics_description = "Affiche la ligne en cours sur l'écran verrouillé et dans l'info de lecture, à la place de l'artiste. Nécessite des paroles synchronisées (LRCLIB, NetEase ou Musixmatch). Redémarrage requis.";

@@ -116,6 +116,13 @@ extension UserDefaults {
         set { container.set(newValue, forKey: declutterEnabledKey) }
     }
 
+    static let lockScreenLyricsEnabledKey = "lockScreenLyricsEnabled"
+
+    static var lockScreenLyricsEnabled: Bool {
+        get { container.object(forKey: lockScreenLyricsEnabledKey) as? Bool ?? false }
+        set { container.set(newValue, forKey: lockScreenLyricsEnabledKey) }
+    }
+
     static let glassOpacityKey = "glassOpacity"
 
     static var glassOpacity: Double {
@@ -165,6 +172,7 @@ extension UserDefaults {
         artistBlockEnabledKey,
         "spmodBlockedArtists",
         declutterEnabledKey,
+        lockScreenLyricsEnabledKey,
         "shakeAction",
         "smartShuffleOptions",
         "quickAddLastPlaylist",

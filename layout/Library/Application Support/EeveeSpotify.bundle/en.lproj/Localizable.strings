@@ -546,3 +546,5 @@ artist_block_added = "Blocked %@";
 declutter = "Declutter";
 declutter_enabled = "Hide clutter";
 declutter_description = "Hides the social-proof play counts and the video carousel in Search, and Spotify's nudge tooltips. Restart required.";
+lock_screen_lyrics = "Lock screen lyrics";
+lock_screen_lyrics_description = "Shows the line being sung on the lock screen and in the now playing info, in place of the artist. Needs synced lyrics (LRCLIB, NetEase or Musixmatch). Restart required.";
