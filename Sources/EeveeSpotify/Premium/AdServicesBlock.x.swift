@@ -48,7 +48,7 @@ private let logAdBlockerEvents         = true
 @inline(__always)
 private func adlog(_ what: String) {
     if logAdBlockerEvents {
-        NSLog("[SPMod][AdBlock] suppressed %@", what)
+        SPModDiagnostics.recordAdBlock(what)
     }
 }
 

@@ -4,10 +4,11 @@ import UIKit
 struct SPModDiagnosticsView: View {
     private let entries = SPModDiagnostics.failedHooks
     private let requests = SPModDiagnostics.seenRequests
+    private let adBlock = SPModDiagnostics.adBlockLog
     private let spotifyVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-    
+
     private var report: String {
-        (["SPMod \(EeveeSpotify.version) · Spotify \(spotifyVersion) · iOS \(UIDevice.current.systemVersion)", "patch: \(UserDefaults.patchType)", "-- hooks"] + entries + ["-- requests"] + requests)
+        (["SPMod \(EeveeSpotify.version) · Spotify \(spotifyVersion) · iOS \(UIDevice.current.systemVersion)", "patch: \(UserDefaults.patchType)", "-- adblock"] + adBlock + ["-- hooks"] + entries + ["-- requests"] + requests)
             .joined(separator: "\n")
     }
     
@@ -31,6 +32,14 @@ struct SPModDiagnosticsView: View {
                 }
             }
             
+            Section(header: Text("Ad Block")) {
+                ForEach(adBlock, id: \.self) { entry in
+                    Text(entry)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            }
+
             if !entries.isEmpty {
                 Section(header: Text("diagnostics_details".localized)) {
                     ForEach(entries, id: \.self) { entry in

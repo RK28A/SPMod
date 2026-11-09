@@ -3,22 +3,40 @@ import Foundation
 enum SPModDiagnostics {
     private static let lock = NSLock()
     private static var entries: [String] = []
+    private static var adLog: [String] = []
+    private static var adBlockedCount = 0
     private static var requests: [String] = []
     private static var requestSet = Set<String>()
 
     static func record(_ message: String) {
         lock.lock()
-        if entries.count < 200 {
+        if entries.count < 300 {
             entries.append(message)
         }
         lock.unlock()
-        NSLog("[SPMod] Hook skipped: %@", message)
+        NSLog("[SPMod] %@", message)
+    }
+
+    static func recordAdBlock(_ message: String) {
+        lock.lock()
+        adBlockedCount += 1
+        if adLog.count < 120 {
+            adLog.append(message)
+        }
+        lock.unlock()
+        NSLog("[SPMod][AdBlock] %@", message)
     }
 
     static var failedHooks: [String] {
         lock.lock()
         defer { lock.unlock() }
         return entries
+    }
+
+    static var adBlockLog: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return ["blocked total: \(adBlockedCount)"] + adLog
     }
 
     static func recordRequest(_ url: URL?, source: String) {
