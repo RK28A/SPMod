@@ -6,6 +6,7 @@
 #import "Shared/ArtistBlock/ArtistBlock.h"
 #import "Shared/Concerts/Concerts.h"
 #import "Shared/Gestures/Gestures.h"
+#import "Shared/NightMode/NightMode.h"
 #import "Shared/Lyrics/Lyrics.h"
 #import "Shared/LyricsMeanings/Meanings.h"
 #import "Shared/LyricsTranslation/LyricsTranslation.h"
@@ -108,6 +109,7 @@ UIViewController *SGAppearanceSettingsPage(void) {
         }
     }
     [rows addObjectsFromArray:SGAppFontRows()];
+    [rows addObject:SGWithSymbol(SGPageRow(@"Night mode", ^UIViewController *{ return SGNightModeSettingsPage(); }), @"moon.stars")];
     [rows addObject:sidebarBadgeTextRow()];
     SGModSection *section = SGNotedSection(nil, rows, @"Some changes apply after you restart Spotify.");
     return [[SGModPage alloc] initWithTitle:@"Appearance" intro:nil sections:@[section] footer:nil];
