@@ -38,7 +38,7 @@ class SpotifySessionDelegateBootstrapHook: ClassHook<NSObject>, SpotifySessionDe
             return
         }
         
-        if url.isBootstrap {
+        if url.isBootstrap || url.isCustomize {
             URLSessionHelper.shared.setOrAppend(data, for: url)
             return
         }
@@ -99,7 +99,35 @@ class SpotifySessionDelegateBootstrapHook: ClassHook<NSObject>, SpotifySessionDe
                 spmodLog("Unable to modify bootstrap data: \(error)")
             }
         }
-        
+
+        if error == nil, url.isCustomize, let buffer = URLSessionHelper.shared.obtainData(for: url) {
+
+            do {
+                var customizeMessage = try CustomizeMessage(serializedBytes: buffer)
+
+                if UserDefaults.patchType == .requests, case .response = customizeMessage.result {
+                    modifyRemoteConfiguration(&customizeMessage.response)
+
+                    orig.URLSession(
+                        session,
+                        dataTask: task,
+                        didReceiveData: try customizeMessage.serializedBytes()
+                    )
+
+                    spmodLog("Modified customize data")
+                }
+                else {
+                    orig.URLSession(session, dataTask: task, didReceiveData: buffer)
+                }
+
+                orig.URLSession(session, task: task, didCompleteWithError: nil)
+                return
+            }
+            catch {
+                spmodLog("Unable to modify customize data: \(error)")
+            }
+        }
+
         orig.URLSession(session, task: task, didCompleteWithError: error)
     }
 }
