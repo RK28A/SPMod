@@ -13,11 +13,30 @@ func modifyRemoteConfiguration(_ configuration: inout UcsResponse) {
     }
 
     if UserDefaults.playerLiquidGlass {
-        forceFlags(&configuration.assignedValues, liquidGlassFlags)
+        forceFlags(&configuration.assignedValues, liquidGlassFlags, value: true)
     }
 
-    forceFlags(&configuration.assignedValues, SPModLabs.enabledFlags)
+    forceFlags(&configuration.assignedValues, SPModLabs.enabledFlags, value: true)
+
+    if UserDefaults.declutterEnabled {
+        forceFlags(&configuration.assignedValues, declutterFlags, value: false)
+    }
 }
+
+// Clutter Spotify ships on: social proof and the video carousel in Search, and
+// the nudge/tooltip interventions. Forcing these off cleans those surfaces up.
+private let declutterFlags: [String] = [
+    "ios-feature-search.social_proof_playlist_enabled",
+    "ios-feature-search.social_proof_plays_in_search_enabled",
+    "ios-feature-search.video_carousel_section_enabled",
+    "ios-feature-nowplayingbar.data_saver_tooltip",
+    "ios-messaging-reduceinterventions-impl.enabled",
+    "ios-messaging-reduceinterventions-impl.enable_message_account_switching_tooltip",
+    "ios-messaging-reduceinterventions-impl.enable_message_smart_shuffle_helper_tooltip",
+    "ios-messaging-reduceinterventions-impl.enable_message_watch_feed_entity_explorer_tooltip",
+    "ios-messaging-reduceinterventions-impl.enable_message_your_library_ai_playlist_creation_tooltip",
+    "ios-messaging-reduceinterventions-impl.enable_message_live_events_concert_notifications_tooltip"
+]
 
 // Spotify ships its iOS 26 Liquid Glass surfaces behind remote-config flags that
 // default off. Forcing them on turns on the glass navigation bar, the new player
@@ -34,19 +53,19 @@ private let liquidGlassFlags: [String] = [
     "ios-feature-sleeptimer.use_options_sheet"
 ]
 
-// Forces each "scope.name" flag to boolean true, updating an existing entry or
-// appending one. No-op for an empty list.
-private func forceFlags(_ values: inout [AssignedValue], _ flags: [String]) {
+// Forces each "scope.name" flag to the given boolean, updating an existing entry
+// or appending one. No-op for an empty list.
+private func forceFlags(_ values: inout [AssignedValue], _ flags: [String], value: Bool) {
     for flag in flags {
         guard let dot = flag.firstIndex(of: ".") else { continue }
         let scope = String(flag[..<dot])
         let name = String(flag[flag.index(after: dot)...])
-        let enabled = BoolValue.with { $0.value = true }
+        let boolValue = BoolValue.with { $0.value = value }
 
         if let index = values.firstIndex(where: {
             $0.propertyID.scope == scope && $0.propertyID.name == name
         }) {
-            values[index].boolValue = enabled
+            values[index].boolValue = boolValue
         }
         else {
             values.append(AssignedValue.with {
@@ -54,7 +73,7 @@ private func forceFlags(_ values: inout [AssignedValue], _ flags: [String]) {
                     $0.scope = scope
                     $0.name = name
                 }
-                $0.boolValue = enabled
+                $0.boolValue = boolValue
             })
         }
     }

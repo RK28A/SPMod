@@ -543,3 +543,6 @@ artist_block_list = "Bloqués";
 artist_block_empty = "Aucun artiste bloqué pour l'instant.";
 artist_block_no_track = "Aucun morceau en lecture.";
 artist_block_added = "%@ bloqué";
+declutter = "Épurer";
+declutter_enabled = "Masquer le superflu";
+declutter_description = "Masque les compteurs d'écoutes (social proof) et le carrousel vidéo dans la recherche, ainsi que les bulles d'incitation de Spotify. Redémarrage requis.";
