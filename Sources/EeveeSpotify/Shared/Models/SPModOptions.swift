@@ -153,6 +153,8 @@ extension UserDefaults {
         hidePremiumUpsellsKey,
         playerQuickAddButtonKey,
         playerLiquidGlassKey,
+        glassOpacityKey,
+        enabledLabGroupsKey,
         "shakeAction",
         "smartShuffleOptions",
         "quickAddLastPlaylist",
