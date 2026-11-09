@@ -28,6 +28,7 @@
 #import "Shared/Lossless/SLDownloadsPage.h"
 #import "Shared/ListeningStats/ListeningStats.h"
 #import "App/About/About.h"
+#import "App/Developer/Developer.h"
 #import "Pages.h"
 
 static const CGFloat kRowHeight = 56;
@@ -364,6 +365,7 @@ static UIViewController *modSettingsPage(void) {
     }
     else [parts addObject:pageRow(@"Home & Library", @"house", ^UIViewController *{ return SGHomeSettingsPage(); })];
     [parts addObject:pageRow(@"Misc", @"ellipsis.circle", ^UIViewController *{ return miscSettingsPage(); })];
+    [parts addObject:pageRow(@"Developer", @"hammer", ^UIViewController *{ return SGDeveloperPage(); })];
     // Sing's microphone is the redesigned player's, so Karaoke is the redesign's; its row follows a download.
     if (SGRedesignedUIStored()) {
         SGModRow *karaoke = pageRow(@"Karaoke", @"music.mic", ^UIViewController *{ return SGRKaraokeSettingsPage(); });
