@@ -15,6 +15,12 @@ on:
         required: true
         default: true
 
+      liquid_glass:
+        description: "Enable the iOS 26 Liquid Glass design (UIDesignRequiresCompatibility off)"
+        type: boolean
+        required: true
+        default: true
+
       display_name:
         description: "App Name (Optional)"
         default: "Spotify"
@@ -260,6 +266,17 @@ jobs:
             || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $DISPLAY_NAME" "$plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$plist"
 
+          if [ "$LIQUID_GLASS" = "true" ]; then
+            setbool() {
+              /usr/libexec/PlistBuddy -c "Set :$1 $2" "$plist" 2>/dev/null \
+                || /usr/libexec/PlistBuddy -c "Add :$1 bool $2" "$plist"
+            }
+            setbool UIDesignRequiresCompatibility false
+            setbool NSSupportsLiveActivities true
+            setbool NSSupportsLiveActivitiesFrequentUpdates true
+            echo "::notice::Liquid Glass design enabled (UIDesignRequiresCompatibility off)"
+          fi
+
           (cd ipa_tmp && zip -qry ../spotify_patched_base.ipa Payload)
           rm -rf ipa_tmp spotify.ipa
           echo "spotify_version=$version" >> $GITHUB_OUTPUT
@@ -267,6 +284,7 @@ jobs:
         env:
           DISPLAY_NAME: ${{ inputs.display_name }}
           BUNDLE_ID: ${{ inputs.bundle_id }}
+          LIQUID_GLASS: ${{ inputs.liquid_glass }}
 
       - name: Inject SPMod
         env:
