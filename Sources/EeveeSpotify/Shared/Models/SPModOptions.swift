@@ -155,6 +155,8 @@ extension UserDefaults {
         playerLiquidGlassKey,
         glassOpacityKey,
         enabledLabGroupsKey,
+        artistBlockEnabledKey,
+        "spmodBlockedArtists",
         "shakeAction",
         "smartShuffleOptions",
         "quickAddLastPlaylist",

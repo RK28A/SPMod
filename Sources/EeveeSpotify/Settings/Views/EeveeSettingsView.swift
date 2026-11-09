@@ -160,6 +160,9 @@ struct EeveeSettingsView: View {
                         navRow("privacy", icon: "hand.raised.fill", color: Color(hex: "#5E5CE6"), subtitle: "privacy_subtitle") {
                             SPModPrivacySettingsView()
                         }
+                        navRow("artist_block", icon: "nosign", color: Color(hex: "#FF453A"), subtitle: "artist_block_subtitle") {
+                            SPModBlockedArtistsView()
+                        }
                         navRow("backup", icon: "externaldrive.fill", color: Color(hex: "#64D2FF"), subtitle: "backup_subtitle") {
                             SPModBackupSettingsView()
                         }
