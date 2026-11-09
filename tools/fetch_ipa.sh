@@ -58,15 +58,22 @@ attempt_wget() {
   wget --no-verbose --tries=3 --user-agent="$ua" -O "$out" "$url"
 }
 
-for method in attempt_curl attempt_curl_plain attempt_wget; do
-  command -v "${method#attempt_}" >/dev/null 2>&1 || [ "$method" != "attempt_wget" ] || continue
-  rm -f "$out"
-  if $method; then
-    if [ "$(head -c 2 "$out" 2>/dev/null)" = "PK" ]; then
-      exit 0
+# The host sometimes returns transient 5xx (502/503/504) under load. Retry in
+# several waves spaced further apart so a temporarily overloaded host can
+# recover, instead of hammering it with back-to-back attempts.
+waits=(0 20 45 90 150)
+for round in "${!waits[@]}"; do
+  [ "${waits[$round]}" -gt 0 ] && { echo "Retry wave $round: waiting ${waits[$round]}s for the host to recover"; sleep "${waits[$round]}"; }
+  for method in attempt_curl attempt_curl_plain attempt_wget; do
+    command -v "${method#attempt_}" >/dev/null 2>&1 || [ "$method" != "attempt_wget" ] || continue
+    rm -f "$out"
+    if $method; then
+      if [ "$(head -c 2 "$out" 2>/dev/null)" = "PK" ]; then
+        exit 0
+      fi
+      echo "Downloaded file is not an IPA (got $(file -b "$out" 2>/dev/null | cut -c1-60)), trying another method"
     fi
-    echo "Downloaded file is not an IPA (got $(file -b "$out" 2>/dev/null | cut -c1-60)), trying another method"
-  fi
+  done
 done
 
 code=$(curl -s -o /dev/null -w '%{http_code}' -L -A "$ua" "$url")
@@ -75,6 +82,7 @@ case "$code" in
   401|403) [[ "$url" == *pixeldrain.com* ]] && echo "Pixeldrain refuses the download: the free download limit of this file is reached or GitHub servers are blocked. Upload the IPA somewhere else (Dropbox with dl=1, Google Drive shared publicly, or a GitHub release)."
     echo "The server refuses the download. Use a direct, public link (no login, not expired): e.g. a GitHub release asset, Dropbox with dl=1, or a fresh link from your host." ;;
   404) echo "The file was not found at this address." ;;
+  500|502|503|504) echo "The host is overloaded or timing out (HTTP $code) and kept failing across several retries. It is the file host, not the build. Re-run the workflow in a few minutes, or host the IPA on a more reliable direct link (a GitHub release asset, or Dropbox with dl=1)." ;;
   200)
     if [[ "$url" == *google* ]] && grep -qiE 'accounts\.google\.com|ServiceLogin|Request access|Demander l' "$out" 2>/dev/null; then
       echo "Google Drive asks to sign in: share the file as 'Anyone with the link' (Tous les utilisateurs disposant du lien)."
