@@ -55,6 +55,8 @@ struct EeveeSpotify: Tweak {
     }
     
     init() {
+        UserDefaults.patchType = .requests
+
         if ThemeEngine.isActive {
             ThemeGroup().activate()
         }
