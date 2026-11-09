@@ -28,7 +28,7 @@ static NSString *const kZlib =
     @"3. This notice may not be removed or altered from any source distribution.";
 
 UIViewController *SGLicensesPage(void) {
-    SGModRow *mod = SGLinkRow(@"Taurus", @"MIT License", [SGRepoURL stringByAppendingString:@"/blob/main/LICENSE"]);
+    SGModRow *mod = SGLinkRow(@"SPMod", @"Based on Taurus (MIT)", [SGRepoURL stringByAppendingString:@"/blob/main/LICENSE"]);
     SGModRow *bs2b = SGLinkRow(@"libbs2b", @"Crossfeed · MIT License", @"https://github.com/alexmarsev/libbs2b");
     SGModRow *wdl = SGLinkRow(@"WDL", @"Liveprog's EEL2 · zlib License", @"https://github.com/justinfrankel/WDL");
     return [[SGModPage alloc] initWithTitle:@"Licenses" intro:@"The mod's own license, and the code from others it includes." sections:@[
