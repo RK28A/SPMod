@@ -515,3 +515,7 @@ themes_subtitle = "Thèmes · Accent · Mode nuit";
 privacy_subtitle = "Suivi · Données locales";
 backup_subtitle = "Sauvegarde auto · Export · Import";
 experiments_subtitle = "Instagram · LiveContainer";
+interface = "Interface";
+player_liquid_glass = "Lecteur Liquid Glass";
+player_liquid_glass_description = "Un fond en verre dépoli et une pochette arrondie sur l'écran de lecture. Le verre est teinté avec la couleur d'accent de ton thème actuel. Redémarrage requis.";
+glass_tint_opacity = "Opacité de la teinte";
