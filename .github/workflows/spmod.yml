@@ -81,16 +81,34 @@ jobs:
           brew install make dpkg ldid
           echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
 
+      - name: Cache Theos
+        id: theos-cache
+        uses: actions/cache@v4
+        with:
+          path: theos
+          key: theos-${{ runner.os }}-v1
+
       - name: Setup Theos
+        if: steps.theos-cache.outputs.cache-hit != 'true'
         uses: actions/checkout@v4
         with:
           repository: theos/theos
           path: theos
           submodules: recursive
 
+      - name: Cache SwiftProtobuf
+        id: sp-cache
+        uses: actions/cache@v4
+        with:
+          path: spbuild
+          key: swiftprotobuf-${{ runner.os }}-${{ env.SWIFTPROTOBUF_VERSION }}-${{ hashFiles('src/tools/build_swiftprotobuf.sh') }}
+
       - name: Build SwiftProtobuf
         run: |
-          framework="$(bash src/tools/build_swiftprotobuf.sh "$SWIFTPROTOBUF_VERSION" "$PWD" | tail -1)"
+          framework="$PWD/spbuild/SwiftProtobuf.framework"
+          if [ ! -d "$framework" ]; then
+            framework="$(bash src/tools/build_swiftprotobuf.sh "$SWIFTPROTOBUF_VERSION" "$PWD/spbuild" | tail -1)"
+          fi
           cp -R "$framework" "$THEOS/lib/"
           echo "SWIFTPROTOBUF_FRAMEWORK=$framework" >> $GITHUB_ENV
 
@@ -118,6 +136,13 @@ jobs:
           git clone --depth 1 https://github.com/BillyCurtis/OpenSpotifySafariExtension
           echo "SAFARI_EXT=$PWD/OpenSpotifySafariExtension/OpenSpotifySafariExtension.appex" >> $GITHUB_ENV
 
+      - name: Cache injection tools
+        id: iptools-cache
+        uses: actions/cache@v4
+        with:
+          path: iptools
+          key: iptools-${{ runner.os }}-ipapatch-v2.1.0-v1
+
       - name: Setup ivinject and ipapatch
         run: |
           retry() {
@@ -133,18 +158,27 @@ jobs:
             done
           }
 
-          retry git clone --depth 1 https://github.com/Tyilo/insert_dylib.git
-          xcrun clang -x c -arch arm64 -O2 ./insert_dylib/insert_dylib/main.c -o insert-dylib
-          sudo mv insert-dylib /usr/local/bin/insert-dylib
-          sudo chmod +x /usr/local/bin/insert-dylib
-          retry git clone --depth 1 https://github.com/whoeevee/ivinject.git
-          cp -r ./ivinject/KnownFrameworks ~/.ivinject
-          retry wget --no-verbose -O ivinject-arm64 https://github.com/whoeevee/ivinject/releases/download/first/ivinject-arm64
-          sudo mv ivinject-arm64 /usr/local/bin/ivinject
-          sudo chmod +x /usr/local/bin/ivinject
-          retry wget --no-verbose -O ipapatch.macos-arm64 https://github.com/asdfzxcvbn/ipapatch/releases/download/v2.1.0/ipapatch.macos-arm64
-          sudo mv ipapatch.macos-arm64 /usr/local/bin/ipapatch
-          sudo chmod +x /usr/local/bin/ipapatch
+          mkdir -p iptools
+          if [ ! -f iptools/insert-dylib ]; then
+            retry git clone --depth 1 https://github.com/Tyilo/insert_dylib.git
+            xcrun clang -x c -arch arm64 -O2 ./insert_dylib/insert_dylib/main.c -o iptools/insert-dylib
+          fi
+          if [ ! -f iptools/ivinject-arm64 ] || [ ! -d iptools/KnownFrameworks ]; then
+            retry git clone --depth 1 https://github.com/whoeevee/ivinject.git
+            rm -rf iptools/KnownFrameworks
+            cp -r ./ivinject/KnownFrameworks iptools/KnownFrameworks
+            retry wget --no-verbose -O iptools/ivinject-arm64 https://github.com/whoeevee/ivinject/releases/download/first/ivinject-arm64
+          fi
+          if [ ! -f iptools/ipapatch.macos-arm64 ]; then
+            retry wget --no-verbose -O iptools/ipapatch.macos-arm64 https://github.com/asdfzxcvbn/ipapatch/releases/download/v2.1.0/ipapatch.macos-arm64
+          fi
+
+          rm -rf ~/.ivinject
+          cp -r iptools/KnownFrameworks ~/.ivinject
+          sudo cp iptools/insert-dylib /usr/local/bin/insert-dylib
+          sudo cp iptools/ivinject-arm64 /usr/local/bin/ivinject
+          sudo cp iptools/ipapatch.macos-arm64 /usr/local/bin/ipapatch
+          sudo chmod +x /usr/local/bin/insert-dylib /usr/local/bin/ivinject /usr/local/bin/ipapatch
 
       - name: Wait for IPA
         run: |
