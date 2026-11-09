@@ -61,7 +61,7 @@ attempt_wget() {
 # The host sometimes returns transient 5xx (502/503/504) under load. Retry in
 # several waves spaced further apart so a temporarily overloaded host can
 # recover, instead of hammering it with back-to-back attempts.
-waits=(0 20 45 90 150)
+waits=(0 5 5 5 5 5 5)
 for round in "${!waits[@]}"; do
   [ "${waits[$round]}" -gt 0 ] && { echo "Retry wave $round: waiting ${waits[$round]}s for the host to recover"; sleep "${waits[$round]}"; }
   for method in attempt_curl attempt_curl_plain attempt_wget; do
