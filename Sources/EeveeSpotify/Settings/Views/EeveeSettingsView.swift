@@ -163,6 +163,9 @@ struct EeveeSettingsView: View {
                         navRow("backup", icon: "externaldrive.fill", color: Color(hex: "#64D2FF"), subtitle: "backup_subtitle") {
                             SPModBackupSettingsView()
                         }
+                        navRow("labs", icon: "flask.fill", color: Color(hex: "#FFD60A"), subtitle: "labs_subtitle") {
+                            SPModLabsSettingsView()
+                        }
                         navRow("experiments", icon: "sparkles", color: .purple, subtitle: "experiments_subtitle", showsDivider: false) {
                             EeveeExperimentsSettingsView()
                         }
