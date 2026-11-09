@@ -471,10 +471,13 @@ class CoreURLSessionAdsKill: ClassHook<NSObject> {
         didReceiveResponse response: URLResponse,
         completionHandler handler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
-        if let url = task.currentRequest?.url ?? task.originalRequest?.url, url.isAd {
-            adlog("core request \(url.host ?? "?")\(url.path)")
-            handler(.cancel)
-            return
+        if let url = task.currentRequest?.url ?? task.originalRequest?.url {
+            if url.isAd {
+                adlog("core request \(url.host ?? "?")\(url.path)")
+                handler(.cancel)
+                return
+            }
+            SPModDiagnostics.recordRequest(url, source: "core")
         }
         orig.URLSession(session, dataTask: task, didReceiveResponse: response, completionHandler: handler)
     }
