@@ -4,6 +4,7 @@ struct SPModGeneralSettingsView: View {
     @State private var language = UserDefaults.spmodLanguage
     @State private var playerLiquidGlass = UserDefaults.playerLiquidGlass
     @State private var glassOpacity = UserDefaults.glassOpacity
+    @State private var lockScreenLyrics = UserDefaults.lockScreenLyricsEnabled
 
     var body: some View {
         List {
@@ -31,6 +32,14 @@ struct SPModGeneralSettingsView: View {
                             }
                     }
                 }
+            }
+
+            Section(footer: Text("lock_screen_lyrics_description".localized)) {
+                Toggle("lock_screen_lyrics".localized, isOn: $lockScreenLyrics)
+                    .onChange(of: lockScreenLyrics) { newValue in
+                        UserDefaults.lockScreenLyricsEnabled = newValue
+                        SPModAlertHelper.askRestart()
+                    }
             }
 
             Section(

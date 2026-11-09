@@ -81,6 +81,7 @@ struct EeveeSpotify: Tweak {
         activateEeveeAdBlockerExtended()
         activatePlayerRedesign()
         activateArtistBlock()
+        activateLockScreenLyrics()
         CopyTrackManager.start()
         ScreenAwakeManager.start()
         ListeningTracker.start()
