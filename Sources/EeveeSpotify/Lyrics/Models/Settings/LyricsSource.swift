@@ -6,9 +6,10 @@ enum LyricsSource: Int, CaseIterable, CustomStringConvertible {
     case musixmatch
     case petit
     case notReplaced
-    
+    case netease
+
     static var allCases: [LyricsSource] {
-        return [.genius, .lrclib, .musixmatch, .petit]
+        return [.genius, .lrclib, .musixmatch, .netease, .petit]
     }
 
     // swift 5.8 compatible
@@ -22,6 +23,8 @@ enum LyricsSource: Int, CaseIterable, CustomStringConvertible {
         return "Musixmatch"
     case .petit:
         return "PetitLyrics"
+    case .netease:
+        return "NetEase"
     case .notReplaced:
         return "Spotify"
     }

@@ -28,6 +28,8 @@ private func lyricsRepository(for source: LyricsSource) throws -> LyricsReposito
         return MusixmatchLyricsRepository.shared
     case .petit:
         return petitLyricsRepository
+    case .netease:
+        return NetEaseLyricsRepository.shared
     case .notReplaced:
         throw LyricsError.invalidSource
     }
