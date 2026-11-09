@@ -110,6 +110,7 @@ UIViewController *SGAppearanceSettingsPage(void) {
     }
     [rows addObjectsFromArray:SGAppFontRows()];
     [rows addObject:SGWithSymbol(SGPageRow(@"Night mode", ^UIViewController *{ return SGNightModeSettingsPage(); }), @"moon.stars")];
+    [rows addObject:SGWithSymbol(SGHideRow(@"Animated background", @"Moving gradient of the accent colour behind the menus", @"spotifyglass.animatedbg"), @"circle.hexagongrid")];
     [rows addObject:sidebarBadgeTextRow()];
     SGModSection *section = SGNotedSection(nil, rows, @"Some changes apply after you restart Spotify.");
     return [[SGModPage alloc] initWithTitle:@"Appearance" intro:nil sections:@[section] footer:nil];
