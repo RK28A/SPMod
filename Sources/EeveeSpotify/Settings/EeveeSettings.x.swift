@@ -61,14 +61,19 @@ enum SPModulationEntry {
             BundleHelper.shared.uiImage("github").withRenderingMode(.alwaysOriginal),
             for: .normal
         )
+        button.imageView?.contentMode = .scaleAspectFit
+        button.contentHorizontalAlignment = .fill
+        button.contentVerticalAlignment = .fill
+        button.layer.cornerRadius = 13
+        button.clipsToBounds = true
         button.addTarget(
             controller,
             action: #selector(controller.openRepositoryUrl(_:)),
             for: .touchUpInside
         )
         let item = UIBarButtonItem(customView: button)
-        item.customView?.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        item.customView?.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        item.customView?.heightAnchor.constraint(equalToConstant: 26).isActive = true
+        item.customView?.widthAnchor.constraint(equalToConstant: 26).isActive = true
         controller.navigationItem.rightBarButtonItem = item
 
         navigationController.pushViewController(controller, animated: true)

@@ -8,6 +8,7 @@ struct SPModThemeSettingsView: View {
     @State private var hasPendingChanges = false
     @State private var nightMode = UserDefaults.nightModeConfig
     @State private var hidePremiumUpsells = UserDefaults.hidePremiumUpsells
+    @State private var presets = SPModPresetStore.presets
     
     private func timeBinding(_ keyPath: WritableKeyPath<NightModeConfig, Int>) -> Binding<Date> {
         Binding<Date>(
@@ -66,6 +67,68 @@ struct SPModThemeSettingsView: View {
 
     private func color(_ hex: String) -> Color {
         Color(UIColor(spmodHex: hex))
+    }
+
+    private func promptSavePreset() {
+        let alert = UIAlertController(
+            title: "preset_save_title".localized,
+            message: "preset_save_message".localized,
+            preferredStyle: .alert
+        )
+        alert.addTextField { field in
+            field.placeholder = "preset_name_placeholder".localized
+        }
+        alert.addAction(UIAlertAction(title: "cancel".localized, style: .cancel))
+        alert.addAction(UIAlertAction(title: "save".localized, style: .default) { _ in
+            let name = alert.textFields?.first?.text ?? ""
+            SPModPresetStore.save(name: name, theme: config)
+            presets = SPModPresetStore.presets
+            ToastHelper.show("preset_saved".localized)
+        })
+        SPModAlertHelper.present(alert)
+    }
+
+    @ViewBuilder private func myPresetsSection() -> some View {
+        Section(
+            header: Text("my_presets".localized),
+            footer: Text("my_presets_description".localized)
+        ) {
+            Button {
+                promptSavePreset()
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                    Text("preset_save_current".localized)
+                }
+            }
+
+            ForEach(presets) { preset in
+                Button {
+                    config = preset.theme
+                    ToastHelper.show("preset_applied".localizeWithFormat(preset.name))
+                } label: {
+                    HStack(spacing: 12) {
+                        HStack(spacing: -6) {
+                            Circle().fill(color(preset.theme.backgroundHex))
+                            Circle().fill(color(preset.theme.surfaceHex))
+                            Circle().fill(color(preset.theme.accentHex))
+                        }
+                        .frame(width: 58, height: 22)
+
+                        Text(preset.name).foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: "arrow.down.circle")
+                            .foregroundColor(color(config.accentHex))
+                    }
+                }
+            }
+            .onDelete { indexSet in
+                for index in indexSet {
+                    SPModPresetStore.delete(presets[index].id)
+                }
+                presets = SPModPresetStore.presets
+            }
+        }
     }
 
     private func hexBinding(_ keyPath: WritableKeyPath<ThemeConfig, String>) -> Binding<Color> {
@@ -154,6 +217,8 @@ struct SPModThemeSettingsView: View {
                 }
             }
 
+            myPresetsSection()
+
             if config.preset == .custom {
                 Section(header: Text("theme_custom_colors".localized)) {
                     ColorPicker("theme_background".localized, selection: hexBinding(\.customBackground), supportsOpacity: false)
@@ -233,6 +298,7 @@ struct SPModThemeSettingsView: View {
         .animation(.default, value: config)
         .animation(.default, value: lyricsColors)
         .animation(.default, value: hasPendingChanges)
+        .animation(.default, value: presets)
 
         .onChange(of: config) { newConfig in
             UserDefaults.themeConfig = newConfig
