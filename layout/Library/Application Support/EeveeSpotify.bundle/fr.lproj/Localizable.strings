@@ -557,3 +557,5 @@ preset_save_message = "Enregistre le thème actuel sous un nom.";
 preset_name_placeholder = "Nom du preset";
 preset_saved = "Preset enregistré";
 preset_applied = "%@ appliqué";
+animated_theme = "Fond animé";
+animated_theme_description = "Dégradé des couleurs de ton thème qui bouge lentement derrière le menu SPMod. Des couleurs qui réagissent au rythme de la musique ne sont pas possibles.";

@@ -123,6 +123,13 @@ extension UserDefaults {
         set { container.set(newValue, forKey: lockScreenLyricsEnabledKey) }
     }
 
+    static let animatedThemeKey = "animatedTheme"
+
+    static var animatedTheme: Bool {
+        get { container.object(forKey: animatedThemeKey) as? Bool ?? false }
+        set { container.set(newValue, forKey: animatedThemeKey) }
+    }
+
     static let glassOpacityKey = "glassOpacity"
 
     static var glassOpacity: Double {
@@ -173,6 +180,7 @@ extension UserDefaults {
         "spmodBlockedArtists",
         declutterEnabledKey,
         lockScreenLyricsEnabledKey,
+        animatedThemeKey,
         SPModPresetStore.key,
         "shakeAction",
         "smartShuffleOptions",

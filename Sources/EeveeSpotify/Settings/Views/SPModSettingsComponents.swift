@@ -132,6 +132,35 @@ struct SPModStatusChip: View {
     }
 }
 
+struct SPModAnimatedBackground: View {
+    @State private var animate = false
+
+    private var colors: [Color] {
+        let config = UserDefaults.themeConfig
+        return [
+            Color(UIColor(spmodHex: config.accentHex)),
+            Color(UIColor(spmodHex: config.surfaceHex)),
+            Color(UIColor(spmodHex: config.backgroundHex)),
+            Color(UIColor(spmodHex: config.accentHex)).opacity(0.75)
+        ]
+    }
+
+    var body: some View {
+        LinearGradient(
+            colors: colors,
+            startPoint: animate ? .topLeading : .bottomTrailing,
+            endPoint: animate ? .bottomTrailing : .topLeading
+        )
+        .overlay(Color.black.opacity(0.4))
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) {
+                animate = true
+            }
+        }
+    }
+}
+
 struct SPModHeroHeader: View {
     let version: String
     let latestVersion: String?

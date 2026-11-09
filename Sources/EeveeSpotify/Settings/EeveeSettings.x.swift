@@ -47,6 +47,15 @@ class ProfileSettingsSectionHook: ClassHook<NSObject> {
 enum SPModulationEntry {
     private static let floatingButtonTag = 0x53504D44
 
+    // The theme accent, or white when the accent is too dark to read on the bar.
+    static var accentTextColor: UIColor {
+        let accent = UIColor(spmodHex: UserDefaults.themeConfig.accentHex)
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        accent.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let luminance = 0.299 * red + 0.587 * green + 0.114 * blue
+        return luminance < 0.14 ? .white : accent
+    }
+
     static func open(from navigationController: UINavigationController) {
         SPModSettingsNavigator.navigationController = navigationController
 
@@ -117,6 +126,7 @@ enum SPModulationEntry {
                 action: #selector(SPModulationEntryTarget.open(_:))
             )
             item.tag = floatingButtonTag
+            item.tintColor = accentTextColor
             var items = viewController.navigationItem.rightBarButtonItems ?? []
             items.append(item)
             viewController.navigationItem.rightBarButtonItems = items
