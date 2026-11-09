@@ -3,6 +3,16 @@ import UIKit
 import ObjectiveC.runtime
 
 struct PlayerRedesignGroup: HookGroup {}
+struct LiquidGlassNavGroup: HookGroup {}
+
+class HubLiquidGlassNavHook: ClassHook<UIViewController> {
+    typealias Group = LiquidGlassNavGroup
+    static let targetName = "SPTHubViewController"
+
+    func prefersLiquidGlassNavigationBar() -> Bool {
+        return true
+    }
+}
 
 enum PlayerRedesign {
     static let backgroundTag = 0x53504D47
@@ -169,15 +179,23 @@ class NPVLiquidGlassHook: ClassHook<UIViewController> {
 func activatePlayerRedesign() {
     guard UserDefaults.playerLiquidGlass else { return }
 
+    if let hub = findTweakClass(HubLiquidGlassNavHook.targetName),
+       class_getInstanceMethod(hub, Selector(("prefersLiquidGlassNavigationBar"))) != nil {
+        LiquidGlassNavGroup().activate()
+        SPModDiagnostics.record("[Redesign] hub glass nav bar activated")
+    } else {
+        SPModDiagnostics.record("[Redesign] SPTHubViewController nav glass unavailable; skipping")
+    }
+
     guard let cls = findTweakClass(NPVLiquidGlassHook.targetName) else {
-        SPModDiagnostics.record("[Redesign] NPVScrollViewController not found; skipping")
+        SPModDiagnostics.record("[Redesign] NPVScrollViewController not found; skipping tint overlay")
         return
     }
     guard class_getInstanceMethod(cls, Selector(("viewDidLayoutSubviews"))) != nil else {
-        SPModDiagnostics.record("[Redesign] no viewDidLayoutSubviews; skipping")
+        SPModDiagnostics.record("[Redesign] no viewDidLayoutSubviews; skipping tint overlay")
         return
     }
 
     PlayerRedesignGroup().activate()
-    SPModDiagnostics.record("[Redesign] player liquid glass activated")
+    SPModDiagnostics.record("[Redesign] player tint overlay activated")
 }

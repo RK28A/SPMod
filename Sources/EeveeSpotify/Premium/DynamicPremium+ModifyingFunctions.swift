@@ -3,13 +3,53 @@ import UIKit
 
 func modifyRemoteConfiguration(_ configuration: inout UcsResponse) {
     modifyAttributes(&configuration.attributes.accountAttributes)
-    
+
     if UserDefaults.overwriteConfiguration,
        let resolveConfiguration = try? BundleHelper.shared.resolveConfiguration() {
         configuration.resolve.configuration = resolveConfiguration
     }
     else {
         modifyAssignedValues(&configuration.assignedValues)
+    }
+
+    if UserDefaults.playerLiquidGlass {
+        forceLiquidGlassFlags(&configuration.assignedValues)
+    }
+}
+
+// Spotify ships its iOS 26 Liquid Glass surfaces behind remote-config flags that
+// default off. Forcing them on turns on the glass navigation bar, the new player
+// slider, the sheet-style player, the bottom-sheet queue and Connect panels, the
+// redesigned player header and the sleep-timer options sheet.
+private let liquidGlassFlags: [(scope: String, name: String)] = [
+    ("ios-reprise-liquid-glass-properties", "context_menu_in_navigation_bar_enabled"),
+    ("ios-feature-encoreexperiments", "new_npv_slider_enabled"),
+    ("ios-feature-nowplaying", "sheet_style_npv"),
+    ("ios-feature-nowplaying", "bottom_sheet_queue_enabled"),
+    ("ios-feature-nowplaying", "new_redesign_header_with_context_menu_enabled"),
+    ("ios-feature-nowplaying-elements", "enable_connect_bottom_sheet"),
+    ("ios-playbackcontrol-audiovideoswitcher-impl", "enable_connect_bottom_sheet"),
+    ("ios-feature-sleeptimer", "use_options_sheet")
+]
+
+private func forceLiquidGlassFlags(_ values: inout [AssignedValue]) {
+    for flag in liquidGlassFlags {
+        let enabled = BoolValue.with { $0.value = true }
+
+        if let index = values.firstIndex(where: {
+            $0.propertyID.scope == flag.scope && $0.propertyID.name == flag.name
+        }) {
+            values[index].boolValue = enabled
+        }
+        else {
+            values.append(AssignedValue.with {
+                $0.propertyID = AssignedIdentifier.with {
+                    $0.scope = flag.scope
+                    $0.name = flag.name
+                }
+                $0.boolValue = enabled
+            })
+        }
     }
 }
 
