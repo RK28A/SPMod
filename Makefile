@@ -20,7 +20,7 @@ DEV_ICON ?= docs/icon.png
 build:    ## FLEX + glass IPA into out/
 	bash ./scripts/pipeline.sh $(IPA) $(SAFARI_ARG)
 release:  ## glass only, no FLEX
-	bash ./scripts/pipeline.sh $(IPA) $(SAFARI_ARG) --no-flex
+	bash ./scripts/pipeline.sh $(IPA) $(SAFARI_ARG) --no-flex --name "SPMod" -o out/SPMod.ipa
 install:  ## build, sign with your certificate, push to the phone on USB (FLEX=1 to take FLEX too)
 	bash ./scripts/pipeline.sh $(IPA) $(SAFARI_ARG) --install $(FLEX_ARG) --name "$(DEV_NAME)" --icon "$(DEV_ICON)" -o out/Taurus.dev.ipa
 trees:    ## record per-screen view trees into trees/ (needs a FLEX build on the phone)
