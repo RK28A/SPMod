@@ -2,7 +2,7 @@
 #import "Core/SGLog.h"
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
-#import "About/About.h"
+#import "App/About/About.h"
 #import "Developer.h"
 
 static UIWindow *frontWindow(void) {
