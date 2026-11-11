@@ -200,7 +200,8 @@ BOOL SGFluidClipWrite(NSURL *file, CGImageRef cover, CGSize size, CGFloat coverS
     Parts parts = makeParts(cover, size, coverScale);
     BOOL ok = parts.blurred && parts.cover && parts.field && parts.shade;
     for (int32_t i = 0; i < frames && ok; i++) {
-        if (!SGVideoReady(input, writer)) { ok = NO; break; }
+        @autoreleasepool {
+            if (!SGVideoReady(input, writer)) { ok = NO; break; }
         CVPixelBufferRef buffer = NULL;
         ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
             && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
@@ -218,6 +219,7 @@ BOOL SGFluidClipWrite(NSURL *file, CGImageRef cover, CGSize size, CGFloat coverS
         CVPixelBufferUnlockBaseAddress(buffer, 0);
         ok = [adaptor appendPixelBuffer:buffer withPresentationTime:CMTimeMake(i, kFPS)];
         CVPixelBufferRelease(buffer);
+        }
     }
     freeParts(parts);
     if (!ok) {
