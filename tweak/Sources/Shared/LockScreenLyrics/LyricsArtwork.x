@@ -463,7 +463,7 @@ static void setTicking(BOOL on) {
         sg_timerPeriod = 0;
         return;
     }
-    sg_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+    sg_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, DISPATCH_TIMER_STRICT, dispatch_get_main_queue());
     sg_timerPeriod = 0;
     updateTickInterval();
     dispatch_source_set_event_handler(sg_timer, ^{
