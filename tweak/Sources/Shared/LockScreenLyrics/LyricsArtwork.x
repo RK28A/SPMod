@@ -34,6 +34,7 @@ static const double kShortest = 2, kLongest = 8;
 @end
 
 static dispatch_source_t sg_timer;
+static uint64_t sg_timerPeriod;
 static NSString *sg_motionURI;
 static NSURL *sg_motion;
 static NSMutableSet<NSString *> *sg_failedMotion;
@@ -106,6 +107,7 @@ static NSCache<NSString *, NSURL *> *sg_clips;
 static NSMutableSet<NSString *> *sg_preparing;
 static NSSet<NSString *> *sg_wanted;
 static void tick(void);
+static void updateTickInterval(void);
 
 static NSURL *clipFile(NSString *artworkID) {
     return [folder() URLByAppendingPathComponent:[artworkID stringByAppendingPathExtension:@"mp4"]];
@@ -203,6 +205,7 @@ static void requestedAsset(BOOL video) {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (video) sg_askedAt = CFAbsoluteTimeGetCurrent();
         else sg_previewAskedAt = CFAbsoluteTimeGetCurrent();
+        updateTickInterval(); // Actual system requests restore full-rate updates immediately.
         tick();
     });
 }
@@ -436,26 +439,36 @@ static void tick(void) {
     }
 }
 
+// Keep the 250-ms cadence while visible or actively requested by the lock screen.
+// Without system demand, a background timer wakes only every two seconds; a new
+// asset callback immediately restores the fast cadence, without dropping lyrics.
+static void updateTickInterval(void) {
+    if (!sg_timer) return;
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    BOOL requested = SGLyricsHasRecentDemand(now, sg_askedAt)
+        || SGLyricsHasRecentDemand(now, sg_previewAskedAt);
+    BOOL active = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
+    uint64_t interval = (uint64_t)((active || requested ? kTick : 2.0) * NSEC_PER_SEC);
+    if (sg_timerPeriod == interval) return;
+    sg_timerPeriod = interval;
+    dispatch_source_set_timer(sg_timer, dispatch_time(DISPATCH_TIME_NOW, interval), interval, 10 * NSEC_PER_MSEC);
+}
+
 // Main thread, as everything the timer touches is.
 static void setTicking(BOOL on) {
     if (on == (sg_timer != nil)) return;
     if (!on) {
         dispatch_source_cancel(sg_timer);
         sg_timer = nil;
+        sg_timerPeriod = 0;
         return;
     }
-    // A strict GCD timer: the main run loop's timers are throttled while the screen is off, and the lines stood
-    // still on a locked phone.
-    sg_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, DISPATCH_TIMER_STRICT, dispatch_get_main_queue());
-    uint64_t every = (uint64_t)(kTick * NSEC_PER_SEC);
-    dispatch_source_set_timer(sg_timer, dispatch_time(DISPATCH_TIME_NOW, every), every, 10 * NSEC_PER_MSEC);
+    sg_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+    sg_timerPeriod = 0;
+    updateTickInterval();
     dispatch_source_set_event_handler(sg_timer, ^{
-        static CFAbsoluteTime last;
-        static int late;
-        CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-        if (last && now - last > 2 && late++ < 5) SGLog(@"%s: ticked %.1f s late", __FILE_NAME__, now - last - kTick);
-        last = now;
         tick();
+        updateTickInterval();
     });
     dispatch_resume(sg_timer);
 }
@@ -481,6 +494,11 @@ static void setTicking(BOOL on) {
 %ctor {
     if (@available(iOS 26.0, *)) {
         sg_lock = [NSObject new];
+        for (NSNotificationName lifecycle in @[UIApplicationDidBecomeActiveNotification, UIApplicationDidEnterBackgroundNotification]) {
+            [NSNotificationCenter.defaultCenter addObserverForName:lifecycle object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+                updateTickInterval();
+            }];
+        }
         sg_queue = dispatch_queue_create("spotifyglass.lockscreen.lyrics", DISPATCH_QUEUE_SERIAL);
         sg_previewQueue = dispatch_queue_create("spotifyglass.lockscreen.lyrics.preview", DISPATCH_QUEUE_SERIAL);
         sg_previews = [NSCache new];
