@@ -166,7 +166,8 @@ typedef struct {
 static UIColor *accentOf(Look look) {
     switch (look.colors) {
         case SGLiveActivityColorsArtwork: return sampleAccent();
-        case SGLiveActivityColorsPlain: return UIColor.whiteColor;
+        case SGLiveActivityColorsPlain:
+        case SGLiveActivityColorsTranslucent: return UIColor.whiteColor;
         default: return green();
     }
 }
@@ -296,10 +297,15 @@ static UIView *card(Look look, NSInteger step) {
     family.layoutMarginsRelativeArrangement = YES;
     family.directionalLayoutMargins = panel ? NSDirectionalEdgeInsetsMake(8, 12, 8, 12) : NSDirectionalEdgeInsetsMake(12, 16, 12, 16);
 
-    // The card's background: the cover's color, or under Plain the system's material.
+    // The card's background: the cover's color, under Plain the system's material, and under Translucent a
+    // thinner one with the veil the widget lays over it (LiveActivity.x's kVeilAlpha).
     UIView *background;
     if (look.colors == SGLiveActivityColorsPlain) {
         background = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterialDark]];
+    } else if (look.colors == SGLiveActivityColorsTranslucent) {
+        UIVisualEffectView *thin = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark]];
+        thin.contentView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.3];
+        background = thin;
     } else {
         background = [UIView new];
         background.backgroundColor = sampleTint();

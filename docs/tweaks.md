@@ -199,7 +199,12 @@ Shared:
                   sends a new state only when what the view shows changes, local updates only, no push. Taps are
                   LiveActivityIntents run inside Spotify and take a second or two to show on the card. The widget is extension/LiveActivity; ActivityKit pairs the two
                   by the attributes' type in LiveActivityShared.swift, compiled into both. It starts only with Spotify
-                  in front; its switch and its view apply at once
+                  in front; its switch and its view apply at once. Card color is worked out in the tweak and sent
+                  with the state (the fill, how opaque, and the lit color): the cover's color read from the artwork
+                  Spotify hands the system, the system's material (Plain), or that material under a thin dark veil
+                  (Translucent). The lock screen's card is the system's, which a widget tints and cannot replace
+                  with glass of its own; Now Playing is the system's too and nothing joins the two, which is what
+                  the page's Merge with Now Playing row says
 
 Native:
 

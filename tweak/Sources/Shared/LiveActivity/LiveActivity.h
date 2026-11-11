@@ -23,11 +23,14 @@ typedef NS_ENUM(NSInteger, SGLiveActivityView) {
 #define SGKeyLiveActivityArtwork @"spotifyglass.liveActivity.artwork"
 #define SGKeyLiveActivityProgressBar @"spotifyglass.liveActivity.progressBar"
 
-// What the card is filled with.
+// What the card is filled with, and what lights its controls. The lock screen's card is the system's: the
+// widget tints it (LiveActivityWidget.swift) and cannot draw glass of its own that sees the wallpaper, so
+// the two that let the lock screen through do it by leaving the system's material, whole or under a veil.
 typedef NS_ENUM(NSInteger, SGLiveActivityColors) {
-    SGLiveActivityColorsSpotify = 0,   // the artwork's color, Spotify's green standing in
-    SGLiveActivityColorsArtwork,       // the artwork's lightened accent
-    SGLiveActivityColorsPlain,         // the system's material
+    SGLiveActivityColorsSpotify = 0,   // the artwork's color darkened, lit in Spotify's green
+    SGLiveActivityColorsArtwork,       // the same fill, lit in the artwork's lightened accent
+    SGLiveActivityColorsPlain,         // the system's material, lit in white
+    SGLiveActivityColorsTranslucent,   // the system's material under a thin dark veil, lit in white
 };
 
 // The lines' size.

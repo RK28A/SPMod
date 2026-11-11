@@ -6,6 +6,8 @@ on:
     branches: [main, patch-v2]
     paths:
       - "tweak/**"
+      - "extension/LiveActivity/**"
+      - "scripts/check-layers.sh"
       - ".github/workflows/build-check.yml"
 
 concurrency:
@@ -40,3 +42,10 @@ jobs:
 
       - name: Build tweak
         run: env -u MAKELEVEL gmake -C tweak clean package
+
+      # The widget only builds with the IPA otherwise (scripts/build-extension.sh): its sources are checked here.
+      - name: Typecheck the Live Activity widget
+        run: |
+          xcrun --sdk iphoneos swiftc -typecheck -wmo -parse-as-library -target arm64-apple-ios17.0 \
+            -module-name SpotifyGlassLiveActivity \
+            tweak/Sources/Shared/LiveActivity/LiveActivityShared.swift extension/LiveActivity/LiveActivityWidget.swift
