@@ -3,6 +3,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import "Shared/AdBlock/Protobuf.h"
 #import "SGMotionClip.h"
+#import "SGVideoEncodeSafety.h"
 
 static NSString *const kCanvas = @"canvas";
 
@@ -22,7 +23,10 @@ BOOL SGMotionClipShape(NSURL *file, CGFloat ratio, NSURL *out) {
         track = tracks.firstObject;
         dispatch_semaphore_signal(loaded);
     }];
-    dispatch_semaphore_wait(loaded, DISPATCH_TIME_FOREVER);
+    if (dispatch_semaphore_wait(loaded, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(30 * NSEC_PER_SEC))) != 0) {
+        [asset cancelLoading];
+        return NO;
+    }
     if (!track) return NO;
     // A quarter turn in the track's transform stands the stored picture on its side: the cut is made in the
     // stored picture, and the transform is carried over to stand it up the same way.
@@ -30,7 +34,8 @@ BOOL SGMotionClipShape(NSURL *file, CGFloat ratio, NSURL *out) {
     BOOL sideways = fabs(turn.b) > 0.5;
     CGSize stored = track.naturalSize, shown = sideways ? CGSizeMake(stored.height, stored.width) : stored;
     CGSize cut = SGMotionClipCut(shown, ratio);
-    if (cut.width < 2 || cut.height < 2) return NO;
+    if (!isfinite(cut.width) || !isfinite(cut.height) || cut.width < 2 || cut.height < 2 ||
+        cut.width > 4096 || cut.height > 4096) return NO;
     if (sideways) cut = CGSizeMake(cut.height, cut.width);
 
     AVAssetReader *reader = [AVAssetReader assetReaderWithAsset:asset error:nil];
@@ -68,8 +73,7 @@ BOOL SGMotionClipShape(NSURL *file, CGFloat ratio, NSURL *out) {
             [writer startSessionAtSourceTime:CMSampleBufferGetPresentationTimeStamp(sample)];
             started = YES;
         }
-        while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
-        ok = writer.status == AVAssetWriterStatusWriting && [input appendSampleBuffer:sample];
+        ok = SGVideoReady(input, writer) && [input appendSampleBuffer:sample];
         CFRelease(sample);
     }
     if (!ok || !started || reader.status != AVAssetReaderStatusCompleted) {
@@ -78,10 +82,7 @@ BOOL SGMotionClipShape(NSURL *file, CGFloat ratio, NSURL *out) {
         return NO;
     }
     [input markAsFinished];
-    dispatch_semaphore_t written = dispatch_semaphore_create(0);
-    [writer finishWritingWithCompletionHandler:^{ dispatch_semaphore_signal(written); }];
-    dispatch_semaphore_wait(written, DISPATCH_TIME_FOREVER);
-    if (writer.status != AVAssetWriterStatusCompleted) return NO;
+    if (!SGVideoFinish(writer)) return NO;
     [NSFileManager.defaultManager removeItemAtURL:out error:nil];
     return [NSFileManager.defaultManager moveItemAtURL:partial toURL:out error:nil];
 }
