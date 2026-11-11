@@ -78,11 +78,11 @@ static CGImageRef copyBackdropFor(UIImage *cover, CGSize size) {
     @synchronized (lock) {
         id key = cover ?: NSNull.null;
         if (!backdrop || made != key) {
-            CGImageRelease(backdrop);
+            if (backdrop) CGImageRelease(backdrop);
             backdrop = SGLyricsClipBackdrop(cover.CGImage, size);
             made = key;
         }
-        return CGImageRetain(backdrop);
+        return backdrop ? CGImageRetain(backdrop) : NULL;
     }
 }
 
@@ -140,10 +140,10 @@ static UIImage *previewFor(NSString *artworkID, SGLockLine *line, CGSize size) {
     if (!frame) {
         CGImageRef backdrop = copyBackdropFor(line.cover, size);
         frame = SGLyricsClipKaraokeFrame(backdrop, line.cover.CGImage, size, line.style, line.composition, karaokeSpecFor(line));
-        CGImageRelease(backdrop);
+        if (backdrop) CGImageRelease(backdrop);
     }
     if (frame) [sg_previews setObject:(preview = [UIImage imageWithCGImage:frame]) forKey:artworkID];
-    CGImageRelease(frame);
+    if (frame) CGImageRelease(frame);
     return preview;
 }
 
@@ -161,7 +161,7 @@ static BOOL writeClip(NSString *artworkID, SGLockLine *line, CGSize size) {
     if (!ok) {
         CGImageRef backdrop = copyBackdropFor(line.cover, size);
         ok = SGLyricsClipWriteKaraoke(file, backdrop, line.cover.CGImage, size, line.style, line.composition, karaokeSpecFor(line));
-        CGImageRelease(backdrop);
+        if (backdrop) CGImageRelease(backdrop);
     }
     // The first few of a launch, and any that fails: one a line would fill the log.
     static NSUInteger told;
