@@ -1,23 +1,38 @@
-TARGET := iphone:clang:latest:15.0
-INSTALL_TARGET_PROCESSES = Spotify
-ARCHS = arm64
+# Entry points; the real work is in scripts/. IPA defaults to the first file in ipa/.
+IPA ?= $(firstword $(wildcard ipa/*.ipa))
 
-include $(THEOS)/makefiles/common.mk
+# Include the Safari link opener unless SAFARI=0 is requested.
+SAFARI ?= 1
+SAFARI_ARG := $(if $(filter 0,$(SAFARI)),--no-safari,)
 
-TWEAK_NAME = EeveeSpotify
+# What goes on the phone is the mod alone. FLEX is the inspector `make trees` reads the screens
+# through, so it rides along only when it is asked for: make install FLEX=1. (A make target cannot
+# take --flex; make would read that as an option of its own.)
+FLEX ?= 0
+FLEX_ARG := $(if $(filter 0,$(FLEX)),--no-flex,)
 
-EeveeSpotify_FILES = $(shell find Sources/EeveeSpotify -name '*.swift') $(shell find Sources/EeveeSpotifyC -name '*.m' -o -name '*.c' -o -name '*.mm' -o -name '*.cpp')
-EeveeSpotify_SWIFTFLAGS = -ISources/EeveeSpotifyC/include -Osize
-EeveeSpotify_EXTRA_FRAMEWORKS = SwiftProtobuf
-EeveeSpotify_FRAMEWORKS = UIKit AVFoundation MediaPlayer
-EeveeSpotify_LDFLAGS += -weak_framework Translation -weak_framework SwiftUI
-EeveeSpotify_CFLAGS = -fobjc-arc -ISources/EeveeSpotifyC/include -Os
+# A local install is renamed and re-iconed so it is told apart from the released app on the home
+# screen.
+DEV_NAME ?= Taurus.dev
+DEV_ICON ?= docs/icon.png
 
-include $(THEOS_MAKE_PATH)/tweak.mk
+.PHONY: build release install trees session log flags
+build:    ## FLEX + glass IPA into out/
+	bash ./scripts/pipeline.sh $(IPA) $(SAFARI_ARG)
+release:  ## glass only, no FLEX
+	bash ./scripts/pipeline.sh $(IPA) $(SAFARI_ARG) --no-flex --name "SPMod" -o out/SPMod.ipa
+install:  ## build, sign with your certificate, push to the phone on USB (FLEX=1 to take FLEX too)
+	bash ./scripts/pipeline.sh $(IPA) $(SAFARI_ARG) --install $(FLEX_ARG) --name "$(DEV_NAME)" --icon "$(DEV_ICON)" -o out/Taurus.dev.ipa
+trees:    ## record per-screen view trees into trees/ (needs a FLEX build on the phone)
+	./scripts/record-trees.py
+session:  ## record clean trees screen by screen into trees/clean/, Enter per snapshot, n for the next screen (SCREENS="playlist artist" for some)
+	./scripts/record-session.py $(SCREENS)
+log:     ## stream the tweak's log lines from the phone
+	./scripts/dump-log.sh
+flags:    ## regenerate tweak/Sources/Shared/Flags/SGFlagList.m, Spotify's remote-config flags, from the IPA
+	./scripts/extract-flags.py $(IPA)
 
-copy-swiftprotobuf:
-	mkdir -p swiftprotobuf && cd swiftprotobuf ;\
-	curl -OL https://github.com/whoeevee/EeveeSpotify/releases/download/swift2.0/org.swift.protobuf.swiftprotobuf_1.26.0_iphoneos-arm.deb ;\
-	ar -x org.swift.protobuf.swiftprotobuf_1.26.0_iphoneos-arm.deb ;\
-	tar -xvf data.tar.lzma ;\
-	cp -r Library/Frameworks/SwiftProtobuf.framework "${THEOS}/lib" ;\
+.PHONY: test-safari
+test-safari:  ## link routing, lifecycle and extension packaging regression checks
+	node --test tests/open-spotify/*.test.cjs
+	python3 -m unittest discover -s tests/open-spotify -p 'test_*.py'
