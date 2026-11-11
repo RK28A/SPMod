@@ -440,7 +440,7 @@ static void tick(void) {
 }
 
 // Keep the 250-ms cadence while visible or actively requested by the lock screen.
-// Without system demand, a background timer wakes only every two seconds; a new
+// Without system demand, a background timer wakes only once a second; a new
 // asset callback immediately restores the fast cadence, without dropping lyrics.
 static void updateTickInterval(void) {
     if (!sg_timer) return;
@@ -448,7 +448,7 @@ static void updateTickInterval(void) {
     BOOL requested = SGLyricsHasRecentDemand(now, sg_askedAt)
         || SGLyricsHasRecentDemand(now, sg_previewAskedAt);
     BOOL active = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
-    uint64_t interval = (uint64_t)((active || requested ? kTick : 2.0) * NSEC_PER_SEC);
+    uint64_t interval = (uint64_t)((active || requested ? kTick : 1.0) * NSEC_PER_SEC);
     if (sg_timerPeriod == interval) return;
     sg_timerPeriod = interval;
     dispatch_source_set_timer(sg_timer, dispatch_time(DISPATCH_TIME_NOW, interval), interval, 10 * NSEC_PER_MSEC);
