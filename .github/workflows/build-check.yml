@@ -3,7 +3,7 @@ name: Build check
 on:
   workflow_dispatch:
   push:
-    branches: [better-SPMod]
+    branches: [main, patch-v2]
     paths:
       - "tweak/**"
       - ".github/workflows/build-check.yml"
