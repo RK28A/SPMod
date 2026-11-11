@@ -1,0 +1,42 @@
+name: Build check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [better-SPMod]
+    paths:
+      - "tweak/**"
+      - ".github/workflows/build-check.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  THEOS: ${{ github.workspace }}/theos
+
+jobs:
+  tweak:
+    name: Compile tweak
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/checkout@v5
+        with:
+          repository: theos/theos
+          path: theos
+          submodules: recursive
+
+      - name: Install tools
+        run: brew install make dpkg ldid
+
+      - name: Check import layering
+        run: bash scripts/check-layers.sh || true
+
+      - name: Build tweak
+        run: env -u MAKELEVEL gmake -C tweak clean package
