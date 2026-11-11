@@ -4,6 +4,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <CoreImage/CoreImage.h>
 #import "SGFluidClip.h"
+#import "SGVideoEncodeSafety.h"
 
 // Each copy, as in SGRFluid.m: its side as a share of the clip's longer side, its center as shares of the
 // clip, its opacity, and its resting angle. Over the loop it sways by kSway either side of that angle and
@@ -28,7 +29,10 @@ static const CGFloat kCoverY = 0.45, kCoverRadius = 0.035, kShadowBlur = 0.08;
 static const int32_t kLoopSeconds = 8, kFPS = 24;
 
 static CGContextRef newContext(CGSize size, void *data, size_t bytesPerRow) {
+    if (!isfinite(size.width) || !isfinite(size.height) || size.width < 1 || size.height < 1 ||
+        size.width > 4096 || size.height > 4096) return NULL;
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    if (!space) return NULL;
     CGContextRef context = CGBitmapContextCreate(data, (size_t)size.width, (size_t)size.height, 8, bytesPerRow, space,
                                                  kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
     CGColorSpaceRelease(space);
@@ -64,6 +68,7 @@ static CGImageRef newCover(CGImageRef cover, CGSize size, CGFloat coverScale) CF
     CGRect frame = coverFrame(size, coverScale);
     CGFloat side = round(size.width * coverScale), margin = (frame.size.width - side) / 2;
     CGContextRef context = newContext(frame.size, NULL, 0);
+    if (!context) return NULL;
     CGRect picture = CGRectMake(margin, margin, side, side);
     CGPathRef rounded = CGPathCreateWithRoundedRect(picture, side * kCoverRadius, side * kCoverRadius, NULL);
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
@@ -151,6 +156,11 @@ CGImageRef SGFluidClipFrame(CGImageRef cover, CGSize size, CGFloat coverScale) {
     coverScale = MIN(MAX(coverScale, 0.2), 0.9);
     Parts parts = makeParts(cover, size, coverScale);
     CGContextRef context = newContext(size, NULL, 0);
+    if (!context || !parts.blurred || !parts.cover || !parts.field || !parts.shade) {
+        if (context) CGContextRelease(context);
+        freeParts(parts);
+        return NULL;
+    }
     drawFrame(context, parts, size, coverScale, 0);
     CGImageRef frame = CGBitmapContextCreateImage(context);
     CGContextRelease(context);
@@ -186,15 +196,21 @@ BOOL SGFluidClipWrite(NSURL *file, CGImageRef cover, CGSize size, CGFloat coverS
     if (![writer startWriting]) return NO;
     [writer startSessionAtSourceTime:kCMTimeZero];
     Parts parts = makeParts(cover, size, coverScale);
-    BOOL ok = parts.blurred && parts.cover;
+    BOOL ok = parts.blurred && parts.cover && parts.field && parts.shade;
     for (int32_t i = 0; i < frames && ok; i++) {
-        while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
+        if (!SGVideoReady(input, writer)) { ok = NO; break; }
         CVPixelBufferRef buffer = NULL;
         ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
             && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
         if (!ok) break;
-        CVPixelBufferLockBaseAddress(buffer, 0);
+        if (CVPixelBufferLockBaseAddress(buffer, 0) != kCVReturnSuccess) {
+            CVPixelBufferRelease(buffer); ok = NO; break;
+        }
         CGContextRef context = newContext(size, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
+        if (!context) {
+            CVPixelBufferUnlockBaseAddress(buffer, 0); CVPixelBufferRelease(buffer);
+            ok = NO; break;
+        }
         drawFrame(context, parts, size, coverScale, (double)i / frames);
         CGContextRelease(context);
         CVPixelBufferUnlockBaseAddress(buffer, 0);
@@ -208,10 +224,7 @@ BOOL SGFluidClipWrite(NSURL *file, CGImageRef cover, CGSize size, CGFloat coverS
     }
     [input markAsFinished];
     [writer endSessionAtSourceTime:CMTimeMake(kLoopSeconds, 1)];
-    dispatch_semaphore_t written = dispatch_semaphore_create(0);
-    [writer finishWritingWithCompletionHandler:^{ dispatch_semaphore_signal(written); }];
-    dispatch_semaphore_wait(written, DISPATCH_TIME_FOREVER);
-    if (writer.status != AVAssetWriterStatusCompleted) return NO;
+    if (!SGVideoFinish(writer)) return NO;
     [NSFileManager.defaultManager removeItemAtURL:file error:nil];
     return [NSFileManager.defaultManager moveItemAtURL:partial toURL:file error:nil];
 }
