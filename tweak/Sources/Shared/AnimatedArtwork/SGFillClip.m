@@ -226,7 +226,8 @@ BOOL SGFillClipWriteFrame(NSURL *file, CGImageRef frame, CGSize size) {
     BOOL ok = YES;
     int32_t frameCount = kLoopSeconds * kFramesPerSecond;
     for (int32_t index = 0; index < frameCount && ok; index++) {
-        if (!SGVideoReady(input, writer)) { ok = NO; break; }
+        @autoreleasepool {
+            if (!SGVideoReady(input, writer)) { ok = NO; break; }
         CVPixelBufferRef buffer = NULL;
         ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
             && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
@@ -245,6 +246,7 @@ BOOL SGFillClipWriteFrame(NSURL *file, CGImageRef frame, CGSize size) {
         CVPixelBufferUnlockBaseAddress(buffer, 0);
         if (ok) ok = [adaptor appendPixelBuffer:buffer withPresentationTime:CMTimeMake(index, kFramesPerSecond)];
         CVPixelBufferRelease(buffer);
+        }
     }
     if (!ok) {
         [writer cancelWriting];
