@@ -1,6 +1,5 @@
 #import "Core/SGCore.h"
 #import "Redesigned/Kit/SGRKit.h"
-#import "Redesigned/Kit/SGRAccentTint.h"
 #import "NowPlayingBar.h"
 
 static void tintConnect(UIView *bar) {
