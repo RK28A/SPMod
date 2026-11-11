@@ -37,6 +37,12 @@ struct SGLyricsAttributes: ActivityAttributes {
         var repeatMode: Int   // 0 off, 1 the playlist or album, 2 the track
         var timerEnd: Date?   // the sleep timer's end, nil when none is set
         var timerEndOfTrack: Bool
+        // The card's look, worked out by the tweak (LiveActivity.x) from the Card color setting: its fill as
+        // 0xRRGGBB at `fillAlpha`, nil for the system's own material, and the colour lit controls take, nil
+        // for Spotify's green.
+        var fill: Int?
+        var fillAlpha: Double?
+        var accent: Int?
     }
 }
 

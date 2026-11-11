@@ -15,6 +15,25 @@ private let idle = Color.white.opacity(0.08)
 private typealias State = SGLyricsAttributes.ContentState
 private typealias Tab = SGLyricsAttributes.Tab
 
+private func color(_ rgb: Int) -> Color {
+    Color(red: Double((rgb >> 16) & 0xFF) / 255, green: Double((rgb >> 8) & 0xFF) / 255, blue: Double(rgb & 0xFF) / 255)
+}
+
+// The card's look as the tweak worked it out from the Card color setting. The lock screen's card is the
+// system's: an extension tints it and draws on it, and cannot draw glass of its own that sees the
+// wallpaper. No tint leaves the system's material, and a tint that is not opaque lets it show through.
+extension SGLyricsAttributes.ContentState {
+    var lit: Color {
+        guard let accent else { return green }
+        return color(accent)
+    }
+
+    var cardTint: Color? {
+        guard let fill else { return nil }
+        return color(fill).opacity(fillAlpha ?? 1)
+    }
+}
+
 @main
 struct SGLiveActivityBundle: WidgetBundle {
     var body: some Widget {
@@ -48,7 +67,7 @@ struct SGLyricsLiveActivity: Widget {
                 .padding(.horizontal, context.state.view == .panel ? 12 : 16)
                 .padding(.vertical, 12)
                 .foregroundStyle(.white)
-                .activityBackgroundTint(Color.black.opacity(0.75))
+                .activityBackgroundTint(context.state.cardTint)
                 .activitySystemActionForegroundColor(.white)
                 .widgetURL(URL(string: "spotify:"))
         } dynamicIsland: { context in
@@ -66,20 +85,20 @@ struct SGLyricsLiveActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "music.note")
-                    .foregroundStyle(green)
+                    .foregroundStyle(context.state.lit)
             } compactTrailing: {
                 if let end = context.state.timerEnd, end > Date() {
                     Text(timerInterval: Date()...end, countsDown: true)
                         .monospacedDigit()
-                        .foregroundStyle(green)
+                        .foregroundStyle(context.state.lit)
                         .frame(maxWidth: 44)
                 } else {
                     Image(systemName: context.state.paused ? "pause.fill" : "waveform")
-                        .foregroundStyle(green)
+                        .foregroundStyle(context.state.lit)
                 }
             } minimal: {
                 Image(systemName: "music.note")
-                    .foregroundStyle(green)
+                    .foregroundStyle(context.state.lit)
             }
             .widgetURL(URL(string: "spotify:"))
         }
@@ -220,7 +239,7 @@ private struct PanelView: View {
                     Toggle(isOn: tab == state.tab, intent: SGLiveActivityActionIntent("tab:\(tab.rawValue)")) {
                         EmptyView()
                     }
-                    .toggleStyle(TabStyle(tab: tab))
+                    .toggleStyle(TabStyle(tab: tab, accent: state.lit))
                 }
             }
             Group {
@@ -237,6 +256,7 @@ private struct PanelView: View {
 
 private struct TabStyle: ToggleStyle {
     let tab: Tab
+    let accent: Color
 
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 4) {
@@ -248,8 +268,8 @@ private struct TabStyle: ToggleStyle {
         .font(.caption.weight(.semibold))
         .frame(maxWidth: .infinity)
         .frame(height: 24)
-        .background(Capsule().fill(configuration.isOn ? green.opacity(0.22) : idle))
-        .foregroundStyle(configuration.isOn ? green : .white.opacity(0.7))
+        .background(Capsule().fill(configuration.isOn ? accent.opacity(0.22) : idle))
+        .foregroundStyle(configuration.isOn ? accent : .white.opacity(0.7))
     }
 }
 
@@ -278,12 +298,13 @@ private struct ChipStyle: ToggleStyle {
     var onLabel: String?
     // Play and pause flips its symbol but is not a setting, so it keeps the idle fill either way.
     var lights = true
+    var accent = green
 
     func makeBody(configuration: Configuration) -> some View {
         let on = configuration.isOn
         ChipLabel(symbol: on ? onSymbol ?? symbol : symbol, label: on ? onLabel ?? label : label)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(on && lights ? green.opacity(0.22) : idle))
-            .foregroundStyle(on && lights ? green : .white)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(on && lights ? accent.opacity(0.22) : idle))
+            .foregroundStyle(on && lights ? accent : .white)
     }
 }
 
@@ -292,12 +313,13 @@ private struct ChipButton: View {
     let symbol: String
     let label: String
     var lit = false
+    var accent = green
 
     var body: some View {
         Button(intent: SGLiveActivityActionIntent(action)) {
             ChipLabel(symbol: symbol, label: label)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(lit ? green.opacity(0.22) : idle))
-                .foregroundStyle(lit ? green : .white)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(lit ? accent.opacity(0.22) : idle))
+                .foregroundStyle(lit ? accent : .white)
         }
         .buttonStyle(.plain)
     }
@@ -323,10 +345,10 @@ private struct ControlsPage: View {
                     .toggleStyle(ChipStyle(symbol: "play.fill", onSymbol: "pause.fill", label: "Play", onLabel: "Pause", lights: false))
                 ChipButton(action: "next", symbol: "forward.fill", label: "Next")
                 Toggle(isOn: state.shuffle, intent: SGLiveActivityActionIntent("shuffle")) { EmptyView() }
-                    .toggleStyle(ChipStyle(symbol: "shuffle", label: "Shuffle"))
+                    .toggleStyle(ChipStyle(symbol: "shuffle", label: "Shuffle", accent: state.lit))
                 // Three states, so a button: the new one shows once the render lands.
                 ChipButton(action: "repeat", symbol: state.repeatMode == 2 ? "repeat.1" : "repeat",
-                           label: "Repeat", lit: state.repeatMode != 0)
+                           label: "Repeat", lit: state.repeatMode != 0, accent: state.lit)
                     .invalidatableContent()
             }
         }
@@ -349,7 +371,7 @@ private struct QueuePage: View {
                     HStack(spacing: 10) {
                         Image(systemName: "play.fill")
                             .font(.caption)
-                            .foregroundStyle(green)
+                            .foregroundStyle(state.lit)
                         Text(track.title)
                             .font(.footnote.weight(.semibold))
                         Text(track.artist)
@@ -383,11 +405,11 @@ private struct TimerPage: View {
                         if let end = state.timerEnd {
                             Text(timerInterval: Date()...end, countsDown: true)
                                 .font(.system(size: 34, weight: .bold).monospacedDigit())
-                                .foregroundStyle(green)
+                                .foregroundStyle(state.lit)
                         } else {
                             Text("End of track")
                                 .font(.title2.weight(.bold))
-                                .foregroundStyle(green)
+                                .foregroundStyle(state.lit)
                         }
                     }
                     Spacer(minLength: 0)
