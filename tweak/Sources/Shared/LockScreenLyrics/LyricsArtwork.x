@@ -7,6 +7,7 @@
 #import "Core/SGCore.h"
 #import "LockScreenLyrics.h"
 #import "SGLyricsClip.h"
+#import "SGLyricsDemand.h"
 #import "Shared/AnimatedArtwork/AnimatedArtwork.h"
 #import "Shared/Lyrics/Lyrics.h"
 #import "Shared/Player/NowPlayingExtras.h"
@@ -175,7 +176,7 @@ static void drawAhead(NSString *artworkID, SGLockLine *line, BOOL urgent) {
     CGSize size = SGLyricsClipSize(SGMotionPixels());
     for (NSUInteger kind = 0; kind < 2; kind++) {
         BOOL video = kind == 1;
-        if (!urgent && time - (video ? sg_askedAt : sg_previewAskedAt) > 60) continue;
+        if (!SGLyricsHasRecentDemand(time, video ? sg_askedAt : sg_previewAskedAt)) continue;
         if (video ? [sg_clips objectForKey:artworkID] != nil : [sg_previews objectForKey:artworkID] != nil) continue;
         NSString *key = [artworkID stringByAppendingString:video ? @"-video" : @"-preview"];
         @synchronized (sg_lock) {
@@ -243,9 +244,10 @@ static MPMediaItemAnimatedArtwork *artworkFor(NSString *artworkID, SGLockLine *l
 }
 
 static void clear(void) {
+    // Pending work also needs invalidating before the first artwork is published.
+    @synchronized (sg_lock) { sg_wanted = nil; }
     if (!sg_shownID) return;
     setShown(nil);
-    @synchronized (sg_lock) { sg_wanted = nil; }
     SGNowPlayingSetExtras(@"lyrics", nil, nil);
 }
 
@@ -320,8 +322,6 @@ static void tick(void) {
             sg_resumeTrack = nil;
             sg_resumeIndex = NSNotFound;
             sg_resumeBucket = 0;
-            CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-            sg_askedAt = sg_previewAskedAt = now;
             [sg_clips removeAllObjects];
             [sg_previews removeAllObjects];
             // The IDs name the track, so the last track's clips are never asked for again.
@@ -418,14 +418,13 @@ static void tick(void) {
         drawAhead(artworkID, currentLine, YES);
         for (NSString *ahead in aheadLines) drawAhead(ahead, aheadLines[ahead], NO);
         if ([artworkID isEqualToString:sg_shownID]) return;
-        // Wait until both the preview image and video clip are ready in cache before notifying SpringBoard,
-        // so the lock screen switches clips synchronously in 0 ms without flashing the plain album cover.
-        if (![sg_previews objectForKey:artworkID] || ![sg_clips objectForKey:artworkID]) return;
+        // Warm only assets the system has recently requested. When idle, publish the
+        // cheap descriptor immediately: its request handlers restart demand on wake.
+        CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+        if (SGLyricsHasRecentDemand(now, sg_previewAskedAt) && ![sg_previews objectForKey:artworkID]) return;
+        if (SGLyricsHasRecentDemand(now, sg_askedAt) && ![sg_clips objectForKey:artworkID]) return;
         if (![sg_shownID hasPrefix:trackID]) {
             SGLog(@"lock lyrics: lines offered for %@", trackID);
-            CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
-            if (!sg_previewAskedAt) sg_previewAskedAt = now;
-            if (!sg_askedAt) sg_askedAt = now;
         }
         if (motion && ![sg_shownID hasSuffix:[@"-" stringByAppendingString:look]])
             SGLog(@"lock lyrics: lines over moving artwork %@", motion.lastPathComponent);
