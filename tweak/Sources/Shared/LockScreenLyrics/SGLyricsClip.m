@@ -74,7 +74,7 @@ CGImageRef SGLyricsClipBackdrop(CGImageRef cover, CGSize size) {
         CGImageRef blurred = [renderer createCGImage:image fromRect:(CGRect){CGPointZero, small}];
         CGContextSetInterpolationQuality(context, kCGInterpolationHigh);
         if (blurred) CGContextDrawImage(context, bounds, blurred);
-        CGImageRelease(blurred);
+        if (blurred) CGImageRelease(blurred);
         // Darkened, so white words read over a light cover.
         CGContextSetRGBFillColor(context, 0, 0, 0, 0.45);
         CGContextFillRect(context, bounds);
@@ -598,8 +598,8 @@ static void drawVinyl(CGContextRef context, CGImageRef backdrop, CGImageRef cove
     CGImageRef baseImage = newVinylBaseImage(backdrop, line, size);
     CGImageRef discImage = newVinylDiscImage(cover, size);
     drawVinylCached(context, baseImage, discImage, size, phase, spin);
-    CGImageRelease(discImage);
-    CGImageRelease(baseImage);
+    if (discImage) CGImageRelease(discImage);
+    if (baseImage) CGImageRelease(baseImage);
 }
 
 // Messages: the line in a chat bubble beside a round avatar of the cover.
@@ -1111,8 +1111,8 @@ BOOL SGLyricsClipWriteInAtTime(NSURL *file, CGImageRef backdrop, CGImageRef cove
             CVPixelBufferRelease(buffer);
         }
     }
-    CGImageRelease(vinylDisc);
-    CGImageRelease(vinylBase);
+    if (vinylDisc) CGImageRelease(vinylDisc);
+    if (vinylBase) CGImageRelease(vinylBase);
     if (!ok) {
         [writer cancelWriting];
         return NO;
@@ -1215,7 +1215,7 @@ static Over makeOver(Motion motion, NSString *previous, NSString *line, NSString
 }
 
 static void freeOver(Over over) {
-    CGImageRelease(over.words);
+    if (over.words) CGImageRelease(over.words);
     free(over.keep);
     free(over.blurred);
     free(over.feather);
