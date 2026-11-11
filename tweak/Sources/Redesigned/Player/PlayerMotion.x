@@ -124,12 +124,20 @@ static CGFloat brightEnd(NSData *luminances) {
 
 @interface SGRPlayerMotionView : UIView <SGPlayerStateObserver>
 @property (nonatomic) CGFloat screenHeight;
+// Only the real player stores a position; settings previews remain independent.
+@property (nonatomic, copy) NSString *resumeTrack;
 // Runs when the clip has drawn nothing kGiveUp seconds after it was first on screen in front.
 @property (nonatomic, copy) void (^gaveUp)(void);
 - (void)playFile:(NSURL *)file poster:(UIImage *)poster;
 - (void)appear:(BOOL)animated then:(void (^)(void))done;
 - (void)setBlurred:(BOOL)blurred animated:(BOOL)animated;
+- (void)retire;
 @end
+
+// Main thread, one current clip only. No disk storage and no memory-pressure eviction:
+// recreating the current view preserves its time; a different clip starts afresh.
+static NSString *sg_savedMotionKey;
+static NSValue *sg_savedMotionTime;
 
 static BOOL lyricsBlurEnabledForTrack(NSString *track);
 static NSString *currentLyricsBlurTrack(void);
@@ -148,6 +156,8 @@ static NSString *currentLyricsBlurTrack(void);
     UIVisualEffectView *_seamBlur, *_lyricsBlur;
     CGFloat _aspect;
     BOOL _timing;   // the give-up's count is running
+    BOOL _restoring, _retired, _inactive;
+    NSString *_resumeKey;
     UIViewPropertyAnimator *_seamBlurAnimator, *_lyricsBlurAnimator;
 }
 
@@ -219,7 +229,9 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
     [self addSubview:_lyricsBlur];
 
     NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
-    for (NSNotificationName name in @[UIApplicationDidBecomeActiveNotification, UIApplicationWillResignActiveNotification,
+    [center addObserver:self selector:@selector(suspendMotion) name:UIApplicationWillResignActiveNotification object:nil];
+    [center addObserver:self selector:@selector(resumeMotion) name:UIApplicationDidBecomeActiveNotification object:nil];
+    for (NSNotificationName name in @[UIApplicationDidEnterBackgroundNotification,
                                       NSProcessInfoPowerStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
         [center addObserver:self selector:@selector(updateMotionSoon) name:name object:nil];
     }
@@ -284,6 +296,8 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
 }
 
 - (void)playFile:(NSURL *)file poster:(UIImage *)poster {
+    if (!poster || poster.size.width <= 0 || poster.size.height <= 0) return;
+    _resumeKey = self.resumeTrack.length ? [NSString stringWithFormat:@"%@\n%@", self.resumeTrack, file.absoluteString] : nil;
     _aspect = poster.size.height / poster.size.width;
     // A blurred copy of the poster's last rows carries the clip's color below its edge without streaking.
     CGFloat rows = MAX(kFootRows, 1 / MAX(1, poster.size.height * poster.scale));
@@ -297,6 +311,20 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
     _player.preventsDisplaySleepDuringVideoPlayback = NO;
     _looper = [AVPlayerLooper playerLooperWithPlayer:_player templateItem:[AVPlayerItem playerItemWithURL:file]];
     _clip.player = _player;
+    NSValue *saved = [_resumeKey isEqualToString:sg_savedMotionKey] ? sg_savedMotionTime : nil;
+    if (saved && CMTIME_IS_NUMERIC(saved.CMTimeValue) && CMTimeGetSeconds(saved.CMTimeValue) > 0) {
+        _restoring = YES;
+        __weak SGRPlayerMotionView *weakSelf = self;
+        [_player seekToTime:saved.CMTimeValue toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero
+            completionHandler:^(BOOL finished) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    SGRPlayerMotionView *view = weakSelf;
+                    if (!view) return;
+                    view->_restoring = NO;
+                    [view updateMotion];
+                });
+            }];
+    }
     [self setNeedsLayout];
     [self updateMotion];
     [self measure:file poster:poster];
@@ -387,15 +415,45 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
     dispatch_async(dispatch_get_main_queue(), ^{ [self updateMotion]; });
 }
 
+- (void)rememberPosition {
+    if (!_resumeKey || _restoring || _retired || !_player) return;
+    CMTime time = _player.currentTime;
+    if (CMTIME_IS_NUMERIC(time) && CMTimeGetSeconds(time) >= 0) {
+        sg_savedMotionKey = _resumeKey;
+        sg_savedMotionTime = [NSValue valueWithCMTime:time];
+    }
+}
+
+- (void)suspendMotion {
+    _inactive = YES;
+    [_player pause];
+    [self rememberPosition];
+}
+
+- (void)resumeMotion {
+    _inactive = NO;
+    [self updateMotion];
+}
+
+- (void)retire {
+    [_player pause];
+    [self rememberPosition];
+    _retired = YES; // Outgoing fade callbacks must never restart the old video.
+    self.gaveUp = nil;
+}
+
 // A locked phone keeps the player in its window, so being in front counts as much as being in one.
 - (void)updateMotion {
     BOOL front = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
-    BOOL may = self.window && front && !SGRPlayerIsTransitioning() && !SGRReduceMotion() && !NSProcessInfo.processInfo.lowPowerModeEnabled
+    BOOL may = !_restoring && !_retired && !_inactive && self.window && front && !SGRPlayerIsTransitioning() && !SGRReduceMotion() && !NSProcessInfo.processInfo.lowPowerModeEnabled
         && !SGPlayerState().isPaused;
     if (may) [_player play];
-    else [_player pause];
+    else {
+        [_player pause];
+        [self rememberPosition];
+    }
     // A paused player still draws the clip's first frame, so the count runs whenever it is on screen in front.
-    if (_player && self.window && front && !_timing && !_clip.readyForDisplay) {
+    if (_player && !_restoring && !_retired && !_inactive && self.window && front && !_timing && !_clip.readyForDisplay) {
         _timing = YES;
         __weak SGRPlayerMotionView *weakSelf = self;
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kGiveUp * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -661,6 +719,7 @@ static BOOL seen(UIView *view) {
 // The clip fades out over the cover coming back where the player is seen, and goes at once where not.
 static void clear(BOOL animated) {
     SGRPlayerMotionView *old = sg_motion;
+    [old retire];
     sg_motion = nil;
     sg_shown = nil;
     sg_motionFile = nil;
@@ -683,10 +742,13 @@ static void show(NSString *track, NSURL *file) {
         if (!poster || poster.size.width <= 0 || begun != sg_begun) return;
         clear(YES);
         sg_motion = [[SGRPlayerMotionView alloc] initWithFrame:CGRectZero];
+        sg_motion.resumeTrack = track;
         sg_shown = track;
         SGRPlayerMotionView *motion = sg_motion;
+        __weak SGRPlayerMotionView *weakMotion = motion;
         motion.gaveUp = ^{
-            if (sg_motion != motion) return;
+            SGRPlayerMotionView *current = weakMotion;
+            if (!current || sg_motion != current) return;
             SGLog(@"redesign player: animated artwork %@ drew nothing in %.0f s, given up", file.lastPathComponent, kGiveUp);
             clear(YES);
         };
