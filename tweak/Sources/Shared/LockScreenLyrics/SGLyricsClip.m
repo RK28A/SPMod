@@ -2,6 +2,7 @@
 // so an animated clip costs a scaled image draw and an encode a frame.
 #import <Accelerate/Accelerate.h>
 #import <AVFoundation/AVFoundation.h>
+#import "Shared/AnimatedArtwork/SGVideoEncodeSafety.h"
 #import <CoreImage/CoreImage.h>
 #import <CoreText/CoreText.h>
 #import "SGLyricsClip.h"
@@ -34,7 +35,11 @@ CGSize SGLyricsClipSize(CGFloat pixels) {
 }
 
 static CGContextRef newContext(CGSize size, void *data, size_t bytesPerRow) {
+    // A failed bitmap allocation is expected under Jetsam pressure; callers fall back safely.
+    if (!isfinite(size.width) || !isfinite(size.height) || size.width < 1 || size.height < 1 ||
+        size.width > 4096 || size.height > 4096) return NULL;
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    if (!space) return NULL;
     CGContextRef context = CGBitmapContextCreate(data, (size_t)size.width, (size_t)size.height, 8, bytesPerRow, space,
                                                  kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
     CGColorSpaceRelease(space);
@@ -46,6 +51,7 @@ static const CGFloat kBackdropWidth = 128;
 
 CGImageRef SGLyricsClipBackdrop(CGImageRef cover, CGSize size) {
     CGContextRef context = newContext(size, NULL, 0);
+    if (!context) return NULL;
     CGRect bounds = {CGPointZero, size};
     CGContextSetRGBFillColor(context, 0.11, 0.11, 0.12, 1);
     CGContextFillRect(context, bounds);
@@ -127,6 +133,7 @@ static CGImageRef newWords(NSString *previous, NSString *line, NSString *next, C
     CGPathRef path = CGPathCreateWithRect(box, NULL);
     CTFrameRef frame = CTFramesetterCreateFrame(setter, CFRangeMake(0, 0), path, NULL);
     CGContextRef context = newContext(size, NULL, 0);
+    if (!context) { CFRelease(frame); CGPathRelease(path); CFRelease(setter); return NULL; }
     if (drawn) {
         CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
         CGFloat shade[] = {0, 0, 0, kShadowAlpha};
@@ -246,6 +253,7 @@ static KaraokePlan makeKaraokePlan(NSString *previous, NSString *line, NSString 
     }
     if (prevH > 0 || nextH > 0) {
         CGContextRef ctx = newContext(size, NULL, 0);
+        if (!ctx) return plan;
         CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
         CGFloat shade[] = {0, 0, 0, kShadowAlpha * 0.7};
         CGColorRef shadowColor = CGColorCreate(space, shade);
@@ -513,6 +521,7 @@ static void drawVinylText(CGContextRef context, NSString *line, CGSize size) {
 
 static CGImageRef newVinylBaseImage(CGImageRef backdrop, NSString *line, CGSize size) CF_RETURNS_RETAINED {
     CGContextRef context = newContext(size, NULL, 0);
+    if (!context) return NULL;
     if (backdrop) CGContextDrawImage(context, (CGRect){CGPointZero, size}, backdrop);
     CGFloat radius = size.width * 0.26;
     CGPoint centre = CGPointMake(size.width / 2, size.height * 0.63);
@@ -535,6 +544,7 @@ static CGImageRef newVinylDiscImage(CGImageRef cover, CGSize size) CF_RETURNS_RE
     CGSize discSize = CGSizeMake(side, side);
     CGPoint centre = CGPointMake(side / 2, side / 2);
     CGContextRef context = newContext(discSize, NULL, 0);
+    if (!context) return NULL;
     CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
     if (cover && CGImageGetWidth(cover) > 1) {
         CGPathRef record = CGPathCreateWithEllipseInRect(CGRectMake(centre.x - radius, centre.y - radius, radius * 2, radius * 2), NULL);
@@ -903,6 +913,7 @@ CGImageRef SGLyricsClipKaraokeFrame(CGImageRef backdrop, CGImageRef cover, CGSiz
         words = autoWords;
     }
     CGContextRef context = newContext(size, NULL, 0);
+    if (!context) { free(autoWords); freeKaraokePlan(plan); return NULL; }
     double breathPhase = isfinite(spec.songTime) ? spec.songTime / (double)kLoopSeconds : 0.0;
     double elapsed = MAX(0.0, spec.elapsedInLine);
     // When rendering the preview image for an animated clip at the start of a line, hold a slight
@@ -964,13 +975,19 @@ BOOL SGLyricsClipWriteKaraoke(NSURL *file, CGImageRef backdrop, CGImageRef cover
     BOOL ok = YES;
     for (int32_t i = 0; i < frames && ok; i++) {
         @autoreleasepool {
-            while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
+            if (!SGVideoReady(input, writer)) { ok = NO; break; }
             CVPixelBufferRef buffer = NULL;
             ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
                 && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
             if (!ok) break;
-            CVPixelBufferLockBaseAddress(buffer, 0);
+            if (CVPixelBufferLockBaseAddress(buffer, 0) != kCVReturnSuccess) {
+                CVPixelBufferRelease(buffer); ok = NO; break;
+            }
             CGContextRef context = newContext(size, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
+            if (!context) {
+                CVPixelBufferUnlockBaseAddress(buffer, 0); CVPixelBufferRelease(buffer);
+                ok = NO; break;
+            }
             double frameTime = style == SGLyricsClipAnimated ? (double)i / (double)kFPS : 0.0;
             double elapsed = MAX(0.0, spec.elapsedInLine) + frameTime;
             double breathPhase = (baseSongTime + frameTime) / (double)kLoopSeconds;
@@ -995,10 +1012,7 @@ BOOL SGLyricsClipWriteKaraoke(NSURL *file, CGImageRef backdrop, CGImageRef cover
     }
     [input markAsFinished];
     [writer endSessionAtSourceTime:length];
-    dispatch_semaphore_t written = dispatch_semaphore_create(0);
-    [writer finishWritingWithCompletionHandler:^{ dispatch_semaphore_signal(written); }];
-    dispatch_semaphore_wait(written, DISPATCH_TIME_FOREVER);
-    if (writer.status != AVAssetWriterStatusCompleted) return NO;
+    if (!SGVideoFinish(writer)) return NO;
     [NSFileManager.defaultManager removeItemAtURL:file error:nil];
     return [NSFileManager.defaultManager moveItemAtURL:partial toURL:file error:nil];
 }
@@ -1015,6 +1029,7 @@ CGImageRef SGLyricsClipFrameInAtTime(CGImageRef backdrop, CGImageRef cover, NSSt
         return SGLyricsClipKaraokeFrame(backdrop, cover, size, style, composition, spec);
     }
     CGContextRef context = newContext(size, NULL, 0);
+    if (!context) return NULL;
     drawComposition(context, backdrop, cover, line, size, isfinite(from) ? from / kLoopSeconds : 0,
                     composition, style == SGLyricsClipAnimated);
     CGImageRef frame = CGBitmapContextCreateImage(context);
@@ -1068,13 +1083,19 @@ BOOL SGLyricsClipWriteInAtTime(NSURL *file, CGImageRef backdrop, CGImageRef cove
     BOOL ok = YES;
     for (int32_t i = 0; i < frames && ok; i++) {
         @autoreleasepool {
-            while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
+            if (!SGVideoReady(input, writer)) { ok = NO; break; }
             CVPixelBufferRef buffer = NULL;
             ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
                 && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
             if (!ok) break;
-            CVPixelBufferLockBaseAddress(buffer, 0);
+            if (CVPixelBufferLockBaseAddress(buffer, 0) != kCVReturnSuccess) {
+                CVPixelBufferRelease(buffer); ok = NO; break;
+            }
             CGContextRef context = newContext(size, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
+            if (!context) {
+                CVPixelBufferUnlockBaseAddress(buffer, 0); CVPixelBufferRelease(buffer);
+                ok = NO; break;
+            }
             double phase = (isfinite(from) ? from / kLoopSeconds : 0) + (double)i / frames;
             if (composition == SGLyricsClipVinyl) {
                 drawVinylCached(context, vinylBase, vinylDisc, size, phase, style == SGLyricsClipAnimated);
@@ -1095,10 +1116,7 @@ BOOL SGLyricsClipWriteInAtTime(NSURL *file, CGImageRef backdrop, CGImageRef cove
     }
     [input markAsFinished];
     [writer endSessionAtSourceTime:length];
-    dispatch_semaphore_t written = dispatch_semaphore_create(0);
-    [writer finishWritingWithCompletionHandler:^{ dispatch_semaphore_signal(written); }];
-    dispatch_semaphore_wait(written, DISPATCH_TIME_FOREVER);
-    if (writer.status != AVAssetWriterStatusCompleted) return NO;
+    if (!SGVideoFinish(writer)) return NO;
     [NSFileManager.defaultManager removeItemAtURL:file error:nil];
     return [NSFileManager.defaultManager moveItemAtURL:partial toURL:file error:nil];
 }
@@ -1131,11 +1149,16 @@ static AVAssetTrack *motionTrack(AVURLAsset *asset, Motion *motion) {
         track = tracks.firstObject;
         dispatch_semaphore_signal(loaded);
     }];
-    dispatch_semaphore_wait(loaded, DISPATCH_TIME_FOREVER);
+    if (dispatch_semaphore_wait(loaded, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(30 * NSEC_PER_SEC))) != 0) {
+        [asset cancelLoading];
+        return nil;
+    }
     if (!track || !CGAffineTransformIsIdentity(track.preferredTransform)) return nil;
     CGSize stored = CGSizeMake(round(track.naturalSize.width), round(track.naturalSize.height));
     double length = CMTimeGetSeconds(track.timeRange.duration);
-    if (stored.width < 16 || stored.height < 16 || !(length > 0)) return nil;
+    if (!isfinite(stored.width) || !isfinite(stored.height) ||
+        stored.width < 16 || stored.height < 16 || stored.width > 4096 || stored.height > 4096 ||
+        !isfinite(length) || !(length > 0)) return nil;
     CGSize cut = stored.width / stored.height > 0.75 ? CGSizeMake(stored.height * 0.75, stored.height)
                                                      : CGSizeMake(stored.width, stored.width / 0.75);
     *motion = (Motion){stored, CGSizeMake(floor(cut.width / 2) * 2, floor(cut.height / 2) * 2), length};
@@ -1236,6 +1259,7 @@ static BOOL drawOver(CVPixelBufferRef buffer, Motion motion, Over over) {
     }
     if (over.words) {
         CGContextRef context = newContext(motion.stored, base, bytesPerRow);
+        if (!context) { CVPixelBufferUnlockBaseAddress(buffer, 0); return NO; }
         CGContextDrawImage(context, CGRectOffset(over.drawn, cut.origin.x, cut.origin.y), over.words);
         CGContextRelease(context);
     }
@@ -1296,11 +1320,11 @@ CGImageRef SGLyricsClipMotionFrame(NSURL *motionFile, NSString *previous, NSStri
         if (!drawOver(buffer, motion, over)) return NO;
         CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
         CGContextRef context = newContext(motion.stored, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
-        CGImageRef whole = CGBitmapContextCreateImage(context);
-        CGContextRelease(context);
+        CGImageRef whole = context ? CGBitmapContextCreateImage(context) : NULL;
+        if (context) CGContextRelease(context);
         CVPixelBufferUnlockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
-        frame = CGImageCreateWithImageInRect(whole, cutIn(motion));
-        CGImageRelease(whole);
+        frame = whole ? CGImageCreateWithImageInRect(whole, cutIn(motion)) : NULL;
+        if (whole) CGImageRelease(whole);
         return NO;
     });
     freeOver(over);
@@ -1335,8 +1359,7 @@ BOOL SGLyricsClipWriteOverMotion(NSURL *file, NSURL *motionFile, NSString *previ
             ok = NO;
             return NO;
         }
-        while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
-        ok = writer.status == AVAssetWriterStatusWriting && [input appendSampleBuffer:sample];
+        ok = SGVideoReady(input, writer) && [input appendSampleBuffer:sample];
         any = YES;
         return ok;
     });
@@ -1347,10 +1370,7 @@ BOOL SGLyricsClipWriteOverMotion(NSURL *file, NSURL *motionFile, NSString *previ
     }
     [input markAsFinished];
     [writer endSessionAtSourceTime:CMTimeMakeWithSeconds(seconds, 600)];
-    dispatch_semaphore_t written = dispatch_semaphore_create(0);
-    [writer finishWritingWithCompletionHandler:^{ dispatch_semaphore_signal(written); }];
-    dispatch_semaphore_wait(written, DISPATCH_TIME_FOREVER);
-    if (writer.status != AVAssetWriterStatusCompleted) return NO;
+    if (!SGVideoFinish(writer)) return NO;
     [NSFileManager.defaultManager removeItemAtURL:file error:nil];
     return [NSFileManager.defaultManager moveItemAtURL:partial toURL:file error:nil];
 }
