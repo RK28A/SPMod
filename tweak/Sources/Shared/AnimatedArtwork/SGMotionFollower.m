@@ -81,7 +81,7 @@
         return;
     }
     __weak SGMotionFollower *weakSelf = self;
-    SGMotionClipFor(uri, canvas, state.track.artistName, metadata[@"album_title"], SGMotionTall, SGMotionPixels(), ^(NSURL *file, NSString *source) {
+    SGMotionClipForShapes(uri, canvas, state.track.artistName, metadata[@"album_title"], SGMotionTall, SGMotionPixels(), self.takes, ^(NSURL *file, NSString *source) {
         SGMotionFollower *follower = weakSelf;
         if (!follower || walk != follower->_walk) return;
         follower->_source = source;
@@ -109,8 +109,8 @@
     if (!uri || [uri isEqualToString:_track] || [uri isEqualToString:_ahead]) return;
     _ahead = uri;
     NSDictionary *metadata = [track.metadata isKindOfClass:NSDictionary.class] ? track.metadata : nil;
-    SGMotionClipFor(uri, SGMotionCanvasIn(metadata), track.artistName, metadata[@"album_title"], SGMotionTall, SGMotionPixels(),
-                    ^(NSURL *file, NSString *source) {
+    SGMotionClipForShapes(uri, SGMotionCanvasIn(metadata), track.artistName, metadata[@"album_title"], SGMotionTall, SGMotionPixels(),
+                          self.takes, ^(NSURL *file, NSString *source) {
         SGLog(@"motion: the next track's clip fetched ahead: %@", file ? source : @"none");
     });
 }

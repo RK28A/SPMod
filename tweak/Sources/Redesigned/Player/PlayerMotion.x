@@ -142,6 +142,13 @@ static NSValue *sg_savedMotionTime;
 static BOOL lyricsBlurEnabledForTrack(NSString *track);
 static NSString *currentLyricsBlurTrack(void);
 
+// The layout draws a cover's shape from the top of the player and a Canvas to its full height. A clip wider
+// than it is tall fits neither: it came out as a strip across the top over a foot of its last rows, so the
+// sources are walked past it and the cover stays where no other has one.
+static BOOL takesShape(CGSize shown) {
+    return shown.width > 0 && shown.height >= shown.width * 0.95;
+}
+
 @implementation SGRPlayerMotionView {
     AVQueuePlayer *_player;
     AVPlayerLooper *_looper;
@@ -648,8 +655,8 @@ UIView *SGRPlayerMotionPreview(void (^arrived)(void)) {
     sg_previewFile = nil;
     sg_previewPoster = nil;
     SGLog(@"redesign player: the Player page looks up the clip of %@%@", track, shown.current ? @"" : @", the last played");
-    SGMotionClipFor(track, shown.canvasURL, shown.artist, shown.album, SGMotionTall, SGMotionPixels(),
-                    ^(NSURL *file, NSString *source) {
+    SGMotionClipForShapes(track, shown.canvasURL, shown.artist, shown.album, SGMotionTall, SGMotionPixels(),
+                          ^BOOL(CGSize size) { return takesShape(size); }, ^(NSURL *file, NSString *source) {
         if (![track isEqualToString:sg_previewTrack]) return;
         // Nothing found is not kept: the page asks again the next time it shows Animated.
         if (!file) {
@@ -901,5 +908,6 @@ void SGRPlayerMenuSetBackground(SGRPlayerBackgroundKind kind) {
         if (file) show(uri, file);
         else clear(YES);
     }];
+    sg_follower.takes = ^BOOL(CGSize shown) { return takesShape(shown); };
     %init(SGRVideoSurfaces);
 }
