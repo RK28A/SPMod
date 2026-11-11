@@ -339,6 +339,7 @@ static void lowerRow(UIView *row) {
         UIImage *airplay = [UIImage systemImageNamed:@"airplayaudio" withConfiguration:cfg];
         if (airplay && imgView.image != airplay) imgView.image = airplay;
     }
+    SGRAccentRetint(connect);
     CGFloat connectFrom = glyph ? moveTo(arrangedAround(connect, host), glyph, CGPointMake(CGRectGetMidX(glyph.bounds), CGRectGetMidY(glyph.bounds)), host, round(width * kMiddle)) : -1;
 
     UIView *queue = SGRFindByIdentifier(host, @"QueueButtonNowPlaying", &kQueueKey);
@@ -447,6 +448,9 @@ static void applyGlassSheet(UIViewController *controller) {
     sg_footerStateWatcher = [SGRFooterStateWatcher new];
     SGAddPlayerStateObserver(sg_footerStateWatcher);
     NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    [center addObserverForName:SGRAccentDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+        [sg_footerHost setNeedsLayout];
+    }];
     for (NSNotificationName name in @[UIApplicationDidBecomeActiveNotification, NSUserDefaultsDidChangeNotification]) {
         [center addObserverForName:name object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             updatePlayerIdleTimer();

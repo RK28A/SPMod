@@ -96,6 +96,10 @@ NSURL *SGMotionCanvasIn(NSDictionary *metadata);
 // Canvas service is asked for it. Main queue.
 void SGMotionClipFor(NSString *uri, NSURL *canvas, NSString *artist, NSString *album, SGMotionShape shape, CGFloat pixels,
                      void (^done)(NSURL *file, NSString *source));
+// The same walk for an asker that does not draw every shape: `takes` is asked about each source's clip with
+// the size it is shown at, and a clip it turns down is passed over for the next source's. nil takes any.
+void SGMotionClipForShapes(NSString *uri, NSURL *canvas, NSString *artist, NSString *album, SGMotionShape shape, CGFloat pixels,
+                           BOOL (^takes)(CGSize shown), void (^done)(NSURL *file, NSString *source));
 
 // Follows the player for one user of moving artwork, the lock screen or the redesign's player
 // (SGMotionFollower.m). Each track's sources are walked once, and again when its Canvas turns up in a later
@@ -108,6 +112,8 @@ void SGMotionClipFor(NSString *uri, NSURL *canvas, NSString *artist, NSString *a
 @interface SGMotionFollower : NSObject
 - (instancetype)initWithBegin:(BOOL (^)(NSString *uri, SPTPlayerState *state))begin
                         found:(void (^)(NSString *uri, NSURL *file))found;
+// The shapes this user draws (SGMotionClipForShapes), nil for any. Set before the first track is walked.
+@property (nonatomic, copy) BOOL (^takes)(CGSize shown);
 // The track is walked again from the player's last state: a setting it depends on changed.
 - (void)restart;
 @end
