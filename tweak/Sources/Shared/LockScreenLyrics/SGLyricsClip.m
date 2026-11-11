@@ -294,6 +294,7 @@ static NSUInteger buildAutoWords(NSString *line, double sungDuration, SGLyricsCl
     }
     NSUInteger count = ranges.count;
     SGLyricsClipWord *words = calloc(count, sizeof(SGLyricsClipWord));
+    if (!words) return 0; // Leave the line readable without a per-word sweep.
     double dur = MAX(sungDuration, 0.8);
     double step = dur / (double)count;
     for (NSUInteger i = 0; i < count; i++) {
@@ -962,27 +963,29 @@ BOOL SGLyricsClipWriteKaraoke(NSURL *file, CGImageRef backdrop, CGImageRef cover
     double baseSongTime = isfinite(spec.songTime) ? spec.songTime : 0.0;
     BOOL ok = YES;
     for (int32_t i = 0; i < frames && ok; i++) {
-        while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
-        CVPixelBufferRef buffer = NULL;
-        ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
-            && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
-        if (!ok) break;
-        CVPixelBufferLockBaseAddress(buffer, 0);
-        CGContextRef context = newContext(size, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
-        double frameTime = style == SGLyricsClipAnimated ? (double)i / (double)kFPS : 0.0;
-        double elapsed = MAX(0.0, spec.elapsedInLine) + frameTime;
-        double breathPhase = (baseSongTime + frameTime) / (double)kLoopSeconds;
-        CGFloat yOffset = 0;
-        if (style == SGLyricsClipAnimated && spec.scrollIn && frameTime < 0.28) {
-            double u = frameTime / 0.28;
-            double ease = 1.0 - (1.0 - u) * (1.0 - u) * (1.0 - u);
-            yOffset = -plan.activeFontSize * 0.42 * (CGFloat)(1.0 - ease);
+        @autoreleasepool {
+            while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
+            CVPixelBufferRef buffer = NULL;
+            ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
+                && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
+            if (!ok) break;
+            CVPixelBufferLockBaseAddress(buffer, 0);
+            CGContextRef context = newContext(size, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
+            double frameTime = style == SGLyricsClipAnimated ? (double)i / (double)kFPS : 0.0;
+            double elapsed = MAX(0.0, spec.elapsedInLine) + frameTime;
+            double breathPhase = (baseSongTime + frameTime) / (double)kLoopSeconds;
+            CGFloat yOffset = 0;
+            if (style == SGLyricsClipAnimated && spec.scrollIn && frameTime < 0.28) {
+                double u = frameTime / 0.28;
+                double ease = 1.0 - (1.0 - u) * (1.0 - u) * (1.0 - u);
+                yOffset = -plan.activeFontSize * 0.42 * (CGFloat)(1.0 - ease);
+            }
+            drawKaraokeFrameInContext(context, backdrop, plan, spec.line, words, wordCount, elapsed, breathPhase, sweepEnabled, yOffset);
+            CGContextRelease(context);
+            CVPixelBufferUnlockBaseAddress(buffer, 0);
+            ok = [adaptor appendPixelBuffer:buffer withPresentationTime:CMTimeMake(i, kFPS)];
+            CVPixelBufferRelease(buffer);
         }
-        drawKaraokeFrameInContext(context, backdrop, plan, spec.line, words, wordCount, elapsed, breathPhase, sweepEnabled, yOffset);
-        CGContextRelease(context);
-        CVPixelBufferUnlockBaseAddress(buffer, 0);
-        ok = [adaptor appendPixelBuffer:buffer withPresentationTime:CMTimeMake(i, kFPS)];
-        CVPixelBufferRelease(buffer);
     }
     free(autoWords);
     freeKaraokePlan(plan);
@@ -1064,23 +1067,25 @@ BOOL SGLyricsClipWriteInAtTime(NSURL *file, CGImageRef backdrop, CGImageRef cove
     CGImageRef vinylDisc = composition == SGLyricsClipVinyl ? newVinylDiscImage(cover, size) : NULL;
     BOOL ok = YES;
     for (int32_t i = 0; i < frames && ok; i++) {
-        while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
-        CVPixelBufferRef buffer = NULL;
-        ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
-            && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
-        if (!ok) break;
-        CVPixelBufferLockBaseAddress(buffer, 0);
-        CGContextRef context = newContext(size, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
-        double phase = (isfinite(from) ? from / kLoopSeconds : 0) + (double)i / frames;
-        if (composition == SGLyricsClipVinyl) {
-            drawVinylCached(context, vinylBase, vinylDisc, size, phase, style == SGLyricsClipAnimated);
-        } else {
-            drawComposition(context, backdrop, cover, line, size, phase, composition, style == SGLyricsClipAnimated);
+        @autoreleasepool {
+            while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) [NSThread sleepForTimeInterval:0.002];
+            CVPixelBufferRef buffer = NULL;
+            ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
+                && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
+            if (!ok) break;
+            CVPixelBufferLockBaseAddress(buffer, 0);
+            CGContextRef context = newContext(size, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
+            double phase = (isfinite(from) ? from / kLoopSeconds : 0) + (double)i / frames;
+            if (composition == SGLyricsClipVinyl) {
+                drawVinylCached(context, vinylBase, vinylDisc, size, phase, style == SGLyricsClipAnimated);
+            } else {
+                drawComposition(context, backdrop, cover, line, size, phase, composition, style == SGLyricsClipAnimated);
+            }
+            CGContextRelease(context);
+            CVPixelBufferUnlockBaseAddress(buffer, 0);
+            ok = [adaptor appendPixelBuffer:buffer withPresentationTime:CMTimeMake(i, kFPS)];
+            CVPixelBufferRelease(buffer);
         }
-        CGContextRelease(context);
-        CVPixelBufferUnlockBaseAddress(buffer, 0);
-        ok = [adaptor appendPixelBuffer:buffer withPresentationTime:CMTimeMake(i, kFPS)];
-        CVPixelBufferRelease(buffer);
     }
     CGImageRelease(vinylDisc);
     CGImageRelease(vinylBase);
@@ -1163,6 +1168,7 @@ static Over makeOver(Motion motion, NSString *previous, NSString *line, NSString
     over.words = newWords(previous, line, next, motion.cut, &over.drawn);
     size_t rows = (size_t)motion.cut.height;
     over.keep = malloc(rows * sizeof(uint16_t));
+    if (!over.keep) return over;
     for (size_t y = 0; y < rows; y++) over.keep[y] = (uint16_t)round(256 * (1 - dimAt(y, rows)));
     if (!over.words) return over;
     CGRect cut = cutIn(motion);
@@ -1171,6 +1177,13 @@ static Over makeOver(Motion motion, NSString *previous, NSString *line, NSString
     size_t fade = MAX(MIN((size_t)(motion.cut.width * kFont), height / 2), 1);
     over.blurred = malloc(width * height * 4);
     over.feather = malloc(height * sizeof(uint16_t));
+    if (!over.blurred || !over.feather) {
+        free(over.blurred);
+        free(over.feather);
+        over.blurred = NULL;
+        over.feather = NULL;
+        return over; // Keep the words and dimming, without the optional blur.
+    }
     for (size_t y = 0; y < height; y++) over.feather[y] = (uint16_t)(256 * MIN(1.0, MIN(y, height - 1 - y) / (double)fade));
     return over;
 }
@@ -1183,6 +1196,7 @@ static void freeOver(Over over) {
 }
 
 static BOOL drawOver(CVPixelBufferRef buffer, Motion motion, Over over) {
+    if (!over.keep) return NO;
     CVPixelBufferLockBaseAddress(buffer, 0);
     uint8_t *base = CVPixelBufferGetBaseAddress(buffer);
     size_t bytesPerRow = CVPixelBufferGetBytesPerRow(buffer);
