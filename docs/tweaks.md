@@ -119,6 +119,11 @@ Shared:
                   menu selects the current lock-screen style; the lock-screen star cycles through its configured views.
                   The star can
                   cycle through Canvas, Lyrics, Fill, Colourful and Default; its order and enabled views are configurable.
+                  Pause animation with playback (off until switched on, LockScreenFreeze.h) holds the clip while the
+                  song is paused: the system's player takes no pause or seek, so a pause swaps in a clip of the one
+                  frame the clip is reckoned to be on, and playing again swaps in the clip turned round to start there
+                  (SGFreezeClip.h); a clip that cannot be turned round starts over. The frame is an estimate, a clock
+                  of the mod's run from when the system took the file.
                   In Every song mode, Fallback album art size controls the square cover shown over the blurred
                   fallback when no moving artwork or lyrics clip is available; 50% is the original size.
                   The sources are asked in the user's order (Spotify Canvas, then Apple Music until set, on the
