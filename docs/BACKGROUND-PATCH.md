@@ -38,3 +38,44 @@ appearance, track changes, pause/resume, then play for at least 10 minutes with
 the screen asleep and wake it again. Lyrics should resume. Repeat in another app,
 and once with lock-screen lyrics disabled. Capture the timestamp and matching
 Spotify `.ips` or JetsamEvent report if it terminates again.
+
+## Animated player pause/resume
+
+The redesigned player's animated Canvas/cover already used AVPlayer pause/play
+for music pause. It now also remembers the current clip's exact CMTime before
+its view is removed, and seeks back before resuming a recreated view. The key
+includes the track and local video URL. Only one position is held in process
+memory; a different clip starts fresh and app relaunch clears the memory.
+Settings previews do not overwrite the real player's position. While the same
+view remains alive, pausing leaves its decoded frame visible. After recreation,
+the poster can appear briefly while AVFoundation decodes the restored frame.
+
+Additional defects fixed:
+
+- The view's copied `gaveUp` callback strongly captured the view itself, keeping
+  the AVQueuePlayer/looper alive after removal. It now uses a weak reference and
+  is cleared when the view retires.
+- A departing view could resume during its fade because it still observed player
+  state/transition notifications. Retired views now stay paused.
+- The video now pauses synchronously on WillResignActive rather than scheduling
+  a lifecycle check for later. Becoming active does not resume music-paused video.
+- Invalid poster dimensions no longer reach the aspect-ratio calculation.
+
+Lock-screen limitation: MPMediaItemAnimatedArtwork exposes asset callbacks and
+an artwork ID, but no readable playhead or pause/seek control for the system's
+video player. Exact frozen-frame/resume synchronization with that player is not
+implemented, and the native Spotify video UI is unchanged. No estimated timeline
+or background video encoder was added.
+References:
+https://developer.apple.com/documentation/mediaplayer/mpmediaitemanimatedartwork
+https://developer.apple.com/documentation/mediaplayer/providing-animated-artwork-for-media-items
+
+Validation: layer and whitespace checks pass. Linux cannot compile/run this
+UIKit/AVFoundation/Logos path; physical-device playback remains unverified.
+On iOS 26+ with Redesigned UI and Animated background: pause mid-Canvas, leave
+and reopen the player, background/foreground the app, then resume. The video
+should hold its frame and continue, without counting paused/background time.
+Also toggle Animated off/on on the same track, change tracks, switch Low Power
+Mode on/off, and relaunch. Confirm no old video resumes during the outgoing fade.
+Use Instruments Allocations across repeated track changes to verify removed
+SGRPlayerMotionView instances are released.
