@@ -1,5 +1,6 @@
 // Only actual lock-screen requests may start speculative rendering. Publishing an
-// artwork descriptor must remain possible without rendering, to bootstrap demand.+#pragma once
+// artwork descriptor must remain possible without rendering, to bootstrap demand.
+#pragma once
 #include <stdbool.h>
 #include <math.h>
 
