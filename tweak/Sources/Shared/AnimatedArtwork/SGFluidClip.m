@@ -116,10 +116,10 @@ static Parts makeParts(CGImageRef cover, CGSize size, CGFloat coverScale) {
 }
 
 static void freeParts(Parts parts) {
-    CGImageRelease(parts.blurred);
-    CGImageRelease(parts.cover);
-    CGContextRelease(parts.field);
-    CGGradientRelease(parts.shade);
+    if (parts.blurred) CGImageRelease(parts.blurred);
+    if (parts.cover) CGImageRelease(parts.cover);
+    if (parts.field) CGContextRelease(parts.field);
+    if (parts.shade) CGGradientRelease(parts.shade);
 }
 
 // A frame `phase` of the way through the loop, 0 to 1, into `context`.
