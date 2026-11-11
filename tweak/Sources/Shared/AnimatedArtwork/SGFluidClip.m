@@ -146,8 +146,10 @@ static void drawFrame(CGContextRef context, Parts parts, CGSize size, CGFloat co
                                 kCGGradientDrawsAfterEndLocation);
     CGImageRef drawn = CGBitmapContextCreateImage(field);
     CGContextSetInterpolationQuality(context, kCGInterpolationHigh);
-    CGContextDrawImage(context, (CGRect){CGPointZero, size}, drawn);
-    CGImageRelease(drawn);
+    if (drawn) {
+        CGContextDrawImage(context, (CGRect){CGPointZero, size}, drawn);
+        CGImageRelease(drawn);
+    }
     CGContextDrawImage(context, coverFrame(size, coverScale), parts.cover);
 }
 
