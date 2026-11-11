@@ -4,6 +4,7 @@
 #import <math.h>
 #import <stdint.h>
 #import "SGFillClip.h"
+#import "SGVideoEncodeSafety.h"
 
 // The cover is drawn aspect-fill across the whole frame — the zoom the system's own full-screen
 // artwork uses, cropping the sides — and dissolves into a blur of the same cover drawn with the same
@@ -34,8 +35,10 @@ static CIContext *fillCIContext(void) {
 }
 
 static CGContextRef bitmapContext(CGSize size) {
+    if (!isfinite(size.width) || !isfinite(size.height) || size.width < 1 || size.height < 1 ||
+        size.width > 4096 || size.height > 4096) return NULL;
     size_t width = (size_t)round(size.width), height = (size_t)round(size.height);
-    if (!width || !height) return NULL;
+    if (!width || !height || !fillColorSpace()) return NULL;
     CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, width * 4, fillColorSpace(),
                                                   kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
     if (context) CGContextClearRect(context, CGRectMake(0, 0, width, height));
@@ -223,14 +226,14 @@ BOOL SGFillClipWriteFrame(NSURL *file, CGImageRef frame, CGSize size) {
     BOOL ok = YES;
     int32_t frameCount = kLoopSeconds * kFramesPerSecond;
     for (int32_t index = 0; index < frameCount && ok; index++) {
-        while (!input.readyForMoreMediaData && writer.status == AVAssetWriterStatusWriting) {
-            [NSThread sleepForTimeInterval:0.002];
-        }
+        if (!SGVideoReady(input, writer)) { ok = NO; break; }
         CVPixelBufferRef buffer = NULL;
         ok = writer.status == AVAssetWriterStatusWriting && adaptor.pixelBufferPool
             && CVPixelBufferPoolCreatePixelBuffer(NULL, adaptor.pixelBufferPool, &buffer) == kCVReturnSuccess;
         if (!ok) break;
-        CVPixelBufferLockBaseAddress(buffer, 0);
+        if (CVPixelBufferLockBaseAddress(buffer, 0) != kCVReturnSuccess) {
+            CVPixelBufferRelease(buffer); ok = NO; break;
+        }
         CGContextRef context = CGBitmapContextCreate(CVPixelBufferGetBaseAddress(buffer), (size_t)width, (size_t)height,
             8, CVPixelBufferGetBytesPerRow(buffer), fillColorSpace(),
             kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
@@ -250,10 +253,7 @@ BOOL SGFillClipWriteFrame(NSURL *file, CGImageRef frame, CGSize size) {
     }
     [input markAsFinished];
     [writer endSessionAtSourceTime:CMTimeMake(kLoopSeconds, 1)];
-    dispatch_semaphore_t written = dispatch_semaphore_create(0);
-    [writer finishWritingWithCompletionHandler:^{ dispatch_semaphore_signal(written); }];
-    dispatch_semaphore_wait(written, DISPATCH_TIME_FOREVER);
-    if (writer.status != AVAssetWriterStatusCompleted) {
+    if (!SGVideoFinish(writer)) {
         [NSFileManager.defaultManager removeItemAtURL:partial error:nil];
         return NO;
     }
