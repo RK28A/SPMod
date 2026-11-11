@@ -124,6 +124,7 @@ static CGImageRef newWords(NSString *previous, NSString *line, NSString *next, C
         if (setter) CFRelease(setter);
         setter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)
             wordsAt(previous, line, next, fontSize * scale, drawn ? kMotionNextAlpha : kNextAlpha));
+        if (!setter) return NULL;
         fits = CTFramesetterSuggestFrameSizeWithConstraints(setter, CFRangeMake(0, 0), NULL, CGSizeMake(width, CGFLOAT_MAX), NULL);
         if (fits.height <= size.height * kTallest) break;
     }
@@ -132,6 +133,7 @@ static CGImageRef newWords(NSString *previous, NSString *line, NSString *next, C
     CGRect box = CGRectMake(round((size.width - width) / 2), round(size.height * (1 - kCentreY) - height / 2), width, height);
     CGPathRef path = CGPathCreateWithRect(box, NULL);
     CTFrameRef frame = CTFramesetterCreateFrame(setter, CFRangeMake(0, 0), path, NULL);
+    if (!frame) { CGPathRelease(path); CFRelease(setter); return NULL; }
     CGContextRef context = newContext(size, NULL, 0);
     if (!context) { CFRelease(frame); CGPathRelease(path); CFRelease(setter); return NULL; }
     if (drawn) {
@@ -145,6 +147,7 @@ static CGImageRef newWords(NSString *previous, NSString *line, NSString *next, C
     CTFrameDraw(frame, context);
     CGImageRef words = CGBitmapContextCreateImage(context);
     CGContextRelease(context);
+    if (!words) { CFRelease(frame); CGPathRelease(path); CFRelease(setter); return NULL; }
     if (drawn) {
         *drawn = CGRectIntersection(CGRectIntegral(CGRectInset(box, -fontSize, -fontSize)), (CGRect){CGPointZero, size});
         CGImageRef cut = CGImageCreateWithImageInRect(words, CGRectMake(drawn->origin.x, size.height - CGRectGetMaxY(*drawn),
@@ -285,7 +288,7 @@ static KaraokePlan makeKaraokePlan(NSString *previous, NSString *line, NSString 
 }
 
 static void freeKaraokePlan(KaraokePlan plan) {
-    CGImageRelease(plan.neighboursImage);
+    if (plan.neighboursImage) CGImageRelease(plan.neighboursImage);
 }
 
 static NSUInteger buildAutoWords(NSString *line, double sungDuration, SGLyricsClipWord **outWords) {
@@ -1220,7 +1223,7 @@ static void freeOver(Over over) {
 
 static BOOL drawOver(CVPixelBufferRef buffer, Motion motion, Over over) {
     if (!over.keep) return NO;
-    CVPixelBufferLockBaseAddress(buffer, 0);
+    if (CVPixelBufferLockBaseAddress(buffer, 0) != kCVReturnSuccess) return NO;
     uint8_t *base = CVPixelBufferGetBaseAddress(buffer);
     size_t bytesPerRow = CVPixelBufferGetBytesPerRow(buffer);
     CGRect cut = cutIn(motion);
@@ -1318,7 +1321,7 @@ CGImageRef SGLyricsClipMotionFrame(NSURL *motionFile, NSString *previous, NSStri
     eachFrame(asset, track, motion, from, motion.length, ^BOOL(CMSampleBufferRef sample) {
         CVPixelBufferRef buffer = CMSampleBufferGetImageBuffer(sample);
         if (!drawOver(buffer, motion, over)) return NO;
-        CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly);
+        if (CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess) return NO;
         CGContextRef context = newContext(motion.stored, CVPixelBufferGetBaseAddress(buffer), CVPixelBufferGetBytesPerRow(buffer));
         CGImageRef whole = context ? CGBitmapContextCreateImage(context) : NULL;
         if (context) CGContextRelease(context);
