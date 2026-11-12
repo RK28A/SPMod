@@ -4,7 +4,7 @@
 
 static const CGFloat kTextGap = 12;
 
-static char kThumbKey, kCoverKey, kLineKey, kCardKey;
+static char kThumbKey, kCoverKey, kLineKey, kCardKey, kGlassRowKey;
 static const CGFloat kCardSide = 8, kCardGap = 5, kCardRadius = 22;
 
 // A row of the list: a playlist, an artist, an album, or one of the rows that adds one (Add artists,
@@ -92,7 +92,6 @@ static void style(UIView *cell) {
     }
 }
 
-static char kGlassRowKey;
 
 // Spotify sets a row's black fill again after its layout (as it appears, as a press ends): a dark fill set on
 // a view of a library row with glass is cleared as it is set.
