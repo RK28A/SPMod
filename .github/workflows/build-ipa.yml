@@ -63,14 +63,20 @@ jobs:
           path: out/*.ipa
           if-no-files-found: error
 
+      # filebin is a free host that fills up (507) or goes down: a failure there is said, never fatal.
       - name: Upload to filebin.net
         if: inputs.upload_method != 'artifacts'
+        continue-on-error: true
         run: |
           BIN="spmod-${{ github.run_id }}"
           echo "### filebin.net download" >> "$GITHUB_STEP_SUMMARY"
           for f in out/*.ipa; do
-            curl -fsS -X POST -H "Content-Type: application/octet-stream" --data-binary "@$f" "https://filebin.net/$BIN/$(basename "$f")" >/dev/null
-            echo "- https://filebin.net/$BIN/$(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
+            if curl -fsS --retry 2 --retry-delay 5 -X POST -H "Content-Type: application/octet-stream" --data-binary "@$f" "https://filebin.net/$BIN/$(basename "$f")" >/dev/null; then
+              echo "- https://filebin.net/$BIN/$(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- filebin refused the upload: use the artifact or the release." >> "$GITHUB_STEP_SUMMARY"
+              echo "::warning::filebin.net refused the upload; the IPA is in the artifact and the release"
+            fi
           done
           echo "- _filebin deletes bins after a few days of inactivity, download promptly._" >> "$GITHUB_STEP_SUMMARY"
 
