@@ -20,6 +20,13 @@
 
 static UIWindow *frontWindow(void) {
     UIWindow *best = nil;
+    // Spotify's own window first: the keyboard's and the text effects' windows are often key and hold nothing.
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class]) continue;
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if (!window.hidden && [window.accessibilityIdentifier isEqualToString:@"spotify-main-window"] && !SGTopController().presentedViewController) return window;
+        }
+    }
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *window in ((UIWindowScene *)scene).windows) {
