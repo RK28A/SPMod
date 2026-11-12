@@ -1,4 +1,4 @@
-name: Build SPMod IPA
+name: Build SPMod IPA (macOS ARM)
 
 on:
   workflow_dispatch:
