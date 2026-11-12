@@ -119,6 +119,14 @@ Shared:
                   menu selects the current lock-screen style; the lock-screen star cycles through its configured views.
                   The star can
                   cycle through Canvas, Lyrics, Fill, Colourful and Default; its order and enabled views are configurable.
+  Playlist Fusion Mod Settings → Player → Playlist Fusion (Shared/Fusion, Fusion.h). Merge playlists copies the
+                  playlists picked as sources (red) onto the end of a destination (green) through Spotify's Web API
+                  as the signed-in app, reads the destination back, and only then, and only with Keep red playlists
+                  off, unfollows the sources. Fusion Shuffle mixes the tracks of every playlist not excluded: one
+                  track is started and the rest fed to Spotify's queue; it is also in the redesigned player's ⋯ menu.
+                  The API only gives the items of playlists the user owns or collaborates on. Neither has run
+                  against a live account from a build yet: the row under a playlist's long-press menu waits on a
+                  recorded tree of that menu.
                   Pause animation with playback (off until switched on, LockScreenFreeze.h) holds the clip while the
                   song is paused: the system's player takes no pause or seek, so a pause swaps in a clip of the one
                   frame the clip is reckoned to be on, and playing again swaps in the clip turned round to start there

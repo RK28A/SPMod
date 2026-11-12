@@ -8,6 +8,7 @@
 #import "Shared/Gestures/Gestures.h"
 #import "Shared/NightMode/NightMode.h"
 #import "Settings/SGBackdrop.h"
+#import "Shared/Fusion/Fusion.h"
 #import "Shared/Lyrics/Lyrics.h"
 #import "Shared/LyricsMeanings/Meanings.h"
 #import "Shared/LyricsTranslation/LyricsTranslation.h"
@@ -166,6 +167,7 @@ UIViewController *SGPlayerSettingsPage(void) {
         SGWithSymbol(SGPageRow(@"Gestures", ^UIViewController *{ return SGGesturesSettingsPage(); }), @"hand.tap"),
         SGWithSymbol(blocked, @"person.crop.circle.badge.xmark"),
         SGWithSymbol(SGKeyboardShortcutsRow(), @"command"),
+        SGWithSymbol(SGPageRow(@"Playlist Fusion", ^UIViewController *{ return SGFusionSettingsPage(); }), @"arrow.triangle.merge"),
     ])];
     NSMutableArray<SGModRow *> *pages = [NSMutableArray array];
     if (native) {
