@@ -137,6 +137,12 @@ Shared:
   Side menu       Misc → Display useless things in menu (off): the profile picture's menu loses its subscription
                   row, Messages and New message, told by their text in English and French since no tree of the
                   drawer is recorded (App/ModSettings.x, trimDrawer). The redesign puts its light behind it.
+  Every page      Redesigned/Kit/SGREdgeEffect.x: a list over the whole screen in the main window's navigation
+                  (feed, Recents, listening stats, preferences...) gets the light or the moving background behind
+                  it and loses its frosted top band. The drawer's Listening stats row opens the mod's stats page
+                  through a control laid over it; its SPMod row is an accent pill.
+  Developer       Click on icon for tree: a draggable tree button over the app; a tap copies the tree of the
+                  screen under it (and keeps a copy in Documents/SPMod trees), a hold puts it away.
   Backgrounds     Settings/SGBackdrop.m. Bars moves on the beat only; Big Bang is one 36 second loop (a star
                   bursts, a flight past four planets, a turn to a sun, into it, down to the star again). Behind
                   Home and the library the page's fills are cleared six views down and the list's dark row fills

@@ -811,9 +811,13 @@ static BOOL darkFill(UIColor *color) {
     return color && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.9 && MAX(r, MAX(g, b)) < 0.13;
 }
 
+// Any view across the list's width is a row: the library's are containers of its own, not cells.
 static void clearRows(UICollectionView *list) {
+    CGFloat across = list.bounds.size.width * 0.9;
     for (UIView *row in list.subviews) {
-        if (![row isKindOfClass:UICollectionReusableView.class]) continue;
+        if (row.bounds.size.width < across || [row isKindOfClass:UIImageView.class]) continue;
+        NSString *name = NSStringFromClass(row.class);
+        if ([name containsString:@"ScrollIndicator"] || [name containsString:@"TouchPassthrough"] || [name containsString:@"SGModSettingsRow"]) continue;
         if (darkFill(row.backgroundColor)) row.backgroundColor = UIColor.clearColor;
         CGFloat width = row.bounds.size.width * 0.9;
         NSMutableArray<UIView *> *spans = [NSMutableArray arrayWithArray:row.subviews];

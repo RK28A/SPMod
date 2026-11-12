@@ -324,6 +324,8 @@ static UIViewController *modSettingsPage(void) {
 
 #pragma mark - row in the settings list
 
+static UIColor *planBadgeColor(void);
+
 @interface SGModSettingsRow : UIControl
 @property (nonatomic) BOOL drawer;
 @end
@@ -353,7 +355,22 @@ static UIViewController *modSettingsPage(void) {
     _icon.frame = CGRectMake(12 + lead, (height - 24) / 2, 24, 24);
     _title.frame = CGRectMake(48 + lead, 0, width - 96, height);
     _chevron.frame = CGRectMake(width - 24, (height - 12) / 2, 12, 12);
-    _chevron.hidden = self.drawer;
+    _chevron.hidden = NO;
+    if (self.drawer) [self standOut];
+}
+
+// In the drawer the row is a pill of the accent's colour, its icon and chevron in the accent, its title bold,
+// so it is the first thing seen there.
+- (void)standOut {
+    UIColor *accent = planBadgeColor();
+    self.layer.cornerRadius = MIN(16, self.bounds.size.height / 2 - 4);
+    self.layer.cornerCurve = kCACornerCurveContinuous;
+    self.backgroundColor = [accent colorWithAlphaComponent:0.16];
+    self.layer.borderWidth = 1;
+    self.layer.borderColor = [accent colorWithAlphaComponent:0.45].CGColor;
+    _icon.tintColor = accent;
+    _chevron.tintColor = accent;
+    _title.font = [UIFont systemFontOfSize:_title.font.pointSize weight:UIFontWeightBold];
 }
 
 - (void)setHighlighted:(BOOL)highlighted {
@@ -402,7 +419,8 @@ static void placeRow(UICollectionView *list, SGModSettingsRow *row) {
     SGAdoptFonts(list, row);
     CGFloat bottom = list.contentSize.height;
     row.hidden = !row.drawer && bottom <= 0;
-    row.frame = CGRectMake(0, row.drawer ? -kRowHeight : bottom, list.bounds.size.width, kRowHeight);
+    row.frame = row.drawer ? CGRectMake(12, -kRowHeight + 4, list.bounds.size.width - 24, kRowHeight - 8)
+                           : CGRectMake(0, bottom, list.bounds.size.width, kRowHeight);
 
     UIEdgeInsets inset = list.contentInset;
     NSValue *applied = objc_getAssociatedObject(list, &kInsetKey);
@@ -557,27 +575,85 @@ static BOOL uselessRow(UIView *row) {
     return found;
 }
 
+// Rows are faded, never moved: the list places its own rows, and moving them over it stacked them on each
+// other. A row reused for something else is brought back.
 static void trimDrawer(UICollectionView *list) {
     BOOL whole = SGFlag(SGKeyDrawerUseless, NO);
-    NSMutableArray<UIView *> *rows = [NSMutableArray array];
-    for (UIView *sub in list.subviews) {
-        if ([sub isKindOfClass:UICollectionReusableView.class]) [rows addObject:sub];
-    }
-    [rows sortUsingComparator:^NSComparisonResult(UIView *a, UIView *b) {
-        return a.center.y < b.center.y ? NSOrderedAscending : a.center.y > b.center.y ? NSOrderedDescending : NSOrderedSame;
-    }];
-    CGFloat lift = 0;
-    for (UIView *row in rows) {
+    for (UIView *row in list.subviews) {
+        if (![row isKindOfClass:UICollectionReusableView.class]) continue;
+        if (!CGAffineTransformIsIdentity(row.transform) && objc_getAssociatedObject(row, &kTrimmedKey)) row.transform = CGAffineTransformIdentity;
         BOOL was = objc_getAssociatedObject(row, &kTrimmedKey) != nil;
         BOOL out = !whole && uselessRow(row);
-        if (out != was) {
-            row.alpha = out ? 0 : 1;
-            row.userInteractionEnabled = !out;
-            objc_setAssociatedObject(row, &kTrimmedKey, out ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if (out == was) continue;
+        row.alpha = out ? 0 : 1;
+        row.userInteractionEnabled = !out;
+        objc_setAssociatedObject(row, &kTrimmedKey, out ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+// The drawer's Listening stats row opens the mod's own stats page: a control laid over that row, which a
+// touch reaches before the list does, so Spotify's page is not opened under it.
+@interface SGStatsCover : UIControl
+@end
+
+@implementation SGStatsCover
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    if (!(self = [super initWithFrame:frame])) return nil;
+    self.backgroundColor = UIColor.clearColor;
+    self.isAccessibilityElement = YES;
+    self.accessibilityTraits = UIAccessibilityTraitButton;
+    self.accessibilityLabel = @"Listening stats";
+    [self addTarget:self action:@selector(open) forControlEvents:UIControlEventTouchUpInside];
+    return self;
+}
+
+- (void)open {
+    UIViewController *owner = nil;
+    for (UIResponder *r = self; r && !owner; r = r.nextResponder) {
+        if ([r isKindOfClass:UIViewController.class]) owner = (UIViewController *)r;
+    }
+    UIViewController *presenting = owner.presentingViewController;
+    if (presenting) {
+        [presenting dismissViewControllerAnimated:YES completion:^{
+            SGShowPage(navigationIn(presenting).topViewController ?: presenting, SGListeningStatsPage());
+        }];
+        return;
+    }
+    SGShowPage(owner, SGListeningStatsPage());
+}
+
+@end
+
+static char kStatsCoverKey;
+
+static BOOL statsRow(UIView *row) {
+    __block BOOL found = NO;
+    SGForEachView(row, ^(UIView *view) {
+        if (found || ![view isKindOfClass:UILabel.class]) return;
+        NSString *text = ((UILabel *)view).text;
+        for (NSString *start in @[@"Stats d'écoute", @"Stats d’écoute", @"Listening stats", @"Listening Stats"]) {
+            if ([text hasPrefix:start]) found = YES;
         }
-        CGAffineTransform moved = lift > 0 ? CGAffineTransformMakeTranslation(0, -lift) : CGAffineTransformIdentity;
-        if (!CGAffineTransformEqualToTransform(row.transform, moved)) row.transform = moved;
-        if (out) lift += row.bounds.size.height;
+    });
+    return found;
+}
+
+static void coverStats(UICollectionView *list) {
+    for (UIView *row in list.subviews) {
+        if (![row isKindOfClass:UICollectionReusableView.class]) continue;
+        SGStatsCover *cover = objc_getAssociatedObject(row, &kStatsCoverKey);
+        if (!statsRow(row)) {
+            [cover removeFromSuperview];
+            continue;
+        }
+        if (!cover) {
+            cover = [SGStatsCover new];
+            objc_setAssociatedObject(row, &kStatsCoverKey, cover, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        if (cover.superview != row) [row addSubview:cover];
+        else if (row.subviews.lastObject != cover) [row bringSubviewToFront:cover];
+        if (!CGRectEqualToRect(cover.frame, row.bounds)) cover.frame = row.bounds;
     }
 }
 
@@ -606,6 +682,9 @@ static void trimDrawer(UICollectionView *list) {
     if (drawerList) {
         updatePlanBadge(self);
         trimDrawer(self);
+        coverStats(self);
+        // The redesign's light right behind the list, where the drawer's own grey is.
+        if (SGRedesignedUI() && self.superview) SGRAccentWashPlace(self.superview);
     }
     if (!row && drawerList)
         row = ensureDrawerRow(self);
