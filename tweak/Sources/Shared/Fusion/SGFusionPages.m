@@ -22,6 +22,7 @@ static void alert(NSString *title, NSString *message) {
 
 @interface SGFusionListPage : SGPage <UISearchBarDelegate>
 - (instancetype)initWithKind:(SGFusionListKind)kind;
+- (void)beginWithDestination:(NSString *)destination;
 @end
 
 @implementation SGFusionListPage {
@@ -43,6 +44,10 @@ static void alert(NSString *title, NSString *message) {
         self.title = kind == SGFusionListMerge ? @"Merge playlists" : @"Excluded playlists";
     }
     return self;
+}
+
+- (void)beginWithDestination:(NSString *)destination {
+    _destination = [destination copy];
 }
 
 - (void)viewDidLoad {
@@ -451,6 +456,12 @@ destination:(SGFusionPlaylist *)destination before:(NSArray<SGFusionItem *> *)be
 }
 
 @end
+
+UIViewController *SGFusionMergePage(NSString *destination) {
+    SGFusionListPage *page = [[SGFusionListPage alloc] initWithKind:SGFusionListMerge];
+    [page beginWithDestination:destination];
+    return page;
+}
 
 #pragma mark - settings
 

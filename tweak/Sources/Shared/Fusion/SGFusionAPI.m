@@ -90,6 +90,35 @@ static NSDictionary *record(id value) {
 
 #pragma mark - the library's playlists
 
+static NSString *const kNamesKey = @"spotifyglass.fusion.names";
+static BOOL sg_warmed;
+
+// A name two playlists share tells neither apart: it is kept with no id.
+static void rememberNames(NSArray<SGFusionPlaylist *> *playlists) {
+    NSMutableDictionary<NSString *, NSString *> *names = [NSMutableDictionary dictionary];
+    for (SGFusionPlaylist *playlist in playlists) names[playlist.name] = names[playlist.name] ? @"" : playlist.identifier;
+    [NSUserDefaults.standardUserDefaults setObject:names forKey:kNamesKey];
+    sg_warmed = YES;
+}
+
+NSString *SGFusionPlaylistNamed(NSString *name) {
+    if (!name.length) return nil;
+    NSString *identifier = [NSUserDefaults.standardUserDefaults dictionaryForKey:kNamesKey][name];
+    return [identifier isKindOfClass:NSString.class] && identifier.length ? identifier : nil;
+}
+
+void SGFusionWarmNames(void (^done)(void)) {
+    static BOOL asking;
+    if (sg_warmed || asking) return;
+    asking = YES;
+    SGFusionLoadPlaylists(^(NSArray<SGFusionPlaylist *> *playlists, NSString *error) {
+        asking = NO;
+        // Asked once a launch, read or not: a menu does not ask again each time it lays itself out.
+        sg_warmed = YES;
+        if (playlists && done) done();
+    });
+}
+
 static void playlistsPage(NSString *me, NSUInteger offset, NSMutableArray<SGFusionPlaylist *> *found,
                           void (^done)(NSArray<SGFusionPlaylist *> *, NSString *)) {
     NSString *url = [NSString stringWithFormat:@"%@/me/playlists?limit=50&offset=%lu", kAPI, (unsigned long)offset];
@@ -114,7 +143,10 @@ static void playlistsPage(NSString *me, NSUInteger offset, NSMutableArray<SGFusi
             one.editable = mine || [playlist[@"collaborative"] isEqual:@YES];
             [found addObject:one];
         }
-        if (entries.count < 50 || !text(record(json)[@"next"]).length) done(found, nil);
+        if (entries.count < 50 || !text(record(json)[@"next"]).length) {
+            rememberNames(found);
+            done(found, nil);
+        }
         else playlistsPage(me, offset + entries.count, found, done);
     });
 }
