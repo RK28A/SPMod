@@ -18,6 +18,9 @@ void SGBackdropSync(UITableView *table);
 // The same background behind a page of Spotify's own (Home, the library): placed at the back of `page` from
 // the page's layout pass, its own fills above cleared so it shows.
 void SGBackdropPlace(UIView *page);
+// The fills of `page` and of what covers nearly all of it, three levels down, cleared, so `behind`, a view at
+// the back of the page, shows through them. For every layout pass of the page: Spotify fills them again.
+void SGBackdropClearFills(UIView *page, UIView *behind);
 // The colour the background is drawn in under Follows the song, from a higher layer: the redesign hands its
 // accent, so the background and the tab bar are one colour from one source; the native look hands the
 // cover's (Shared/Player/SongColor.x). Main thread.

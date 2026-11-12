@@ -582,7 +582,7 @@ static SGBackdropHost *newHost(void) {
 }
 
 // Behind a page of Spotify's own: the host at the back of `page`, and the page's own full-size fills above it
-// cleared, three levels down, so it shows through. With the switch off the host is taken away.
+// cleared (SGBackdropClearFills), so it shows through. With the switch off the host is taken away.
 void SGBackdropPlace(UIView *page) {
     static char key;
     if (!page) return;
@@ -603,13 +603,17 @@ void SGBackdropPlace(UIView *page) {
     else if (page.subviews.firstObject != host) [page sendSubviewToBack:host];
     if (!CGRectEqualToRect(host.frame, page.bounds)) host.frame = page.bounds;
     [host colorChanged];
+    SGBackdropClearFills(page, host);
+}
+
+void SGBackdropClearFills(UIView *page, UIView *behind) {
     CGFloat area = page.bounds.size.width * page.bounds.size.height;
     if (area < 1) return;
     NSMutableArray<UIView *> *level = [NSMutableArray arrayWithObject:page];
     for (int depth = 0; depth < 4 && level.count; depth++) {
         NSMutableArray<UIView *> *next = [NSMutableArray array];
         for (UIView *view in level) {
-            if (view == host || [view isKindOfClass:UIVisualEffectView.class]) continue;
+            if (view == behind || [view isKindOfClass:UIVisualEffectView.class]) continue;
             if (view.bounds.size.width * view.bounds.size.height < area * 0.85) continue;
             if (view.backgroundColor && CGColorGetAlpha(view.backgroundColor.CGColor) > 0.01) view.backgroundColor = UIColor.clearColor;
             [next addObjectsFromArray:view.subviews];
