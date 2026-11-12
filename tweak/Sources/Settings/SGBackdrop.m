@@ -624,8 +624,13 @@ static BOOL sg_playing;
 static CFTimeInterval sg_lastBeat;
 static NSTimer *sg_stepper;
 
+// Only to what is on screen: a page left behind, or the app in the background with the music on, draws
+// nothing, and is not woken twice a second to animate it.
 static void deal(CGFloat intensity) {
-    for (SGBackdropHost *host in sg_hosts.allObjects) [host beat:intensity];
+    if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
+    for (SGBackdropHost *host in sg_hosts.allObjects) {
+        if (host.window) [host beat:intensity];
+    }
 }
 
 void SGBackdropBeat(float intensity) {
