@@ -1,3 +1,4 @@
+#import "Shared/Fusion/Fusion.h"
 #import "Core/SGCore.h"
 #import "Settings/SGPage.h"
 #import "Settings/SGPageStyle.h"
@@ -262,6 +263,7 @@ static UIViewController *modSettingsPage(void) {
         pageRow(@"Navbar", @"dock.rectangle", ^UIViewController *{ return SGNavbarPage(); }),
         pageRow(@"Player", @"play.circle", ^UIViewController *{ return SGPlayerSettingsPage(); }),
         pageRow(@"Lyrics", @"quote.bubble", ^UIViewController *{ return SGLyricsSettingsPage(); }),
+        pageRow(@"Fusion Shuffle", @"shuffle", ^UIViewController *{ return SGFusionSettingsPage(); }),
         downloads,
         pageRow(@"Lossless & Soulseek", @"sparkles", ^UIViewController *{ return [SLDownloadsPage new]; }),
         pageRow(@"Your files", @"folder", ^UIViewController *{ return SGLocalFilesSettingsPage(); }),

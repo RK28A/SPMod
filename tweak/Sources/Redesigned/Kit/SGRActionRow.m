@@ -93,7 +93,7 @@ static NSString *wordIn(UIView *button) {
     if (!source) return;
     _source = source;
     // The stand-in covers Spotify's shuffle button, so it takes the long press that one would (Shared/Fusion).
-    if ([source.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleMenu(self);
+    if ([source.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleStandIn(self, source);
 
     NSString *word = wordIn(source);
     CGSize size = source.bounds.size;
@@ -304,7 +304,7 @@ static BOOL indicatorOn(UIView *button, BOOL *found) {
     if (!source) return;
     _source = source;
     // The stand-in covers Spotify's shuffle button, so it takes the long press that one would (Shared/Fusion).
-    if ([source.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleMenu(self);
+    if ([source.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleStandIn(self, source);
 
     if (self.readState) {
         BOOL on = NO;

@@ -57,6 +57,26 @@ UIViewController *SGFusionMergePage(NSString *destination);
 // library once a launch and calls back when the names are there.
 NSString *SGFusionPlaylistNamed(NSString *name);
 void SGFusionWarmNames(void (^done)(void));
-// A long press on `button`, one of Spotify's shuffle buttons or a stand-in for one, opens the shuffle
-// choices: Spotify's shuffle, Fusion Shuffle and its settings. Asked again for the same view, nothing more.
+// `button` is one of Spotify's shuffle buttons or a stand-in for one. A long press on it opens the sheet of
+// shuffle modes (No Shuffle, Shuffle, Smart Shuffle, Fusion Shuffle); a tap goes on to Fusion Shuffle after
+// Spotify's own modes and from it back to none; while Fusion Shuffle is on its glyph covers the button's.
+// Called on the button's layout passes: the first call attaches, the others keep the glyph right.
 void SGFusionAttachShuffleMenu(UIView *button);
+// The colour what is chosen is drawn in, from the look (the redesign's accent); Spotify's green when unset.
+extern UIColor *(^SGFusionAccent)(void);
+
+// The shuffle modes, in the order the sheet lists them. Which one is on, as far as can be told: Spotify
+// says whether it shuffles, not whether its shuffle is the smart one, so Smart is only known when it was
+// chosen from the sheet. Setting one goes through `source`, the button the sheet was opened from, for the
+// one mode only Spotify's own button reaches.
+typedef NS_ENUM(NSInteger, SGFusionMode) { SGFusionModeNone, SGFusionModeShuffle, SGFusionModeSmart, SGFusionModeFusion };
+NSInteger SGFusionModeNow(void);
+void SGFusionSetMode(NSInteger mode, UIView *source);
+void SGFusionShowModes(UIView *source);
+void SGFusionOpenSettings(void);
+// A stand-in drawn over one of Spotify's shuffle buttons says which it stands for.
+void SGFusionAttachShuffleStandIn(UIView *standIn, UIView *real);
+
+typedef NS_ENUM(NSInteger, SGFusionGlyph) { SGFusionGlyphShuffle, SGFusionGlyphNoShuffle, SGFusionGlyphSmart, SGFusionGlyphFusion };
+// A template image `side` points square.
+UIImage *SGFusionIcon(SGFusionGlyph glyph, CGFloat side);

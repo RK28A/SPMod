@@ -35,7 +35,7 @@ typedef NS_ENUM(NSInteger, SGLiveActivityColors) {
     SGLiveActivityColorsSpotify = 0,   // the artwork's color darkened, lit in Spotify's green
     SGLiveActivityColorsArtwork,       // the same fill, lit in the artwork's lightened accent
     SGLiveActivityColorsPlain,         // the system's material, lit in white
-    SGLiveActivityColorsTranslucent,   // the system's material under a thin dark veil, lit in white
+    SGLiveActivityColorsTranslucent,   // the system's material with next to nothing over it, lit in white; the default
 };
 
 // The lines' size.

@@ -3,6 +3,7 @@
 #import "SGRAccent.h"
 #import "SGRTokens.h"
 #import "SGRAccentWash.h"
+#import "Settings/SGBackdrop.h"
 
 static const CGFloat kReach = 0.55, kStrength = 0.30;
 static const CFTimeInterval kFade = 0.7;
@@ -56,13 +57,18 @@ static char kWashKey;
 
 void SGRAccentWashPlace(UIView *page) {
     if (!page) return;
+    // With the moving background on, the page takes that whole (Settings/SGBackdrop.h) and the light steps aside.
+    SGBackdropPlace(page);
     SGRAccentWashView *wash = objc_getAssociatedObject(page, &kWashKey);
+    if (SGHidden(SGKeyBackdrop)) {
+        [wash removeFromSuperview];
+        return;
+    }
     if (!wash) {
         wash = [SGRAccentWashView new];
         objc_setAssociatedObject(page, &kWashKey, wash, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (wash.superview != page) [page insertSubview:wash atIndex:0];
-    else if (page.subviews.firstObject != wash) [page sendSubviewToBack:wash];
     CGRect frame = CGRectMake(0, 0, page.bounds.size.width, round(page.bounds.size.height * kReach));
     if (!CGRectEqualToRect(wash.frame, frame)) wash.frame = frame;
 }

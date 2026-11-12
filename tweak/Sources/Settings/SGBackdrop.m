@@ -1,3 +1,4 @@
+#import <objc/runtime.h>
 #import "SGBackdrop.h"
 #import "Core/SGCore.h"
 #import "Core/SGPrefs.h"
@@ -130,6 +131,7 @@ static UIImage *dot(void) {
 @property (nonatomic, readonly) CFTimeInterval period;
 - (instancetype)initWithStyle:(SGBackdropStyle)style color:(UIColor *)color;
 - (CFTimeInterval)untilLoopEnds;
+- (void)beat:(CGFloat)intensity;
 @end
 
 @implementation SGBackdropScene {
@@ -137,6 +139,7 @@ static UIImage *dot(void) {
     UIColor *_color;
     CGSize _built;
     CFTimeInterval _began;
+    int _meteors;
 }
 
 - (instancetype)initWithStyle:(SGBackdropStyle)style color:(UIColor *)color {
@@ -177,12 +180,125 @@ static UIImage *dot(void) {
     if (size.width < 1 || size.height < 1) return;
     _built = size;
     _began = CACurrentMediaTime();
+    _meteors = 0;
     for (CALayer *layer in [self.layer.sublayers copy]) [layer removeFromSuperlayer];
     BOOL still = UIAccessibilityIsReduceMotionEnabled();
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
     [self build:size still:still];
     [CATransaction commit];
+}
+
+// A small meteor from the left edge to the right, at a height of its own, a little downhill: a thin trail
+// that brightens to a white head with a glow of the colour around it. Gone once it has crossed.
+- (void)meteor:(CGFloat)intensity {
+    CGSize size = self.bounds.size;
+    if (_meteors >= 6 || size.width < 1) return;
+    CGFloat length = 70 + arc4random_uniform(70) + 50 * intensity, thick = 1.5 + intensity;
+    CALayer *meteor = [CALayer layer];
+    meteor.bounds = CGRectMake(0, 0, length, 12);
+    CAGradientLayer *trail = [CAGradientLayer layer];
+    trail.frame = CGRectMake(0, (12 - thick) / 2, length, thick);
+    trail.cornerRadius = thick / 2;
+    trail.startPoint = CGPointMake(0, 0.5);
+    trail.endPoint = CGPointMake(1, 0.5);
+    trail.colors = @[cg(_color, 0), cg(_color, 0.55), cg(UIColor.whiteColor, 0.95)];
+    trail.locations = @[@0, @0.7, @1];
+    [meteor addSublayer:trail];
+    [meteor addSublayer:blob(_color, 0.9, 12, CGPointMake(length - 2, 6))];
+    CALayer *head = [CALayer layer];
+    head.bounds = CGRectMake(0, 0, thick + 1.5, thick + 1.5);
+    head.cornerRadius = (thick + 1.5) / 2;
+    head.position = CGPointMake(length - 2, 6);
+    head.backgroundColor = UIColor.whiteColor.CGColor;
+    [meteor addSublayer:head];
+
+    CGFloat y = size.height * (0.06 + arc4random_uniform(70) / 100.0), fall = size.width * (0.08 + arc4random_uniform(10) / 100.0);
+    CGPoint from = CGPointMake(-length, y), to = CGPointMake(size.width + length, y + fall);
+    meteor.position = to;
+    meteor.opacity = 0;
+    meteor.transform = CATransform3DMakeRotation(atan2(fall, size.width + 2 * length), 0, 0, 1);
+    CFTimeInterval duration = 0.9 + arc4random_uniform(50) / 100.0;
+    _meteors++;
+    __weak SGBackdropScene *weakSelf = self;
+    [CATransaction begin];
+    [CATransaction setCompletionBlock:^{
+        [meteor removeFromSuperlayer];
+        SGBackdropScene *scene = weakSelf;
+        if (scene && scene->_meteors > 0) scene->_meteors--;
+    }];
+    CABasicAnimation *cross = [CABasicAnimation animationWithKeyPath:@"position"];
+    cross.fromValue = [NSValue valueWithCGPoint:from];
+    cross.toValue = [NSValue valueWithCGPoint:to];
+    cross.duration = duration;
+    cross.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn];
+    CAKeyframeAnimation *shine = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
+    shine.values = @[@0, @1, @1, @0];
+    shine.keyTimes = @[@0, @0.12, @0.8, @1];
+    shine.duration = duration;
+    [self.layer addSublayer:meteor];
+    [meteor addAnimation:cross forKey:@"cross"];
+    [meteor addAnimation:shine forKey:@"shine"];
+    [CATransaction commit];
+}
+
+// The music's beat, as it is felt or reckoned (SGBackdropBeat): the styles with room for it answer.
+- (void)beat:(CGFloat)intensity {
+    if (!self.window || UIAccessibilityIsReduceMotionEnabled()) return;
+    CGSize size = self.bounds.size;
+    switch (_style) {
+        case SGBackdropStars:
+            [self meteor:intensity];
+            break;
+        case SGBackdropRipples: {
+            CAShapeLayer *ring = [CAShapeLayer layer];
+            CGFloat side = 120, longer = MAX(size.width, size.height);
+            ring.bounds = CGRectMake(0, 0, side, side);
+            ring.position = CGPointMake(size.width / 2, size.height / 2);
+            ring.path = [UIBezierPath bezierPathWithOvalInRect:ring.bounds].CGPath;
+            ring.fillColor = UIColor.clearColor.CGColor;
+            ring.strokeColor = (__bridge CGColorRef)cg(_color, 0.5 + 0.4 * intensity);
+            ring.lineWidth = 1.5;
+            ring.opacity = 0;
+            [CATransaction begin];
+            [CATransaction setCompletionBlock:^{ [ring removeFromSuperlayer]; }];
+            CABasicAnimation *grow = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+            grow.fromValue = @0.15;
+            grow.toValue = @(longer * 0.9 / side);
+            grow.duration = 1.6;
+            grow.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+            CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+            fade.fromValue = @0.9;
+            fade.toValue = @0;
+            fade.duration = 1.6;
+            [self.layer addSublayer:ring];
+            [ring addAnimation:grow forKey:@"grow"];
+            [ring addAnimation:fade forKey:@"fade"];
+            [CATransaction commit];
+            break;
+        }
+        case SGBackdropPulse:
+        case SGBackdropMesh:
+        case SGBackdropAurora: {
+            // A breath of light over the whole scene, gone in half a second.
+            CALayer *flash = [CALayer layer];
+            flash.frame = self.bounds;
+            flash.backgroundColor = (__bridge CGColorRef)cg(_color, 0.1 + 0.1 * intensity);
+            flash.opacity = 0;
+            [CATransaction begin];
+            [CATransaction setCompletionBlock:^{ [flash removeFromSuperlayer]; }];
+            CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+            fade.fromValue = @1;
+            fade.toValue = @0;
+            fade.duration = 0.5;
+            [self.layer addSublayer:flash];
+            [flash addAnimation:fade forKey:@"fade"];
+            [CATransaction commit];
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 - (void)build:(CGSize)size still:(BOOL)still {
@@ -273,32 +389,27 @@ static UIImage *dot(void) {
             break;
         }
         case SGBackdropStars: {
-            _period = 4;
+            // A dim sky of small fixed stars, a few of them breathing; the meteors come with the music (-beat:).
+            _period = 3;
             CAGradientLayer *glow = [CAGradientLayer layer];
             glow.frame = frame;
-            glow.colors = @[cg(color, 0), cg(color, 0.3)];
+            glow.colors = @[cg(color, 0.16), cg(color, 0), cg(color, 0.1)];
+            glow.locations = @[@0, @0.55, @1];
             [root addSublayer:glow];
-            if (still) break;
-            CAEmitterLayer *emitter = [CAEmitterLayer layer];
-            emitter.frame = frame;
-            emitter.emitterShape = kCAEmitterLayerLine;
-            emitter.emitterPosition = CGPointMake(w / 2, h + 10);
-            emitter.emitterSize = CGSizeMake(w, 1);
-            CAEmitterCell *cell = [CAEmitterCell emitterCell];
-            cell.contents = (id)dot().CGImage;
-            cell.color = (__bridge CGColorRef)cg(color, 0.9);
-            cell.birthRate = 7;
-            cell.lifetime = 16;
-            cell.velocity = 55;
-            cell.velocityRange = 30;
-            cell.emissionLongitude = -M_PI_2;
-            cell.emissionRange = M_PI / 10;
-            cell.scale = 0.22;
-            cell.scaleRange = 0.18;
-            cell.alphaSpeed = -0.055;
-            emitter.emitterCells = @[cell];
-            emitter.beginTime = CACurrentMediaTime() - 12;
-            [root addSublayer:emitter];
+            for (int i = 0; i < 36; i++) {
+                CALayer *star = [CALayer layer];
+                CGFloat side = 1 + arc4random_uniform(3) * 0.5;
+                star.bounds = CGRectMake(0, 0, side, side);
+                star.cornerRadius = side / 2;
+                star.position = CGPointMake(arc4random_uniform((uint32_t)w), arc4random_uniform((uint32_t)h));
+                star.backgroundColor = UIColor.whiteColor.CGColor;
+                star.opacity = 0.25 + arc4random_uniform(40) / 100.0;
+                [root addSublayer:star];
+                if (still || i % 3) continue;
+                CABasicAnimation *twinkle = loop(@"opacity", @(star.opacity), @0.05, 1.5 + arc4random_uniform(20) / 10.0, YES);
+                twinkle.beginTime = CACurrentMediaTime() + arc4random_uniform(30) / 10.0;
+                [star addAnimation:twinkle forKey:@"twinkle"];
+            }
             break;
         }
         case SGBackdropRibbons: {
@@ -385,6 +496,7 @@ static UIImage *dot(void) {
 
 @interface SGBackdropHost : UIView
 - (void)colorChanged;
+- (void)beat:(CGFloat)intensity;
 @end
 
 static NSHashTable<SGBackdropHost *> *sg_hosts;
@@ -449,7 +561,13 @@ static NSHashTable<SGBackdropHost *> *sg_hosts;
     [self show:currentColor() after:0 fade:0.5];
 }
 
+- (void)beat:(CGFloat)intensity {
+    if (self.window) [_scene beat:intensity];
+}
+
 @end
+
+static SGBackdropHost *newHost(void);
 
 void SGBackdropSync(UITableView *table) {
     if (!table) return;
@@ -465,10 +583,81 @@ void SGBackdropSync(UITableView *table) {
     }
     // A page with a background of its own, an empty state, keeps it.
     if (table.backgroundView) return;
+    table.backgroundView = newHost();
+}
+
+static SGBackdropHost *newHost(void) {
     SGBackdropHost *host = [SGBackdropHost new];
     if (!sg_hosts) sg_hosts = [NSHashTable weakObjectsHashTable];
     [sg_hosts addObject:host];
-    table.backgroundView = host;
+    return host;
+}
+
+// Behind a page of Spotify's own: the host at the back of `page`, and the page's own full-size fills above it
+// cleared, three levels down, so it shows through. With the switch off the host is taken away.
+void SGBackdropPlace(UIView *page) {
+    static char key;
+    if (!page) return;
+    SGBackdropHost *host = objc_getAssociatedObject(page, &key);
+    if (!SGHidden(SGKeyBackdrop)) {
+        if (host) {
+            [host removeFromSuperview];
+            objc_setAssociatedObject(page, &key, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        return;
+    }
+    if (!host) {
+        host = newHost();
+        host.autoresizingMask = UIViewAutoresizingNone;
+        objc_setAssociatedObject(page, &key, host, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (host.superview != page) [page insertSubview:host atIndex:0];
+    else if (page.subviews.firstObject != host) [page sendSubviewToBack:host];
+    if (!CGRectEqualToRect(host.frame, page.bounds)) host.frame = page.bounds;
+    [host colorChanged];
+    CGFloat area = page.bounds.size.width * page.bounds.size.height;
+    if (area < 1) return;
+    NSMutableArray<UIView *> *level = [NSMutableArray arrayWithObject:page];
+    for (int depth = 0; depth < 4 && level.count; depth++) {
+        NSMutableArray<UIView *> *next = [NSMutableArray array];
+        for (UIView *view in level) {
+            if (view == host || [view isKindOfClass:UIVisualEffectView.class]) continue;
+            if (view.bounds.size.width * view.bounds.size.height < area * 0.85) continue;
+            if (view.backgroundColor && CGColorGetAlpha(view.backgroundColor.CGColor) > 0.01) view.backgroundColor = UIColor.clearColor;
+            [next addObjectsFromArray:view.subviews];
+        }
+        level = next;
+    }
+}
+
+// The beat: as Vibrations feels it when it listens, else reckoned at a steady step while a song plays, so
+// the styles that answer the music still move with it. Paused, nothing comes.
+static BOOL sg_playing;
+static CFTimeInterval sg_lastBeat;
+static NSTimer *sg_stepper;
+
+static void deal(CGFloat intensity) {
+    for (SGBackdropHost *host in sg_hosts.allObjects) [host beat:intensity];
+}
+
+void SGBackdropBeat(float intensity) {
+    CFTimeInterval now = CACurrentMediaTime();
+    if (now - sg_lastBeat < 0.16) return;
+    sg_lastBeat = now;
+    deal(MIN(1, MAX(0, intensity)));
+}
+
+void SGBackdropSetPlaying(BOOL playing) {
+    sg_playing = playing;
+    if (sg_stepper) return;
+    sg_stepper = [NSTimer scheduledTimerWithTimeInterval:0.52 repeats:YES block:^(NSTimer *timer) {
+        if (!sg_playing || !sg_hosts.count || CACurrentMediaTime() - sg_lastBeat < 1.5) return;
+        static int step;
+        // Every other step a stronger one, and now and then none: a pulse, not a metronome.
+        if (arc4random_uniform(6) == 0) return;
+        deal(step++ % 2 ? 0.35 : 0.7);
+    }];
+    sg_stepper.tolerance = 0.05;
 }
 
 void SGBackdropSetSongColor(UIColor *color) {

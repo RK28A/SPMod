@@ -304,7 +304,7 @@ static UIView *card(Look look, NSInteger step) {
         background = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterialDark]];
     } else if (look.colors == SGLiveActivityColorsTranslucent) {
         UIVisualEffectView *thin = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark]];
-        thin.contentView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.3];
+        thin.contentView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.06];
         background = thin;
     } else {
         background = [UIView new];
@@ -410,7 +410,7 @@ static NSString *stepName(NSInteger view, NSInteger step) {
 }
 
 - (Look)look {
-    NSInteger colors = SGInt(SGKeyLiveActivityColors, SGLiveActivityColorsSpotify);
+    NSInteger colors = SGInt(SGKeyLiveActivityColors, SGLiveActivityColorsTranslucent);
     return (Look){
         .view = _view,
         .textSize = SGInt(SGKeyLiveActivityTextSize, SGLiveActivityTextMedium),

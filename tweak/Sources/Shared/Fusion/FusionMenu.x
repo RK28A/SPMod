@@ -21,6 +21,7 @@
 
 static const CGFloat kRowHeight = 56, kSideMargin = 16, kIconSide = 24;
 static char kRowKey, kPressKey;
+UIColor *(^SGFusionAccent)(void);
 
 static UINavigationController *navigationIn(UIViewController *controller, int depth) {
     if (!controller || depth > 6) return nil;
@@ -58,8 +59,7 @@ static void show(UIViewController *page) {
 
 - (instancetype)initWithFrame:(CGRect)frame {
     if (!(self = [super initWithFrame:frame])) return nil;
-    UIImage *glyph = [UIImage systemImageNamed:@"arrow.triangle.merge" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightRegular]];
-    _icon = [[UIImageView alloc] initWithImage:glyph];
+    _icon = [[UIImageView alloc] initWithImage:SGFusionIcon(SGFusionGlyphFusion, kIconSide)];
     _icon.tintColor = [UIColor colorWithWhite:1 alpha:UIAccessibilityDarkerSystemColorsEnabled() ? 0.80 : 0.65];
     _icon.contentMode = UIViewContentModeCenter;
     _title = [UILabel new];
@@ -158,48 +158,243 @@ static void install(UIViewController *menu) {
 }
 %end
 
-#pragma mark - the shuffle choices
+#pragma mark - the shuffle modes
 
-@interface SGFusionShufflePress : NSObject
+// Spotify's button goes from none to shuffle to, where it offers it, smart shuffle, and back to none. Fusion
+// Shuffle is put after its last: a tap that takes Spotify's shuffle from on to off starts it, and a tap while
+// it is on ends it and leaves no shuffle. The tap itself is Spotify's; what follows is told from the player
+// saying, within a moment of a tap on one of these buttons, that its shuffle turned.
+@interface SGFusionBox : NSObject
+@property (nonatomic, weak) UIView *view;
 @end
 
-@implementation SGFusionShufflePress
+@implementation SGFusionBox
+@end
+
+@interface SGFusionButtons : NSObject <SGPlayerStateObserver>
+@end
+
+static SGFusionButtons *sg_buttons;
+static NSHashTable<UIView *> *sg_attached;
+static CFAbsoluteTime sg_tapAt;
+static BOOL sg_wasShuffling, sg_smart;
+static char kGlyphKey, kDimmedKey, kRealKey;
+
+static BOOL shufflingNow(void) {
+    return SGPlaybackPlayer().state.options.shufflingContext;
+}
+
+// Spotify's shuffle set by the mod, not by a tap: what the player says next is not a tap's doing.
+static void setSpotifyShuffle(BOOL on) {
+    sg_tapAt = 0;
+    id<SPTPlayer> player = SGPlaybackPlayer();
+    if ([player respondsToSelector:@selector(setShufflingContext:)]) [player setShufflingContext:on];
+}
+
+static void note(NSString *text) {
+    UIWindow *window = SGTopController().view.window;
+    if (!window) return;
+    UILabel *label = [UILabel new];
+    label.text = [NSString stringWithFormat:@"  %@  ", text];
+    label.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    label.textColor = UIColor.whiteColor;
+    label.textAlignment = NSTextAlignmentCenter;
+    label.numberOfLines = 2;
+    label.backgroundColor = [UIColor colorWithWhite:0.12 alpha:0.96];
+    label.layer.cornerRadius = 14;
+    label.clipsToBounds = YES;
+    CGSize fit = [label sizeThatFits:CGSizeMake(window.bounds.size.width - 48, 80)];
+    label.frame = CGRectMake((window.bounds.size.width - fit.width - 16) / 2, window.safeAreaInsets.top + 12, fit.width + 16, fit.height + 18);
+    label.alpha = 0;
+    [window addSubview:label];
+    [UIView animateWithDuration:0.25 animations:^{ label.alpha = 1; } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.3 delay:2.4 options:0 animations:^{ label.alpha = 0; } completion:^(BOOL done) { [label removeFromSuperview]; }];
+    }];
+}
+
+NSInteger SGFusionModeNow(void) {
+    if (SGFusionShuffleActive()) return SGFusionModeFusion;
+    if (!shufflingNow()) return SGFusionModeNone;
+    return sg_smart ? SGFusionModeSmart : SGFusionModeShuffle;
+}
+
+static UIControl *realControl(UIView *source) {
+    SGFusionBox *box = objc_getAssociatedObject(source, &kRealKey);
+    UIView *real = box.view ?: source;
+    return [real isKindOfClass:UIControl.class] ? (UIControl *)real : nil;
+}
+
+static void after(NSTimeInterval seconds, void (^block)(void)) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(seconds * NSEC_PER_SEC)), dispatch_get_main_queue(), block);
+}
+
+// Smart Shuffle has no call of its own that is known: it is reached the way a finger reaches it, through
+// Spotify's button, from none: one press for shuffle, a second for smart. Where the second press lands on
+// none, Spotify does not offer it here, and plain shuffle is left on with a word saying so.
+static void reachSmart(UIView *source) {
+    UIControl *control = realControl(source);
+    setSpotifyShuffle(NO);
+    if (!control) {
+        setSpotifyShuffle(YES);
+        note(@"Smart Shuffle is not reachable from this button. Shuffle is on");
+        return;
+    }
+    after(0.3, ^{
+        sg_tapAt = 0;
+        [control sendActionsForControlEvents:UIControlEventTouchUpInside];
+        after(0.45, ^{
+            sg_tapAt = 0;
+            if (!shufflingNow()) {
+                setSpotifyShuffle(YES);
+                note(@"Smart Shuffle could not be reached. Shuffle is on");
+                return;
+            }
+            [control sendActionsForControlEvents:UIControlEventTouchUpInside];
+            after(0.45, ^{
+                sg_tapAt = 0;
+                if (shufflingNow()) {
+                    sg_smart = YES;
+                    return;
+                }
+                setSpotifyShuffle(YES);
+                note(@"Spotify does not offer Smart Shuffle here. Shuffle is on");
+            });
+        });
+    });
+}
+
+void SGFusionSetMode(NSInteger mode, UIView *source) {
+    if (mode != SGFusionModeFusion && SGFusionShuffleActive()) SGFusionShuffleStop();
+    sg_smart = NO;
+    switch (mode) {
+        case SGFusionModeNone:
+            setSpotifyShuffle(NO);
+            break;
+        case SGFusionModeShuffle:
+            // Off first: on from smart shuffle would leave it smart.
+            setSpotifyShuffle(NO);
+            after(0.25, ^{ setSpotifyShuffle(YES); });
+            break;
+        case SGFusionModeSmart:
+            reachSmart(source);
+            break;
+        default:
+            setSpotifyShuffle(NO);
+            SGFusionShuffleStart();
+    }
+}
+
+void SGFusionOpenSettings(void) {
+    show(SGFusionSettingsPage());
+}
+
+// Fusion Shuffle's glyph over the button while it is on, the button's own drawing under it faded out, not
+// hidden (Spotify's stacks crash on hidden), and brought back as it was when the mode ends.
+static void dress(UIView *button) {
+    UIImageView *glyph = objc_getAssociatedObject(button, &kGlyphKey);
+    NSHashTable<UIView *> *dimmed = objc_getAssociatedObject(button, &kDimmedKey);
+    if (!SGFusionShuffleActive()) {
+        if (!glyph) return;
+        glyph.alpha = 0;
+        for (UIView *view in dimmed.allObjects) view.alpha = 1;
+        [dimmed removeAllObjects];
+        return;
+    }
+    if (!glyph) {
+        glyph = [[UIImageView alloc] initWithImage:SGFusionIcon(SGFusionGlyphFusion, 26)];
+        glyph.userInteractionEnabled = NO;
+        glyph.isAccessibilityElement = NO;
+        glyph.contentMode = UIViewContentModeCenter;
+        objc_setAssociatedObject(button, &kGlyphKey, glyph, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        dimmed = [NSHashTable weakObjectsHashTable];
+        objc_setAssociatedObject(button, &kDimmedKey, dimmed, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    UIColor *lit = SGFusionAccent ? SGFusionAccent() : nil;
+    glyph.tintColor = lit ?: [UIColor colorWithRed:0x1E / 255.0 green:0xD7 / 255.0 blue:0x60 / 255.0 alpha:1];
+    if (glyph.superview != button) [button addSubview:glyph];
+    glyph.frame = button.bounds;
+    glyph.alpha = 1;
+    for (UIView *view in button.subviews) {
+        if (view == glyph || view.alpha < 0.01) continue;
+        view.alpha = 0;
+        [dimmed addObject:view];
+    }
+}
+
+@implementation SGFusionButtons
 
 - (void)pressed:(UILongPressGestureRecognizer *)press {
     if (press.state != UIGestureRecognizerStateBegan) return;
     [[UIImpactFeedbackGenerator new] impactOccurred];
-    id<SPTPlayer> player = SGPlaybackPlayer();
-    BOOL shuffling = player.state.options.shufflingContext;
-    BOOL fusion = SGFusionShuffleActive();
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Shuffle" message:fusion ? SGFusionShuffleStatus() : nil
-                                                            preferredStyle:UIAlertControllerStyleActionSheet];
-    [sheet addAction:[UIAlertAction actionWithTitle:shuffling ? @"Spotify shuffle: turn off" : @"Spotify shuffle: turn on" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        if (fusion) SGFusionShuffleStop();
-        if ([player respondsToSelector:@selector(setShufflingContext:)]) [player setShufflingContext:!shuffling];
-    }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:fusion ? @"Stop Fusion Shuffle" : @"Fusion Shuffle: mix every playlist" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        if (fusion) SGFusionShuffleStop();
-        else SGFusionShuffleStart();
-    }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Fusion settings" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        show(SGFusionSettingsPage());
-    }]];
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    sheet.popoverPresentationController.sourceView = press.view;
-    sheet.popoverPresentationController.sourceRect = press.view.bounds;
-    [SGTopController() presentViewController:sheet animated:YES completion:nil];
+    // The press is not a tap: what it lets go of turns nothing.
+    sg_tapAt = 0;
+    SGFusionShowModes(press.view);
+}
+
+- (void)tapped {
+    sg_tapAt = CFAbsoluteTimeGetCurrent();
+}
+
+- (void)fusionChanged {
+    for (UIView *button in sg_attached.allObjects) dress(button);
+}
+
+- (void)playerStateDidChange:(SPTPlayerState *)state {
+    BOOL shuffling = state.options.shufflingContext;
+    if (shuffling == sg_wasShuffling) return;
+    sg_wasShuffling = shuffling;
+    if (!shuffling) sg_smart = NO;
+    BOOL tapped = CFAbsoluteTimeGetCurrent() - sg_tapAt < 1.5;
+    sg_tapAt = 0;
+    if (!tapped) return;
+    if (SGFusionShuffleActive()) {
+        // A tap during Fusion Shuffle: Spotify turned its own on, which is not what the tap is for here.
+        if (shuffling) {
+            SGFusionShuffleStop();
+            setSpotifyShuffle(NO);
+        }
+    } else if (!shuffling) {
+        SGFusionShuffleStart();
+    }
 }
 
 @end
 
 void SGFusionAttachShuffleMenu(UIView *button) {
-    if (!button || objc_getAssociatedObject(button, &kPressKey)) return;
-    static SGFusionShufflePress *target;
-    if (!target) target = [SGFusionShufflePress new];
-    UILongPressGestureRecognizer *press = [[UILongPressGestureRecognizer alloc] initWithTarget:target action:@selector(pressed:)];
-    press.minimumPressDuration = 0.45;
-    [button addGestureRecognizer:press];
-    objc_setAssociatedObject(button, &kPressKey, press, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (!button) return;
+    if (!sg_buttons) {
+        sg_buttons = [SGFusionButtons new];
+        sg_attached = [NSHashTable weakObjectsHashTable];
+        sg_wasShuffling = shufflingNow();
+        SGAddPlayerStateObserver(sg_buttons);
+        [NSNotificationCenter.defaultCenter addObserver:sg_buttons selector:@selector(fusionChanged) name:SGFusionShuffleDidChangeNotification object:nil];
+    }
+    if (!objc_getAssociatedObject(button, &kPressKey)) {
+        UILongPressGestureRecognizer *press = [[UILongPressGestureRecognizer alloc] initWithTarget:sg_buttons action:@selector(pressed:)];
+        press.minimumPressDuration = 0.35;
+        [button addGestureRecognizer:press];
+        objc_setAssociatedObject(button, &kPressKey, press, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        if ([button isKindOfClass:UIControl.class]) {
+            [(UIControl *)button addTarget:sg_buttons action:@selector(tapped) forControlEvents:UIControlEventTouchUpInside];
+        } else {
+            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:sg_buttons action:@selector(tapped)];
+            tap.cancelsTouchesInView = NO;
+            [button addGestureRecognizer:tap];
+        }
+        [sg_attached addObject:button];
+    }
+    dress(button);
+}
+
+void SGFusionAttachShuffleStandIn(UIView *standIn, UIView *real) {
+    if (!standIn) return;
+    SGFusionBox *box = objc_getAssociatedObject(standIn, &kRealKey);
+    if (!box) {
+        box = [SGFusionBox new];
+        objc_setAssociatedObject(standIn, &kRealKey, box, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    box.view = real;
+    SGFusionAttachShuffleMenu(standIn);
 }
 
 %hook _TtC19LegacyUI_ECMCoreKitP33_7AC6ABDB5A3E514EA5239D6986C3C90912EncoreButton

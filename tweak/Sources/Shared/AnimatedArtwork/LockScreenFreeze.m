@@ -104,12 +104,15 @@ static void startOver(void) {
 
 API_AVAILABLE(ios(26.0))
 static void hold(void) {
+    if (!sg_clip || !sg_key) SGLog(@"lock hold: paused with no moving artwork offered (the Lyrics view and iOS's own artwork are not held)");
     if (!sg_clip || !sg_key || sg_held) return;
     NSUInteger offered = sg_offer, turn = ++sg_turn;
     double at = position();
     NSString *key = sg_key, *title = sg_title;
+    SGLog(@"lock hold: paused %.1f s into %@, holding", at, sg_name);
     sg_clip(^(NSURL *file) {
         dispatch_async(sg_queue, ^{
+            if (!file) SGLog(@"lock hold: the clip could not be made, nothing held");
             if (!file) return;
             CFAbsoluteTime start = CFAbsoluteTimeGetCurrent();
             double length = 0, where = 0;
@@ -193,7 +196,7 @@ static void goOn(void) {
         if (sg_since > 0) sg_played += CACurrentMediaTime() - sg_since;
         sg_since = 0;
         if (@available(iOS 26.0, *)) {
-            if (SGHidden(SGKeyLockScreenPauseMotion)) hold();
+            if (SGEnabled(SGKeyLockScreenPauseMotion)) hold();
         }
     } else {
         sg_since = CACurrentMediaTime();
@@ -230,7 +233,7 @@ void SGLockFreezeOffered(NSString *key, NSString *title, NSString *name,
     sg_heldClip = nil;
     // A track that comes in paused is held on its first frame, as it would be had it been paused there.
     if (@available(iOS 26.0, *)) {
-        if (sg_paused && SGHidden(SGKeyLockScreenPauseMotion)) hold();
+        if (sg_paused && SGEnabled(SGKeyLockScreenPauseMotion)) hold();
     }
 }
 
@@ -261,7 +264,7 @@ void SGLockFreezeCleared(void) {
 }
 
 SGModRow *SGLockFreezeRow(void) {
-    SGModRow *row = SGHideRow(@"Pause animation with playback",
+    SGModRow *row = SGSwitchRow(@"Pause animation with playback",
         @"Experimental. Holds the moving artwork on a frame while the song is paused, then goes on from it. iOS gives no clock for its player, so the frame is an estimate",
         SGKeyLockScreenPauseMotion);
     row.visible = ^BOOL {
