@@ -19,7 +19,7 @@ typedef NS_ENUM(NSInteger, SGBackdropStyle) {
     SGBackdropStyleCount,
 };
 
-static const NSTimeInterval kFade = 1.6, kLongestWait = 5;
+static const NSTimeInterval kFade = 1.2, kLongestWait = 2.5;
 
 NSArray<NSString *> *SGBackdropStyleNames(void) {
     return @[@"Wave", @"Aurora", @"Pulse", @"Tide", @"Spotlights", @"Ripples", @"Stars", @"Ribbons", @"Prism", @"Mesh", @"Bars"];
@@ -451,12 +451,24 @@ static NSHashTable<SGBackdropHost *> *sg_hosts;
 
 @end
 
-UIView *SGBackdropView(void) {
-    if (!SGHidden(SGKeyBackdrop)) return nil;
+void SGBackdropSync(UITableView *table) {
+    if (!table) return;
+    BOOL has = [table.backgroundView isKindOfClass:SGBackdropHost.class];
+    if (!SGHidden(SGKeyBackdrop)) {
+        if (has) table.backgroundView = nil;
+        return;
+    }
+    if (has) {
+        // A colour that came in while the page was out of view.
+        [(SGBackdropHost *)table.backgroundView colorChanged];
+        return;
+    }
+    // A page with a background of its own, an empty state, keeps it.
+    if (table.backgroundView) return;
     SGBackdropHost *host = [SGBackdropHost new];
     if (!sg_hosts) sg_hosts = [NSHashTable weakObjectsHashTable];
     [sg_hosts addObject:host];
-    return host;
+    table.backgroundView = host;
 }
 
 void SGBackdropSetSongColor(UIColor *color) {

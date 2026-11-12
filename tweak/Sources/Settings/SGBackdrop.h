@@ -11,7 +11,9 @@
 extern NSNotificationName const SGBackdropDidChangeNotification;   // a setting above changed
 
 NSArray<NSString *> *SGBackdropStyleNames(void);
-// nil when the switch is off.
-UIView *SGBackdropView(void);
+// Puts the background behind a page's table, or takes it away once the switch is off. Every page of the
+// mod's asks as it loads and each time it comes into view (SGPage.m), so one opened before the switch was
+// turned follows too.
+void SGBackdropSync(UITableView *table);
 // The playing song's colour, from a higher layer (Shared/Player/SongColor.x). Main thread.
 void SGBackdropSetSongColor(UIColor *color);
