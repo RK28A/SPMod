@@ -1,6 +1,6 @@
 #import "SGLog.h"
 
-static const NSUInteger kLogLimit = 256 * 1024;
+static const NSUInteger kLogLimit = 2 * 1024 * 1024;
 static dispatch_queue_t sg_logQueue;
 static const void *sg_logQueueKey = &sg_logQueueKey;
 
