@@ -49,3 +49,14 @@ void SGFusionShuffleStop(void);
 void SGFusionShuffleForgetLibrary(void);
 
 UIViewController *SGFusionSettingsPage(void);
+// The list where a merge is set up, `destination` already green when it names a playlist of the library.
+UIViewController *SGFusionMergePage(NSString *destination);
+
+// The library's playlists by name, as last read, for telling a playlist's menu by its heading: the id of the
+// one called `name`, nil when none or more than one is. Kept across launches; SGFusionWarmNames reads the
+// library once a launch and calls back when the names are there.
+NSString *SGFusionPlaylistNamed(NSString *name);
+void SGFusionWarmNames(void (^done)(void));
+// A long press on `button`, one of Spotify's shuffle buttons or a stand-in for one, opens the shuffle
+// choices: Spotify's shuffle, Fusion Shuffle and its settings. Asked again for the same view, nothing more.
+void SGFusionAttachShuffleMenu(UIView *button);
