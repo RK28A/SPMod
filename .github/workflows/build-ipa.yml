@@ -13,6 +13,9 @@ on:
         type: choice
         options: [artifacts, filebin, both]
 
+permissions:
+  contents: write
+
 env:
   THEOS: ${{ github.workspace }}/theos
 
@@ -64,3 +67,19 @@ jobs:
             echo "- https://filebin.net/$BIN/$(basename "$f")" >> "$GITHUB_STEP_SUMMARY"
           done
           echo "- _filebin deletes bins after a few days of inactivity, download promptly._" >> "$GITHUB_STEP_SUMMARY"
+
+      # The build as the latest release, numbered 6.1.N where N counts the releases, this one included.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COUNT="$(gh api "repos/${{ github.repository }}/releases" --paginate -q '.[].id' | wc -l | tr -d ' ')"
+          NUMBER=$((COUNT + 1))
+          while gh api "repos/${{ github.repository }}/git/ref/tags/v6.1.$NUMBER" >/dev/null 2>&1; do NUMBER=$((NUMBER + 1)); done
+          VERSION="6.1.$NUMBER"
+          cp out/SPMod.ipa "out/SPMod-$VERSION.ipa"
+          gh release create "v$VERSION" "out/SPMod-$VERSION.ipa" --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" --title "SPMod $VERSION" --latest \
+            --notes "Built from \`${{ github.ref_name }}\` at ${GITHUB_SHA::7}. Unsigned: sign it with SideStore, Feather or any certificate signer."
+          echo "### Release" >> "$GITHUB_STEP_SUMMARY"
+          echo "- https://github.com/${{ github.repository }}/releases/tag/v$VERSION" >> "$GITHUB_STEP_SUMMARY"
