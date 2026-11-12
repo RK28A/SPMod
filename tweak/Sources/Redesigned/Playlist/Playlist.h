@@ -1,6 +1,8 @@
 #import <UIKit/UIKit.h>
 
 #define SGRKeyPlaylistFullCover @"spotifyglass.redesign.playlist.fullCover"
+// Off until switched on: each track on a card of glass, and under the cover the theme seen through glass.
+#define SGRKeyPlaylistGlass @"spotifyglass.redesign.playlist.glassRows"
 
 BOOL SGRPlaylistFullCoverOn(void);
 UIViewController *SGRPlaylistSettingsPage(void);

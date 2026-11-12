@@ -365,12 +365,17 @@ static UIColor *planBadgeColor(void);
     UIColor *accent = planBadgeColor();
     self.layer.cornerRadius = MIN(16, self.bounds.size.height / 2 - 4);
     self.layer.cornerCurve = kCACornerCurveContinuous;
-    self.backgroundColor = [accent colorWithAlphaComponent:0.16];
-    self.layer.borderWidth = 1;
-    self.layer.borderColor = [accent colorWithAlphaComponent:0.45].CGColor;
-    _icon.tintColor = accent;
-    _chevron.tintColor = accent;
-    _title.font = [UIFont systemFontOfSize:_title.font.pointSize weight:UIFontWeightBold];
+    self.backgroundColor = [accent colorWithAlphaComponent:0.32];
+    self.layer.borderWidth = 1.5;
+    self.layer.borderColor = [accent colorWithAlphaComponent:0.9].CGColor;
+    self.layer.shadowColor = accent.CGColor;
+    self.layer.shadowOpacity = 0.55;
+    self.layer.shadowRadius = 10;
+    self.layer.shadowOffset = CGSizeZero;
+    _icon.tintColor = UIColor.whiteColor;
+    _chevron.tintColor = UIColor.whiteColor;
+    _title.textColor = UIColor.whiteColor;
+    _title.font = [UIFont systemFontOfSize:_title.font.pointSize + 1 weight:UIFontWeightHeavy];
 }
 
 - (void)setHighlighted:(BOOL)highlighted {
@@ -547,9 +552,12 @@ static void updatePlanBadge(UIView *root) {
     });
 }
 
+static void fadeUselessLabel(UILabel *label);
+
 %hook UILabel
 - (void)setText:(NSString *)text {
     %orig;
+    fadeUselessLabel(self);
     if (![text isEqualToString:@"Spotify Free"] && ![text isEqualToString:@"Taurine"] &&
         ![text isEqualToString:@"SPMod"]) return;
     if (!isDrawerBadgeLabel(self)) return;
@@ -563,16 +571,66 @@ static void updatePlanBadge(UIView *root) {
 // by its height, so no gap is left. The list's own layout puts them back on each pass and this runs after it.
 static char kTrimmedKey;
 
+static BOOL uselessText(NSString *text) {
+    if (!text.length) return NO;
+    for (NSString *start in @[@"Votre abonnement", @"Your subscription", @"Your plan", @"Your Premium", @"Messages",
+                              @"Partagez vos coups", @"Share what you", @"Nouveau message", @"New message"]) {
+        if ([text hasPrefix:start]) return YES;
+    }
+    return NO;
+}
+
 static BOOL uselessRow(UIView *row) {
     __block BOOL found = NO;
     SGForEachView(row, ^(UIView *view) {
-        if (found || ![view isKindOfClass:UILabel.class]) return;
-        NSString *text = ((UILabel *)view).text;
-        for (NSString *start in @[@"Votre abonnement", @"Your subscription", @"Your plan", @"Your Premium", @"Messages", @"Nouveau message", @"New message"]) {
-            if ([text hasPrefix:start]) found = YES;
-        }
+        if (!found && [view isKindOfClass:UILabel.class] && uselessText(((UILabel *)view).text)) found = YES;
     });
     return found;
+}
+
+static BOOL rowHasText(UIView *row) {
+    __block BOOL found = NO;
+    SGForEachView(row, ^(UIView *view) {
+        if (!found && [view isKindOfClass:UILabel.class] && ((UILabel *)view).text.length) found = YES;
+    });
+    return found;
+}
+
+// Where in the list a useless row has been, by its top: the subscription row is drawn as a grey skeleton
+// before its words come, and is faded from its place before it can show.
+static NSMutableSet<NSNumber *> *sg_uselessTops;
+
+static void fade(UIView *row, BOOL out) {
+    BOOL was = objc_getAssociatedObject(row, &kTrimmedKey) != nil;
+    if (out == was) return;
+    row.alpha = out ? 0 : 1;
+    row.userInteractionEnabled = !out;
+    objc_setAssociatedObject(row, &kTrimmedKey, out ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+// A label of the drawer's taking useless words is faded with its row the moment it takes them, not on the
+// list's next pass: its row is the cell it is in, or, outside the list (Messages may be), the view under
+// whatever holds several rows or most of the drawer.
+static void fadeUselessLabel(UILabel *label) {
+    UIView *root = sg_drawerRoot;
+    if (!root || SGFlag(SGKeyDrawerUseless, NO) || !uselessText(label.text)) return;
+    CGFloat tall = root.bounds.size.height * 0.5;
+    UIView *row = nil;
+    for (UIView *view = label; view && view != root; view = view.superview) {
+        UIView *parent = view.superview;
+        if (!parent) return;
+        if ([parent isKindOfClass:UICollectionView.class] || [parent isKindOfClass:UIStackView.class]
+            || parent == root || parent.bounds.size.height > tall) {
+            row = view;
+            break;
+        }
+    }
+    if (!row) return;
+    fade(row, YES);
+    if ([row.superview isKindOfClass:UICollectionView.class]) {
+        if (!sg_uselessTops) sg_uselessTops = [NSMutableSet set];
+        [sg_uselessTops addObject:@(round(row.frame.origin.y))];
+    }
 }
 
 // Rows are faded, never moved: the list places its own rows, and moving them over it stacked them on each
@@ -581,13 +639,16 @@ static void trimDrawer(UICollectionView *list) {
     BOOL whole = SGFlag(SGKeyDrawerUseless, NO);
     for (UIView *row in list.subviews) {
         if (![row isKindOfClass:UICollectionReusableView.class]) continue;
-        if (!CGAffineTransformIsIdentity(row.transform) && objc_getAssociatedObject(row, &kTrimmedKey)) row.transform = CGAffineTransformIdentity;
-        BOOL was = objc_getAssociatedObject(row, &kTrimmedKey) != nil;
-        BOOL out = !whole && uselessRow(row);
-        if (out == was) continue;
-        row.alpha = out ? 0 : 1;
-        row.userInteractionEnabled = !out;
-        objc_setAssociatedObject(row, &kTrimmedKey, out ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        BOOL out = NO;
+        if (!whole) {
+            out = uselessRow(row);
+            if (!out && !rowHasText(row)) out = [sg_uselessTops containsObject:@(round(row.frame.origin.y))];
+        }
+        if (out && [row.superview isKindOfClass:UICollectionView.class] && rowHasText(row)) {
+            if (!sg_uselessTops) sg_uselessTops = [NSMutableSet set];
+            [sg_uselessTops addObject:@(round(row.frame.origin.y))];
+        }
+        fade(row, out);
     }
 }
 
@@ -658,7 +719,32 @@ static void coverStats(UICollectionView *list) {
 }
 
 // Keep the drawer's plan badge and the SPMod settings row current as Spotify rebuilds its view.
+// Spotify gives the drawer its grey again each time it opens: the light goes back behind it then too.
+static void relightDrawer(UIViewController *drawer) {
+    UIView *root = drawer.viewIfLoaded;
+    if (!root || !SGRedesignedUI()) return;
+    SGRAccentWashPlace(root);
+    SGForEachView(root, ^(UIView *view) {
+        if (![view isKindOfClass:UICollectionView.class] ||
+            ![NSStringFromClass(view.class) containsString:@"SideDrawerListCollectionView"]) return;
+        trimDrawer((UICollectionView *)view);
+        if (view.superview) SGRAccentWashPlace(view.superview);
+    });
+}
+
 %hook _TtC23SideDrawer_ListPageImpl18ListViewController
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    relightDrawer((UIViewController *)self);
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    relightDrawer((UIViewController *)self);
+    __weak UIViewController *weakSelf = (UIViewController *)self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ relightDrawer(weakSelf); });
+}
+
 - (void)viewDidLayoutSubviews {
     %orig;
     sg_drawerRoot = ((UIViewController *)self).view;

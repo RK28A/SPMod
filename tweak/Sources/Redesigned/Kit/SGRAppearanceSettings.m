@@ -1,4 +1,6 @@
 #import "Core/SGCore.h"
+#import "Redesigned/Library/Library.h"
+#import "Redesigned/Playlist/Playlist.h"
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "SGRAccent.h"
@@ -51,6 +53,8 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
     SGModRow *plainCheck = SGOptionRow(@"Plain checkmark", @"Without the circle on saved songs", @"spotifyglass.redesign.plaincheck");
     SGModRow *prettier = SGSwitchRow(@"Prettier icons", @"Apple Music style explicit badge", SGRKeyPrettierIcons);
     SGModRow *explicitMark = SGHideRow(@"Explicit mark", @"The E badge next to explicit tracks", SGKeyHideExplicit);
+    SGModRow *libraryGlass = SGWithSymbol(SGSwitchRow(@"Liquid Glass library", @"Each playlist, artist and button of the library on glass", SGRKeyLibraryGlass), @"square.stack");
+    SGModRow *playlistGlass = SGWithSymbol(SGOptionRow(@"Liquid Glass tracks", @"Each track of a playlist on glass, the theme through glass under the cover", SGRKeyPlaylistGlass), @"music.note.list");
     return @[
         profile,
         gradient,
@@ -59,6 +63,8 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
         plainCheck,
         prettier,
         explicitMark,
+        libraryGlass,
+        playlistGlass,
         SGPresetsRow(),
     ];
 }
