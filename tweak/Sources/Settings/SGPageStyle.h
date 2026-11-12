@@ -18,6 +18,8 @@ void SGAdoptFonts(UIView *list, UIView *exclude);
 UIImageView *SGSymbolView(NSString *name, CGFloat size, UIImageSymbolWeight weight, CGFloat box);
 // A symbol on a rounded grey square, the leading icon of a row that opens a page.
 UIImage *SGTileImage(NSString *symbol);
+// The same tile under a picture of the caller's own, drawn white at the size it has (18 points fills it well).
+UIImage *SGTileImageOf(UIImage *picture);
 // The Discord mark as a template image, for a row's leading slot (Settings/SGDiscordIcon.m).
 UIImage *SGDiscordIcon(void);
 // A grey note in a wrapper view, for a table header or footer; SGFitNote sizes it to its text.

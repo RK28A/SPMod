@@ -85,6 +85,7 @@ SGModRow *SGPageRow(NSString *title, UIViewController *(^page)(void)) {
 }
 
 @interface SGChoicePage : SGPage
+@property (nonatomic, copy) NSArray<UIImage *> *images;
 - (instancetype)initWithTitle:(NSString *)title key:(NSString *)key choices:(NSArray<NSString *> *)choices notes:(NSArray<NSString *> *)notes
                        footer:(NSString *)footer fallback:(NSInteger)fallback chosen:(void (^)(NSInteger index))chosen;
 @end
@@ -142,6 +143,12 @@ SGModRow *SGPageRow(NSString *title, UIViewController *(^page)(void)) {
     UITableViewCell *cell = SGDequeueCell(table, @"choice");
     NSUInteger index = (NSUInteger)path.row;
     SGFillCell(cell, _choices[index], index < _notes.count ? _notes[index] : nil, nil, nil);
+    if (index < _images.count) {
+        UIListContentConfiguration *content = (UIListContentConfiguration *)cell.contentConfiguration;
+        content.image = SGTileImageOf(_images[index]);
+        content.imageToTextPadding = 14;
+        cell.contentConfiguration = content;
+    }
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     if (path.row == SGInt(_key, _fallback)) {
         UIImageView *tick = SGSymbolView(@"checkmark", 13, UIImageSymbolWeightSemibold, 16);
@@ -171,7 +178,9 @@ SGModRow *SGChoiceRow(NSString *title, NSString *subtitle, NSString *key, NSArra
     };
     __weak SGModRow *weakRow = row;
     row.page = ^UIViewController *{
-        return [[SGChoicePage alloc] initWithTitle:title key:key choices:choices notes:weakRow.choiceNotes footer:weakRow.choiceFooter fallback:fallback chosen:weakRow.chosen];
+        SGChoicePage *page = [[SGChoicePage alloc] initWithTitle:title key:key choices:choices notes:weakRow.choiceNotes footer:weakRow.choiceFooter fallback:fallback chosen:weakRow.chosen];
+        page.images = weakRow.choiceImages;
+        return page;
     };
     return row;
 }
@@ -243,6 +252,12 @@ SGModSection *SGNotedSection(NSString *title, NSArray<SGModRow *> *rows, NSStrin
 
 SGModRow *SGWithSymbol(SGModRow *row, NSString *symbol) {
     row.symbol = symbol;
+    return row;
+}
+
+SGModRow *SGWithImage(SGModRow *row, UIImage *image) {
+    row.image = image;
+    row.tiled = YES;
     return row;
 }
 
@@ -641,8 +656,10 @@ static void showProgress(UITableViewCell *cell, SGModRow *row, BOOL animated) {
     SGFillCell(cell, row.title, row.subtitle, row.color, row.symbol);
     UIListContentConfiguration *content = (UIListContentConfiguration *)cell.contentConfiguration;
     if (row.color) content.secondaryTextProperties.color = row.color;
-    BOOL tile = row.symbol && !row.color;
-    if (row.image) {
+    BOOL tile = (row.symbol || (row.image && row.tiled)) && !row.color;
+    if (row.image && tile) {
+        content.image = SGTileImageOf(row.image);
+    } else if (row.image) {
         content.image = [row.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
         content.imageProperties.tintColor = row.color ?: UIColor.whiteColor;
         content.imageToTextPadding = 14;

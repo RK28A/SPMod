@@ -659,7 +659,7 @@ static SGRPlayerMenuItem *downloadLosslessItem(SGRPlayerMenuTakeover *takeover) 
 // Fusion Shuffle beside the menu's other modes: starts the mix, or ends it while it is on (Shared/Fusion).
 static SGRPlayerMenuItem *fusionShuffleItem(SGRPlayerMenuTakeover *takeover) {
     BOOL on = SGFusionShuffleActive();
-    SGRPlayerMenuItem *item = [SGRPlayerMenuItem itemWithTitle:on ? @"Stop Fusion Shuffle" : @"Fusion Shuffle" image:symbol(@"shuffle") action:^{
+    SGRPlayerMenuItem *item = [SGRPlayerMenuItem itemWithTitle:on ? @"Stop Fusion Shuffle" : @"Fusion Shuffle" image:SGFusionIcon(SGFusionGlyphFusion, 22) action:^{
         UIViewController *sheet = takeover.sheet;
         [sheet dismissViewControllerAnimated:YES completion:^{
             if (on) SGFusionShuffleStop();

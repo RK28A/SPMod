@@ -106,6 +106,10 @@ void SGKaraokeAskSpotifyForTiming(NSString *trackID);
 NSString *SGKaraokeSpotifyAuthorization(void);
 // The headers Spotify sends its own spclient requests, as the signed-in app (KaraokeSource.x).
 void SGSpclientHeaders(void (^use)(NSDictionary<NSString *, NSString *> *headers));
+// The host those requests go to and the account they are made for, as last seen on one; the account is nil
+// until the app has asked for its list of playlists once, and is kept across launches.
+NSString *SGSpclientHost(void);
+NSString *SGSpclientUsername(void);
 NSString *SGKaraokePlayingTrack(void);   // the base62 id, nil before the player reported
 NSInteger SGKaraokePositionMs(void);     // negative when unknown
 void SGKaraokeSeek(NSInteger ms);

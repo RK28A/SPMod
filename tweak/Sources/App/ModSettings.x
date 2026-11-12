@@ -263,7 +263,7 @@ static UIViewController *modSettingsPage(void) {
         pageRow(@"Navbar", @"dock.rectangle", ^UIViewController *{ return SGNavbarPage(); }),
         pageRow(@"Player", @"play.circle", ^UIViewController *{ return SGPlayerSettingsPage(); }),
         pageRow(@"Lyrics", @"quote.bubble", ^UIViewController *{ return SGLyricsSettingsPage(); }),
-        pageRow(@"Fusion Shuffle", @"shuffle", ^UIViewController *{ return SGFusionSettingsPage(); }),
+        SGWithImage(SGPageRow(@"Fusion Shuffle", ^UIViewController *{ return SGFusionSettingsPage(); }), SGFusionIcon(SGFusionGlyphFusion, 18)),
         downloads,
         pageRow(@"Lossless & Soulseek", @"sparkles", ^UIViewController *{ return [SLDownloadsPage new]; }),
         pageRow(@"Your files", @"folder", ^UIViewController *{ return SGLocalFilesSettingsPage(); }),

@@ -1,6 +1,6 @@
 // Fusion Shuffle (Fusion.h). The pool is every track of the library's playlists that are not excluded and
-// whose items Spotify gives; a track only an excluded playlist holds is never in it, and one an allowed
-// playlist holds too is. The order is drawn once, the first track is started as a context of its own and the
+// whose items Spotify gives, followed ones too where its own endpoints answer; a track only an excluded
+// playlist holds is never in it, and one an allowed playlist holds too is. The order is drawn once, the first track is started as a context of its own and the
 // next few are put in Spotify's queue, topped up as they play, so skip, back and the queue work as ever.
 // Playing something else ends it. The calls into the player are the ones Local Jam makes, behind the same
 // guards: a player that refuses is said so, not crashed into.
@@ -35,6 +35,7 @@ static NSArray<NSString *> *sg_skippedPlaylists;
 static CFAbsoluteTime sg_libraryRead;
 
 static void say(NSString *status) {
+    if (![status hasPrefix:@"Reading"]) SGLog(@"fusion shuffle: %@", status);
     sg_status = [status copy];
     [NSNotificationCenter.defaultCenter postNotificationName:SGFusionShuffleDidChangeNotification object:nil];
 }
@@ -205,8 +206,7 @@ static void readNext(NSArray<SGFusionPlaylist *> *playlists, NSUInteger index, N
     SGFusionPlaylist *playlist = playlists[index];
     NSSet<NSString *> *excluded = [NSSet setWithArray:[NSUserDefaults.standardUserDefaults stringArrayForKey:SGKeyFusionExcluded] ?: @[]];
     // An excluded playlist is not even read.
-    if ([excluded containsObject:playlist.identifier] || !playlist.editable) {
-        if (!playlist.editable && ![excluded containsObject:playlist.identifier]) [skipped addObject:playlist.name];
+    if ([excluded containsObject:playlist.identifier]) {
         readNext(playlists, index + 1, library, skipped);
         return;
     }
