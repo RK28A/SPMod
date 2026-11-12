@@ -115,18 +115,6 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     return path;
 }
 
-static UIImage *dot(void) {
-    static UIImage *image;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        image = [[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(16, 16)] imageWithActions:^(UIGraphicsImageRendererContext *context) {
-            [UIColor.whiteColor setFill];
-            [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(2, 2, 12, 12)] fill];
-        }];
-    });
-    return image;
-}
-
 @interface SGBackdropScene : UIView
 @property (nonatomic, readonly) CFTimeInterval period;
 - (instancetype)initWithStyle:(SGBackdropStyle)style color:(UIColor *)color;
