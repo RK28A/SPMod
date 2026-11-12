@@ -23,6 +23,11 @@ typedef NS_ENUM(NSInteger, SGLiveActivityView) {
 #define SGKeyLiveActivityArtwork @"spotifyglass.liveActivity.artwork"
 #define SGKeyLiveActivityProgressBar @"spotifyglass.liveActivity.progressBar"
 
+// On unless switched off: the card leaves the lock screen once the song has been paused a few seconds. iOS only
+// lets an app put a Live Activity up while it is in front, so one that left while Spotify was in the
+// background comes back the next time Spotify is opened with a song playing.
+#define SGKeyLiveActivityOnlyPlaying @"spotifyglass.liveActivity.onlyPlaying"
+
 // What the card is filled with, and what lights its controls. The lock screen's card is the system's: the
 // widget tints it (LiveActivityWidget.swift) and cannot draw glass of its own that sees the wallpaper, so
 // the two that let the lock screen through do it by leaving the system's material, whole or under a veil.

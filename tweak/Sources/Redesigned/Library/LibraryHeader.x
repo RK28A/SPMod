@@ -228,6 +228,7 @@ static void layoutFolder(UIView *page) {
 - (void)layoutSubviews {
     %orig;
     layoutRoot((UIView *)self);
+    SGRAccentWashPlace((UIView *)self);
 }
 %end
 

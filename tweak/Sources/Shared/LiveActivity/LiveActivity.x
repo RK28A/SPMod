@@ -27,6 +27,7 @@ typedef NS_ENUM(NSInteger, SGLiveActivityTab) {
 
 static const NSTimeInterval kTick = 0.25;
 static const NSTimeInterval kPausedTick = 1;
+static const CFAbsoluteTime kPausedGrace = 8;
 // Past a line's sung end by this much, with the next line at least this far off, the line gives way to a note.
 static const NSInteger kBreakMs = 4000;
 // Seconds between attempts to start one, so a refused request (activities turned off) is not retried every tick.
@@ -230,6 +231,20 @@ static void tick(void) API_AVAILABLE(ios(17.0)) {
 
     NSInteger view = SGInt(SGKeyLiveActivityView, SGLiveActivityLyrics);
     BOOL paused = state.isPaused;
+    // Paused past the grace, the card goes; a skip's short pause does not take it down.
+    static CFAbsoluteTime pausedSince;
+    if (!paused) pausedSince = 0;
+    else if (pausedSince == 0) pausedSince = CFAbsoluteTimeGetCurrent();
+    if (paused && SGEnabled(SGKeyLiveActivityOnlyPlaying) && CFAbsoluteTimeGetCurrent() - pausedSince > kPausedGrace) {
+        if (sg_shown || SGLiveActivityBridge.isShowing) {
+            [SGLiveActivityBridge end];
+            sg_shown = nil;
+            sg_lastStart = nil;
+            SGLog(@"live activity: paused, taken down");
+        }
+        if (sg_timer && sg_tickEvery != kPausedTick) startTimer(kPausedTick);
+        return;
+    }
     NSTimeInterval every = paused ? kPausedTick : kTick;
     if (sg_timer && sg_tickEvery != every) startTimer(every);
     NSString *line = @"", *next = @"";
