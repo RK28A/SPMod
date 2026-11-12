@@ -1,4 +1,4 @@
-// The lock screen's moving artwork held while the song is paused (off until switched on, iOS 26).
+// The lock screen's moving artwork held while the song is paused (on unless switched off, iOS 26).
 //
 // The system plays the clip it was handed and offers no pause, no seek and no clock, so nothing here
 // stops its player. A pause swaps the clip for one of a single frame, the one the clip is reckoned to be

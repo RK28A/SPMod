@@ -68,6 +68,9 @@ static void look(NSUInteger turn, int left) {
 @implementation SGSongColorWatcher
 
 - (void)playerStateDidChange:(SPTPlayerState *)state {
+    SGBackdropSetPlaying(state.track && !state.isPaused);
+    // The redesign hands its accent, so its tab bar and the background are one colour (SGRAccent.x).
+    if (SGRedesignedUI()) return;
     NSString *title = state.track.trackTitle;
     if (!title.length || [title isEqualToString:sg_title]) return;
     sg_title = [title copy];

@@ -142,12 +142,9 @@ static NSValue *sg_savedMotionTime;
 static BOOL lyricsBlurEnabledForTrack(NSString *track);
 static NSString *currentLyricsBlurTrack(void);
 
-// The layout draws a cover's shape from the top of the player and a Canvas to its full height. A clip wider
-// than it is tall fits neither: it came out as a strip across the top over a foot of its last rows, so the
-// sources are walked past it and the cover stays where no other has one.
-static BOOL takesShape(CGSize shown) {
-    return shown.width > 0 && shown.height >= shown.width * 0.95;
-}
+// A clip wider than it is tall has no top-of-the-player shape: it is drawn as a Canvas is, to the window's
+// full height, filled about its middle, its sides off the screen.
+static const CGFloat kWideAspect = 0.95;
 
 @implementation SGRPlayerMotionView {
     AVQueuePlayer *_player;
@@ -284,7 +281,7 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
     CGFloat width = bounds.size.width, total = MAX(1, bounds.size.height);
     CGFloat screen = _screenHeight > 0 ? _screenHeight : total;
     CGFloat height = round(width * _aspect);
-    if (_aspect > kCanvasAspect) height = MAX(height, screen);
+    if (_aspect > kCanvasAspect || _aspect < kWideAspect) height = MAX(height, screen);
     CGFloat seam = round(height * kFootFrom), blurFrom = MIN(seam, round(screen * kBlurByControls));
     _picture.frame = bounds;
     _seamBlur.frame = bounds;
@@ -655,8 +652,8 @@ UIView *SGRPlayerMotionPreview(void (^arrived)(void)) {
     sg_previewFile = nil;
     sg_previewPoster = nil;
     SGLog(@"redesign player: the Player page looks up the clip of %@%@", track, shown.current ? @"" : @", the last played");
-    SGMotionClipForShapes(track, shown.canvasURL, shown.artist, shown.album, SGMotionTall, SGMotionPixels(),
-                          ^BOOL(CGSize size) { return takesShape(size); }, ^(NSURL *file, NSString *source) {
+    SGMotionClipFor(track, shown.canvasURL, shown.artist, shown.album, SGMotionTall, SGMotionPixels(),
+                    ^(NSURL *file, NSString *source) {
         if (![track isEqualToString:sg_previewTrack]) return;
         // Nothing found is not kept: the page asks again the next time it shows Animated.
         if (!file) {
@@ -908,6 +905,5 @@ void SGRPlayerMenuSetBackground(SGRPlayerBackgroundKind kind) {
         if (file) show(uri, file);
         else clear(YES);
     }];
-    sg_follower.takes = ^BOOL(CGSize shown) { return takesShape(shown); };
     %init(SGRVideoSurfaces);
 }

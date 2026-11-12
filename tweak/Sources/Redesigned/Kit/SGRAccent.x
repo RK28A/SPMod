@@ -1,3 +1,5 @@
+#import "Shared/Fusion/Fusion.h"
+#import "Settings/SGBackdrop.h"
 #import "Core/SGCore.h"
 #import "SGRKit.h"
 #import "SGRAccent.h"
@@ -160,7 +162,14 @@ static void sweep(BOOL faded) {
 }
 
 // The accent became `rgb`: what was drawn in the one before fades to it.
+// The settings' moving background, and the same behind Home and the library, take the accent itself.
+static void handBackdrop(void) {
+    UIColor *accent = SGRAccentColor() ?: [UIColor colorWithRed:0x1E / 255.0 green:0xD7 / 255.0 blue:0x60 / 255.0 alpha:1];
+    SGBackdropSetSongColor(accent);
+}
+
 static void turned(NSInteger before) {
+    handBackdrop();
     remember(before);
     remember(kDefaultAccent);
     for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) remember(kGreens[i]);
@@ -360,4 +369,6 @@ static id swappedValue(id value) {
         }];
     }
     if (sg_accent >= 0 || SGHidden(SGRKeyAccentAuto)) %init;
+    dispatch_async(dispatch_get_main_queue(), ^{ handBackdrop(); });
+    SGFusionAccent = ^UIColor *{ return SGRAccentColor(); };
 }

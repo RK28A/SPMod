@@ -12,6 +12,29 @@ import WidgetKit
 private let green = Color(red: 0.12, green: 0.84, blue: 0.38)
 private let idle = Color.white.opacity(0.08)
 
+// What an unlit chip is filled with, handed down from the card: on a card that lets the lock screen through
+// the chips are a shade darker than it, not lighter, so they still read as chips.
+private struct ChipIdleKey: EnvironmentKey {
+    static let defaultValue = idle
+}
+
+private extension EnvironmentValues {
+    var chipIdle: Color {
+        get { self[ChipIdleKey.self] }
+        set { self[ChipIdleKey.self] = newValue }
+    }
+}
+
+private struct Plate<S: Shape>: View {
+    let shape: S
+    let lit: Color?
+    @Environment(\.chipIdle) private var unlit
+
+    var body: some View {
+        shape.fill(lit ?? unlit)
+    }
+}
+
 private typealias State = SGLyricsAttributes.ContentState
 private typealias Tab = SGLyricsAttributes.Tab
 
@@ -31,6 +54,10 @@ extension SGLyricsAttributes.ContentState {
     var cardTint: Color? {
         guard let fill else { return nil }
         return color(fill).opacity(fillAlpha ?? 1)
+    }
+
+    var chipIdle: Color {
+        (fillAlpha ?? 1) < 0.2 ? Color.black.opacity(0.24) : idle
     }
 }
 
@@ -63,6 +90,7 @@ struct SGLyricsLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: SGLyricsAttributes.self) { context in
             ContentView(state: context.state, upNext: 4)
+                .environment(\.chipIdle, context.state.chipIdle)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, context.state.view == .panel ? 12 : 16)
                 .padding(.vertical, 12)
@@ -78,6 +106,7 @@ struct SGLyricsLiveActivity: Widget {
                             Summary(state: context.state)
                         } else {
                             ContentView(state: context.state, upNext: 3)
+                                .environment(\.chipIdle, context.state.chipIdle)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -268,7 +297,7 @@ private struct TabStyle: ToggleStyle {
         .font(.caption.weight(.semibold))
         .frame(maxWidth: .infinity)
         .frame(height: 24)
-        .background(Capsule().fill(configuration.isOn ? accent.opacity(0.22) : idle))
+        .background(Plate(shape: Capsule(), lit: configuration.isOn ? accent.opacity(0.22) : nil))
         .foregroundStyle(configuration.isOn ? accent : .white.opacity(0.7))
     }
 }
@@ -303,7 +332,7 @@ private struct ChipStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         let on = configuration.isOn
         ChipLabel(symbol: on ? onSymbol ?? symbol : symbol, label: on ? onLabel ?? label : label)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(on && lights ? accent.opacity(0.22) : idle))
+            .background(Plate(shape: RoundedRectangle(cornerRadius: 12, style: .continuous), lit: on && lights ? accent.opacity(0.22) : nil))
             .foregroundStyle(on && lights ? accent : .white)
     }
 }
@@ -318,7 +347,7 @@ private struct ChipButton: View {
     var body: some View {
         Button(intent: SGLiveActivityActionIntent(action)) {
             ChipLabel(symbol: symbol, label: label)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(lit ? accent.opacity(0.22) : idle))
+                .background(Plate(shape: RoundedRectangle(cornerRadius: 12, style: .continuous), lit: lit ? accent.opacity(0.22) : nil))
                 .foregroundStyle(lit ? accent : .white)
         }
         .buttonStyle(.plain)
@@ -382,7 +411,7 @@ private struct QueuePage: View {
                     .lineLimit(1)
                     .padding(.horizontal, 10)
                     .frame(height: 28)
-                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(idle))
+                    .background(Plate(shape: RoundedRectangle(cornerRadius: 10, style: .continuous), lit: nil))
                 }
                 .buttonStyle(.plain)
             }

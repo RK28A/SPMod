@@ -120,8 +120,9 @@ static NSString *lyricsLine(NSString *trackID, NSString **next) {
 static const NSInteger kWidgetGreen = -1, kWhite = 0xFFFFFF, kBlack = 0x000000;
 // The fill a card had before it took the cover's color, kept for a track whose cover has not been read.
 static const double kDarkAlpha = 0.75;
-// The veil Translucent lays over the system's material: thin enough to see through, dark enough for white text.
-static const double kVeilAlpha = 0.3;
+// The veil Translucent lays over the system's material: next to nothing, so the card is no darker than the
+// player above it. The widget fills its chips a shade darker on such a card, which keeps them readable.
+static const double kVeilAlpha = 0.06;
 // Seconds between looks at the now playing info for the cover.
 static const CFAbsoluteTime kCoverEvery = 1;
 
@@ -177,7 +178,7 @@ static void readCover(NSString *track, NSString *title) {
 // What Card color asks for: the fill (below zero for the system's material), how opaque, and the lit color.
 static void cardLook(NSInteger *fill, double *fillAlpha, NSInteger *accent) {
     BOOL cover = sg_coverFill >= 0;
-    switch (SGInt(SGKeyLiveActivityColors, SGLiveActivityColorsSpotify)) {
+    switch (SGInt(SGKeyLiveActivityColors, SGLiveActivityColorsTranslucent)) {
         case SGLiveActivityColorsArtwork:
             *fill = cover ? sg_coverFill : kBlack;
             *fillAlpha = cover ? 1 : kDarkAlpha;
@@ -188,15 +189,15 @@ static void cardLook(NSInteger *fill, double *fillAlpha, NSInteger *accent) {
             *fillAlpha = 0;
             *accent = kWhite;
             break;
-        case SGLiveActivityColorsTranslucent:
-            *fill = kBlack;
-            *fillAlpha = kVeilAlpha;
-            *accent = kWhite;
-            break;
-        default:
+        case SGLiveActivityColorsSpotify:
             *fill = cover ? sg_coverFill : kBlack;
             *fillAlpha = cover ? 1 : kDarkAlpha;
             *accent = kWidgetGreen;
+            break;
+        default:
+            *fill = kBlack;
+            *fillAlpha = kVeilAlpha;
+            *accent = kWhite;
     }
 }
 

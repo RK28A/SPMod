@@ -160,18 +160,33 @@ static void play(void) {
         say(@"No track to play: every playlist is excluded, empty, or not readable");
         return;
     }
-    if (!start(order.firstObject)) {
+    // A song already playing is left to play: the mix is queued behind it. With nothing playing it starts.
+    SPTPlayerState *state = SGPlayerState();
+    NSString *playing = state.track && !state.isPaused ? uriOf(state.track) : nil;
+    if (playing.length) {
+        sg_order = order;
+        sg_queued = 0;
+        sg_lastURI = playing;
+    } else {
+        if (!start(order.firstObject)) {
+            sg_active = NO;
+            say(@"Spotify's player refused to start the mix");
+            return;
+        }
+        sg_order = order;
+        sg_queued = 1;
+        sg_lastURI = order.firstObject;
+        remember(order.firstObject);
+    }
+    sg_stray = 0;
+    sg_active = YES;
+    topUp(0);
+    if (!sg_queued) {
         sg_active = NO;
-        say(@"Spotify's player refused to start the mix");
+        sg_order = nil;
+        say(@"Spotify's queue refused the mix");
         return;
     }
-    sg_order = order;
-    sg_queued = 1;
-    sg_stray = 0;
-    sg_lastURI = order.firstObject;
-    sg_active = YES;
-    remember(order.firstObject);
-    topUp(0);
     NSString *skipped = sg_skippedPlaylists.count ? [NSString stringWithFormat:@" · %lu not readable", (unsigned long)sg_skippedPlaylists.count] : @"";
     say([NSString stringWithFormat:@"On · %lu tracks mixed%@", (unsigned long)order.count, skipped]);
     SGLog(@"fusion shuffle: %lu tracks, %lu queued, not readable: %@", (unsigned long)order.count, (unsigned long)sg_queued,

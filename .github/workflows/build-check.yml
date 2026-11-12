@@ -1,5 +1,9 @@
 name: Build check
 
+# A macOS minute costs ten of a free plan's, so this runs when asked and not on every push: by hand, or for a
+# push whose last commit says [check]. Theos and its SDKs are kept between runs, and a newer push cancels the
+# run before it.
+
 on:
   workflow_dispatch:
   push:
@@ -20,7 +24,9 @@ env:
 jobs:
   tweak:
     name: Compile tweak
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[check]')
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
@@ -28,20 +34,28 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Theos, kept between runs
+        id: theos
+        uses: actions/cache@v4
+        with:
+          path: theos
+          key: theos-${{ runner.os }}-v1
+
       - uses: actions/checkout@v5
+        if: steps.theos.outputs.cache-hit != 'true'
         with:
           repository: theos/theos
           path: theos
           submodules: recursive
 
       - name: Install tools
-        run: brew install make dpkg ldid
+        run: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install make dpkg ldid
 
       - name: Check import layering
         run: bash scripts/check-layers.sh || true
 
       - name: Build tweak
-        run: env -u MAKELEVEL gmake -C tweak clean package
+        run: env -u MAKELEVEL gmake -C tweak package
 
       # The widget only builds with the IPA otherwise (scripts/build-extension.sh): its sources are checked here.
       - name: Typecheck the Live Activity widget

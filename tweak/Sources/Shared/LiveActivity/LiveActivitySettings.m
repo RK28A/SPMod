@@ -18,7 +18,7 @@ static NSArray<NSString *> *colorNotes(void) {
     return @[@"The cover's color, darkened, with Spotify's green on what is lit.",
              @"The cover's color, darkened, with a light shade of it on what is lit.",
              @"The lock screen's own material, with nothing laid over it.",
-             @"The lock screen's own material under a thin dark veil, so the wallpaper shows through and white text stays readable."];
+             @"The lock screen's own material with next to nothing over it, so the card sits with the player above it. Chips are a shade darker to stay readable."];
 }
 
 // iOS draws Now Playing and every Live Activity as cards of its own, in a process of its own, and gives an
@@ -62,7 +62,7 @@ static NSArray<SGModSection *> *sections(SGLiveActivityPreview *preview, void (^
     on.changed = ^(BOOL value) { SGSetLiveActivityEnabled(value); };
     SGModRow *view = SGChoiceRow(@"Shows", nil, SGKeyLiveActivityView, viewNames(), SGLiveActivityLyrics);
     view.chosen = ^(NSInteger index) { [weakPreview reload]; };
-    SGModRow *colors = SGChoiceRow(@"Card color", nil, SGKeyLiveActivityColors, colorNames(), SGLiveActivityColorsSpotify);
+    SGModRow *colors = SGChoiceRow(@"Card color", nil, SGKeyLiveActivityColors, colorNames(), SGLiveActivityColorsTranslucent);
     colors.choiceNotes = colorNotes();
     colors.choiceFooter = @"The card is the system's: the mod tints it, and cannot draw Liquid Glass of its own on the lock screen.";
     SGModRow *textSize = SGChoiceRow(@"Text size", nil, SGKeyLiveActivityTextSize, textSizeNames(), SGLiveActivityTextMedium);
