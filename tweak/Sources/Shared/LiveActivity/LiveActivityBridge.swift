@@ -50,11 +50,42 @@ public final class SGLiveActivityBridge: NSObject {
             let activities = Activity<SGLyricsAttributes>.activities
             switch change {
             case .update(let id, let content):
-                await activities.first { $0.id == id }?.update(content)
+                guard let activity = activities.first(where: { $0.id == id }) else { break }
+                // With the screen dimmed or locked the system can hold an update back for a long while. The queue
+                // waits two seconds at most for it, then sends what came after, so the line shown does not stay
+                // behind until the screen is woken.
+                let started = Date()
+                let late = await waitAtMost(2) { await activity.update(content) }
+                if late {
+                    log.notice("[spotifyglass] live activity: an update was still waiting after \(Date().timeIntervalSince(started), privacy: .public) s, sending on")
+                }
             case .end(let ids):
                 for activity in activities where ids.contains(activity.id) {
                     await activity.end(nil, dismissalPolicy: .immediate)
                 }
+            }
+        }
+    }
+
+    // YES when `work` had not finished after `seconds`; it goes on finishing on its own.
+    private static func waitAtMost(_ seconds: Double, _ work: @escaping @Sendable () async -> Void) async -> Bool {
+        let settled = OSAllocatedUnfairLock<Bool?>(initialState: nil)
+        return await withCheckedContinuation { (waiting: CheckedContinuation<Bool, Never>) in
+            let finish: @Sendable (Bool) -> Void = { late in
+                let first = settled.withLock { state -> Bool in
+                    if state != nil { return false }
+                    state = late
+                    return true
+                }
+                if first { waiting.resume(returning: late) }
+            }
+            Task {
+                await work()
+                finish(false)
+            }
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                finish(true)
             }
         }
     }
