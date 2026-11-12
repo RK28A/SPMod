@@ -9,7 +9,8 @@
 #import "NowPlayingExtras.h"
 #import "PlayerState.h"
 
-static const int kLooks = 12, kGrid = 8;
+static const int kLooks = 12;
+enum { kGrid = 8 };
 static const NSTimeInterval kLookEvery = 0.5;
 
 @interface SGSongColorWatcher : NSObject <SGPlayerStateObserver>

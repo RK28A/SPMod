@@ -1,4 +1,5 @@
 #import <objc/runtime.h>
+#import "Shared/Fusion/Fusion.h"
 #import "Core/SGCore.h"
 #import "Redesigned/Kit/SGRKit.h"
 #import "Shared/Player/SpeedPitch.h"
@@ -655,6 +656,20 @@ static SGRPlayerMenuItem *downloadLosslessItem(SGRPlayerMenuTakeover *takeover) 
     return item;
 }
 
+// Fusion Shuffle beside the menu's other modes: starts the mix, or ends it while it is on (Shared/Fusion).
+static SGRPlayerMenuItem *fusionShuffleItem(SGRPlayerMenuTakeover *takeover) {
+    BOOL on = SGFusionShuffleActive();
+    SGRPlayerMenuItem *item = [SGRPlayerMenuItem itemWithTitle:on ? @"Stop Fusion Shuffle" : @"Fusion Shuffle" image:symbol(@"shuffle") action:^{
+        UIViewController *sheet = takeover.sheet;
+        [sheet dismissViewControllerAnimated:YES completion:^{
+            if (on) SGFusionShuffleStop();
+            else SGFusionShuffleStart();
+        }];
+    }];
+    item.key = @"spotifyglass.playerFusionShuffle";
+    return item;
+}
+
 static SGRPlayerMenuItem *editInfoItem(void) {
     NSString *track = SGKaraokePlayingTrack();
     SGRPlayerMenuItem *item = [SGRPlayerMenuItem itemWithTitle:@"Edit info" image:symbol(@"square.and.pencil") action:nil];
@@ -711,6 +726,7 @@ static NSArray<SGRPlayerMenuSection *> *sectionsFor(SGRPlayerMenuTakeover *t, NS
     [main addObject:lyricsSourceItem(t)];
     [main addObject:downloadItem(t)];
     [main addObject:downloadLosslessItem(t)];
+    [main addObject:fusionShuffleItem(t)];
     [main addObject:editInfoItem()];
     if (more.count == 1) {
         [feedback addObject:more.firstObject];
