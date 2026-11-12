@@ -20,7 +20,24 @@ static NSURL *logFile(void) {
             URLByAppendingPathComponent:@"diagnostics.log"];
 }
 
+// The launch before this one, whole: its log is set aside as this launch writes its first line, and the one
+// set aside before it goes. Two launches are kept, this one and the last.
+static NSURL *previousLogFile(void) {
+    return [logFile().URLByDeletingLastPathComponent URLByAppendingPathComponent:@"diagnostics.previous.log"];
+}
+
+static void turnLogOver(void) {
+    static BOOL turned;
+    if (turned) return;
+    turned = YES;
+    NSFileManager *files = NSFileManager.defaultManager;
+    if (![files fileExistsAtPath:logFile().path]) return;
+    [files removeItemAtURL:previousLogFile() error:nil];
+    [files moveItemAtURL:logFile() toURL:previousLogFile() error:nil];
+}
+
 static void appendLog(NSString *message) {
+    turnLogOver();
     static NSDateFormatter *formatter;
     if (!formatter) {
         formatter = [NSDateFormatter new];
@@ -99,7 +116,12 @@ NSString *SGLogContents(void) {
     __block NSString *contents;
     dispatch_block_t read = ^{
         NSError *error = nil;
+        turnLogOver();
         contents = [NSString stringWithContentsOfURL:logFile() encoding:NSUTF8StringEncoding error:&error];
+        NSString *before = [NSString stringWithContentsOfURL:previousLogFile() encoding:NSUTF8StringEncoding error:nil];
+        if (before.length) {
+            contents = [NSString stringWithFormat:@"===== the launch before this one =====\n%@\n===== this launch =====\n%@", before, contents ?: @""];
+        }
         if (!contents && error && error.code != NSFileReadNoSuchFileError) {
             os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot read diagnostics log: %{public}s",
                              error.localizedDescription.UTF8String ?: "unknown error");

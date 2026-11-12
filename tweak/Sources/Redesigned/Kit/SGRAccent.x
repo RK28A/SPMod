@@ -35,6 +35,143 @@ static void saveRecentAccent(NSInteger rgb) {
     [defaults setObject:recent forKey:SGRKeyAccentRecent];
 }
 
+#pragma mark - what was drawn in an accent before this one
+
+// Spotify makes its green once and keeps the colour it was handed, so what it draws after the accent has
+// changed still comes out in the accent of launch, and what is on screen keeps the one it was drawn in. Every
+// accent of this launch is remembered, and whatever is found in one of them, or in Spotify's own green, is
+// given the one of now: a label's text, a view's fill or tint, a shape layer's fill or stroke, a layer's fill,
+// at the brightness it had. Once as the accent changes, cross-fading the window from the old colours to the
+// new, and again every little while for what Spotify builds afterwards. Main thread.
+static NSMutableArray<NSNumber *> *sg_past;
+static NSTimer *sg_sweeper;
+static const CGFloat kDimmer = 0xB9 / 215.0;   // the darker of Spotify's two greens beside the lighter
+static const NSTimeInterval kSweepEvery = 2, kSweepFade = 0.6;
+
+static void remember(NSInteger rgb) {
+    if (rgb < 0) return;
+    if (!sg_past) sg_past = [NSMutableArray array];
+    if (![sg_past containsObject:@(rgb)]) [sg_past addObject:@(rgb)];
+    while (sg_past.count > 24) [sg_past removeObjectAtIndex:0];
+}
+
+static BOOL near(CGFloat a, CGFloat b) {
+    return fabs(a - b) < 0.012;
+}
+
+// YES with the accent of now at the same brightness when (r, g, b) is an accent of before.
+static BOOL renewed(CGFloat *r, CGFloat *g, CGFloat *b) {
+    if (sg_accent < 0) return NO;
+    CGFloat ar, ag, ab;
+    unpack((uint32_t)sg_accent, &ar, &ag, &ab);
+    for (int dim = 0; dim < 2; dim++) {
+        CGFloat factor = dim ? kDimmer : 1;
+        if (near(*r, MIN(1, ar * factor)) && near(*g, MIN(1, ag * factor)) && near(*b, MIN(1, ab * factor))) return NO;
+    }
+    for (NSNumber *past in sg_past) {
+        if (past.integerValue == sg_accent) continue;
+        CGFloat pr, pg, pb;
+        unpack((uint32_t)past.integerValue, &pr, &pg, &pb);
+        for (int dim = 0; dim < 2; dim++) {
+            CGFloat factor = dim ? kDimmer : 1;
+            if (!near(*r, MIN(1, pr * factor)) || !near(*g, MIN(1, pg * factor)) || !near(*b, MIN(1, pb * factor))) continue;
+            *r = MIN(1, ar * factor);
+            *g = MIN(1, ag * factor);
+            *b = MIN(1, ab * factor);
+            return YES;
+        }
+    }
+    return NO;
+}
+
+static UIColor *renewedColor(UIColor *color) {
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if (!color || ![color getRed:&r green:&g blue:&b alpha:&a] || a < 0.02 || !renewed(&r, &g, &b)) return nil;
+    return [UIColor colorWithRed:r green:g blue:b alpha:a];
+}
+
+// A new colour for the caller to release, NULL when `color` is not one of before.
+static CGColorRef renewedCopy(CGColorRef color) {
+    if (!color || CGColorGetNumberOfComponents(color) != 4) return NULL;
+    CGColorSpaceRef space = CGColorGetColorSpace(color);
+    if (!space || CGColorSpaceGetModel(space) != kCGColorSpaceModelRGB) return NULL;
+    const CGFloat *c = CGColorGetComponents(color);
+    CGFloat r = c[0], g = c[1], b = c[2];
+    if (c[3] < 0.02 || !renewed(&r, &g, &b)) return NULL;
+    CGFloat out[] = {r, g, b, c[3]};
+    return CGColorCreate(space, out);
+}
+
+static void sweepLayer(CALayer *layer, int depth) {
+    if ([layer isKindOfClass:CAShapeLayer.class]) {
+        CAShapeLayer *shape = (CAShapeLayer *)layer;
+        CGColorRef fill = renewedCopy(shape.fillColor);
+        if (fill) {
+            shape.fillColor = fill;
+            CGColorRelease(fill);
+        }
+        CGColorRef stroke = renewedCopy(shape.strokeColor);
+        if (stroke) {
+            shape.strokeColor = stroke;
+            CGColorRelease(stroke);
+        }
+    }
+    CGColorRef back = renewedCopy(layer.backgroundColor);
+    if (back) {
+        layer.backgroundColor = back;
+        CGColorRelease(back);
+    }
+    if (depth > 12) return;
+    for (CALayer *sub in [layer.sublayers copy]) {
+        // A view's own layer is reached through the view.
+        if ([sub.delegate isKindOfClass:UIView.class]) continue;
+        sweepLayer(sub, depth + 1);
+    }
+}
+
+static void sweepView(UIView *view, int depth) {
+    if ([view isKindOfClass:UILabel.class]) {
+        UILabel *label = (UILabel *)view;
+        UIColor *text = label.text.length ? renewedColor(label.textColor) : nil;
+        if (text) label.textColor = text;
+    }
+    UIColor *tint = renewedColor(view.tintColor);
+    if (tint) view.tintColor = tint;
+    sweepLayer(view.layer, 0);
+    if (depth > 60) return;
+    for (UIView *sub in [view.subviews copy]) sweepView(sub, depth + 1);
+}
+
+static void sweep(BOOL faded) {
+    if (!sg_past.count || UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class]) continue;
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if (window.hidden) continue;
+            if (faded && !UIAccessibilityIsReduceMotionEnabled()) {
+                [UIView transitionWithView:window duration:kSweepFade
+                                   options:UIViewAnimationOptionTransitionCrossDissolve | UIViewAnimationOptionAllowUserInteraction
+                                animations:^{ sweepView(window, 0); } completion:nil];
+            } else {
+                sweepView(window, 0);
+            }
+        }
+    }
+}
+
+// The accent became `rgb`: what was drawn in the one before fades to it.
+static void turned(NSInteger before) {
+    remember(before);
+    remember(kDefaultAccent);
+    for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) remember(kGreens[i]);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        sweep(YES);
+        if (sg_sweeper) return;
+        sg_sweeper = [NSTimer scheduledTimerWithTimeInterval:kSweepEvery repeats:YES block:^(NSTimer *timer) { sweep(NO); }];
+        sg_sweeper.tolerance = 0.5;
+    });
+}
+
 static void applyAutoColor(UIColor *source) {
     if (!SGHidden(SGRKeyAccentAuto) || !source) return;
     CGFloat h = 0, s = 0, v = 0, a = 1;
@@ -44,9 +181,11 @@ static void applyAutoColor(UIColor *source) {
     [bright getRed:&r green:&g blue:&b alpha:&a];
     NSInteger rgb = ((NSInteger)lround(r * 255) << 16) | ((NSInteger)lround(g * 255) << 8) | (NSInteger)lround(b * 255);
     if (rgb == sg_autoAccent) return;
+    NSInteger before = sg_accent;
     sg_autoAccent = rgb;
     sg_accent = rgb;
     [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
+    turned(before);
 }
 
 UIColor *SGRAccentColor(void) {
@@ -87,9 +226,10 @@ void SGRSetAccent(NSInteger rgb) {
     SGSetEnabled(SGRKeyAccentAuto, NO);
     sg_autoAccent = -1;
     SGSetInt(SGRKeyAccent, rgb);
-    NSInteger now = chosen();
+    NSInteger now = chosen(), before = sg_accent;
     if (now >= 0) sg_accent = now;
     [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
+    if (now >= 0 && now != before) turned(before);
 }
 
 void SGRPickAccent(void) {

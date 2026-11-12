@@ -37,4 +37,5 @@
 #import "SGRRepaint.h"
 #import "SGRAccent.h"
 #import "SGRAccentTint.h"
+#import "SGRAccentWash.h"
 #import "Settings/SGMarquee.h"

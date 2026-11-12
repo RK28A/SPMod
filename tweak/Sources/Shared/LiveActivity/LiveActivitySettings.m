@@ -73,8 +73,10 @@ static NSArray<SGModSection *> *sections(SGLiveActivityPreview *preview, void (^
     SGModRow *progress = SGOptionRow(@"Progress bar", @"Under the lines", SGKeyLiveActivityProgressBar);
     for (SGModRow *row in @[colors, textSize, without, align]) row.chosen = ^(NSInteger index) { [weakPreview reload]; };
     for (SGModRow *row in @[translation, artwork, progress]) row.changed = ^(BOOL value) { [weakPreview reload]; };
+    SGModRow *onlyPlaying = SGSwitchRow(@"Only while playing", @"The card leaves once the song is paused. iOS brings it back only when Spotify is opened again",
+                                        SGKeyLiveActivityOnlyPlaying);
     return @[
-        SGSection(nil, @[on, view]),
+        SGSection(nil, @[on, view, onlyPlaying]),
         SGSection(@"Card", @[colors, textSize, without, align, translation, artwork, progress, mergeRow(preview, reload)]),
     ];
 }

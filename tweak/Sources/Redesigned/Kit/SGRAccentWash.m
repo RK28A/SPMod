@@ -1,0 +1,68 @@
+#import <objc/runtime.h>
+#import "Core/SGCore.h"
+#import "SGRAccent.h"
+#import "SGRTokens.h"
+#import "SGRAccentWash.h"
+
+static const CGFloat kReach = 0.55, kStrength = 0.30;
+static const CFTimeInterval kFade = 0.7;
+static char kWashKey;
+
+@interface SGRAccentWashView : UIView
+@end
+
+@implementation SGRAccentWashView
+
++ (Class)layerClass {
+    return CAGradientLayer.class;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        self.userInteractionEnabled = NO;
+        self.isAccessibilityElement = NO;
+        self.backgroundColor = UIColor.clearColor;
+        [self paint:NO];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(accentChanged) name:SGRAccentDidChangeNotification object:nil];
+    }
+    return self;
+}
+
+- (void)accentChanged {
+    [self paint:self.window != nil];
+}
+
+- (void)paint:(BOOL)animated {
+    CAGradientLayer *gradient = (CAGradientLayer *)self.layer;
+    UIColor *accent = SGRAccent();
+    NSArray *colors = @[(id)[accent colorWithAlphaComponent:kStrength].CGColor, (id)[accent colorWithAlphaComponent:kStrength * 0.35].CGColor,
+                        (id)[accent colorWithAlphaComponent:0].CGColor];
+    if (animated && gradient.colors) {
+        CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"colors"];
+        fade.fromValue = gradient.presentationLayer ? ((CAGradientLayer *)gradient.presentationLayer).colors : gradient.colors;
+        fade.toValue = colors;
+        fade.duration = kFade;
+        fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        [gradient addAnimation:fade forKey:@"accent"];
+    }
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    gradient.colors = colors;
+    gradient.locations = @[@0, @0.45, @1];
+    [CATransaction commit];
+}
+
+@end
+
+void SGRAccentWashPlace(UIView *page) {
+    if (!page) return;
+    SGRAccentWashView *wash = objc_getAssociatedObject(page, &kWashKey);
+    if (!wash) {
+        wash = [SGRAccentWashView new];
+        objc_setAssociatedObject(page, &kWashKey, wash, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (wash.superview != page) [page insertSubview:wash atIndex:0];
+    else if (page.subviews.firstObject != wash) [page sendSubviewToBack:wash];
+    CGRect frame = CGRectMake(0, 0, page.bounds.size.width, round(page.bounds.size.height * kReach));
+    if (!CGRectEqualToRect(wash.frame, frame)) wash.frame = frame;
+}

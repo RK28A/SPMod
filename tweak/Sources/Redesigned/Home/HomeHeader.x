@@ -280,6 +280,7 @@ static void layoutHeader(UIViewController *page) {
     %orig;
     CFTimeInterval began = SGRHomeProbeBegin();
     layoutHeader((UIViewController *)self);
+    SGRAccentWashPlace(((UIViewController *)self).view);
     SGRHomeProbeEnd(SGRHomeProbeHeader, began);
 }
 
