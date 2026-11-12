@@ -151,8 +151,41 @@ static NSString *sg_me;
 // The playlists the Web API listed as someone else's: it will not give their items, so it is not asked.
 static NSSet<NSString *> *sg_followed;
 
+// The account as the app's own files name it: Spotify keeps what belongs to an account in a folder called
+// <name>-user inside one called Users. The one written to last is the one signed in. Looked for once.
+static NSString *accountOnDisk(void) {
+    static NSString *found;
+    static BOOL looked;
+    if (looked) return found;
+    looked = YES;
+    NSFileManager *files = NSFileManager.defaultManager;
+    NSDate *newest = nil;
+    NSUInteger seen = 0;
+    for (NSURL *root in [files URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask]) {
+        NSDirectoryEnumerator<NSURL *> *walk = [files enumeratorAtURL:root includingPropertiesForKeys:@[NSURLIsDirectoryKey, NSURLContentModificationDateKey]
+                                                              options:0 errorHandler:nil];
+        for (NSURL *url in walk) {
+            if (++seen > 20000) break;
+            NSNumber *folder = nil;
+            [url getResourceValue:&folder forKey:NSURLIsDirectoryKey error:nil];
+            if (!folder.boolValue) continue;
+            if (walk.level >= 5) [walk skipDescendants];
+            NSString *name = url.lastPathComponent;
+            if (![name hasSuffix:@"-user"] || name.length < 6 || ![url.URLByDeletingLastPathComponent.lastPathComponent isEqualToString:@"Users"]) continue;
+            [walk skipDescendants];
+            NSDate *written = nil;
+            [url getResourceValue:&written forKey:NSURLContentModificationDateKey error:nil];
+            if (found && newest && written && [written compare:newest] != NSOrderedDescending) continue;
+            found = [name substringToIndex:name.length - 5];
+            newest = written;
+        }
+    }
+    SGLog(@"fusion: the account's folder was %@ (%lu entries looked at)", found ? @"found" : @"not found", (unsigned long)seen);
+    return found;
+}
+
 static NSString *account(void) {
-    return sg_me ?: SGSpclientUsername() ?: [NSUserDefaults.standardUserDefaults stringForKey:kMeKey];
+    return sg_me ?: SGSpclientUsername() ?: [NSUserDefaults.standardUserDefaults stringForKey:kMeKey] ?: accountOnDisk();
 }
 
 static NSString *escaped(NSString *part) {
@@ -284,7 +317,8 @@ void SGFusionLoadPlaylists(void (^done)(NSArray<SGFusionPlaylist *> *, NSString 
         NSString *user = account();
         if (!user.length) {
             SGLog(@"fusion: no account name to ask Spotify's own endpoint with");
-            done(nil, web == kUntried ? explain(kNoAccount) : explain(web));
+            done(nil, web == kUntried ? explain(kNoAccount)
+                : [NSString stringWithFormat:@"Spotify's Web API refused the app (%ld), and the account's name, which its own endpoint needs, was not found.", (long)web]);
             return;
         }
         innerPlaylistsPage(user, 0, [NSMutableArray array], ^(NSArray<SGFusionPlaylist *> *playlists, NSInteger status) {
@@ -303,7 +337,7 @@ void SGFusionLoadPlaylists(void (^done)(NSArray<SGFusionPlaylist *> *, NSString 
     }
     webPlaylists(^(NSArray<SGFusionPlaylist *> *playlists, NSInteger status) {
         if (!playlists) {
-            if (status == 403 || status == 429) sg_webShut = YES;
+            if (status == 403 || status == 404 || status == 429) sg_webShut = YES;
             inner(status);
             return;
         }

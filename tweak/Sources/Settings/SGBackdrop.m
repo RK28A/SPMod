@@ -17,13 +17,15 @@ typedef NS_ENUM(NSInteger, SGBackdropStyle) {
     SGBackdropPrism,
     SGBackdropMesh,
     SGBackdropBars,
+    SGBackdropBigBang,
     SGBackdropStyleCount,
 };
 
 static const NSTimeInterval kFade = 1.2, kLongestWait = 2.5;
+static const CGFloat kBarRest = 0.1;
 
 NSArray<NSString *> *SGBackdropStyleNames(void) {
-    return @[@"Wave", @"Aurora", @"Pulse", @"Tide", @"Spotlights", @"Ripples", @"Stars", @"Ribbons", @"Prism", @"Mesh", @"Bars"];
+    return @[@"Wave", @"Aurora", @"Pulse", @"Tide", @"Spotlights", @"Ripples", @"Stars", @"Ribbons", @"Prism", @"Mesh", @"Bars", @"Big Bang"];
 }
 
 static UIColor *fromRGB(NSInteger rgb) {
@@ -128,6 +130,7 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     CGSize _built;
     CFTimeInterval _began;
     int _meteors;
+    NSMutableArray<CALayer *> *_bars;
 }
 
 - (instancetype)initWithStyle:(SGBackdropStyle)style color:(UIColor *)color {
@@ -169,6 +172,7 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     _built = size;
     _began = CACurrentMediaTime();
     _meteors = 0;
+    _bars = nil;
     for (CALayer *layer in [self.layer.sublayers copy]) [layer removeFromSuperlayer];
     BOOL still = UIAccessibilityIsReduceMotionEnabled();
     [CATransaction begin];
@@ -265,6 +269,24 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
             [CATransaction commit];
             break;
         }
+        case SGBackdropBars: {
+            // Every bar jumps to a height of its own, the middle ones highest, and falls back until the next beat.
+            NSUInteger count = _bars.count;
+            for (NSUInteger i = 0; i < count; i++) {
+                CALayer *bar = _bars[i];
+                CGFloat middle = 1 - fabs((CGFloat)i / MAX(1, count - 1) - 0.5) * 1.1;
+                CGFloat reach = MIN(1, kBarRest + (0.25 + 0.75 * intensity) * middle * (0.45 + 0.55 * arc4random_uniform(1000) / 1000.0));
+                NSNumber *now = [bar.presentationLayer valueForKeyPath:@"transform.scale.y"] ?: @(kBarRest);
+                CAKeyframeAnimation *jump = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale.y"];
+                jump.values = @[now, @(reach), @(kBarRest)];
+                jump.keyTimes = @[@0, @0.18, @1];
+                jump.timingFunctions = @[[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
+                                         [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn]];
+                jump.duration = 0.62;
+                [bar addAnimation:jump forKey:@"jump"];
+            }
+            break;
+        }
         case SGBackdropPulse:
         case SGBackdropMesh:
         case SGBackdropAurora: {
@@ -287,6 +309,181 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
         default:
             break;
     }
+}
+
+// One value after another at the seconds given, over a loop of `period`, for ever. Every layer of a scene is
+// given its own in the same pass, so they keep step.
+static CAKeyframeAnimation *timed(NSString *keyPath, NSArray *values, NSArray<NSNumber *> *seconds, CFTimeInterval period) {
+    NSMutableArray<NSNumber *> *times = [NSMutableArray array];
+    for (NSNumber *second in seconds) [times addObject:@(MIN(1, MAX(0, second.doubleValue / period)))];
+    CAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:keyPath];
+    animation.values = values;
+    animation.keyTimes = times;
+    animation.duration = period;
+    animation.repeatCount = HUGE_VALF;
+    animation.removedOnCompletion = NO;
+    return animation;
+}
+
+// A planet `side` across: a lit ball of `color`, and what makes it itself: 0 a ring round it, 1 bands across
+// it, 2 craters, 3 a haze about it and a moon beside it.
+static CALayer *planet(UIColor *color, CGFloat side, int kind) {
+    CALayer *whole = [CALayer layer];
+    whole.bounds = CGRectMake(0, 0, side, side);
+    if (kind == 3) [whole addSublayer:blob(color, 0.5, side * 1.7, CGPointMake(side / 2, side / 2))];
+    CAGradientLayer *ball = [CAGradientLayer layer];
+    ball.type = kCAGradientLayerRadial;
+    ball.frame = whole.bounds;
+    ball.colors = @[cg(shifted(color, 0.03), 1), cg(color, 0.85), cg([UIColor colorWithWhite:0.03 alpha:1], 1)];
+    ball.locations = @[@0, @0.45, @1];
+    ball.startPoint = CGPointMake(0.32, 0.3);
+    ball.endPoint = CGPointMake(1.05, 1.05);
+    ball.cornerRadius = side / 2;
+    ball.masksToBounds = YES;
+    [whole addSublayer:ball];
+    if (kind == 1) {
+        for (int i = 0; i < 4; i++) {
+            CALayer *band = [CALayer layer];
+            band.frame = CGRectMake(0, side * (0.16 + 0.19 * i), side, side * (i % 2 ? 0.05 : 0.09));
+            band.backgroundColor = (__bridge CGColorRef)cg(i % 2 ? UIColor.whiteColor : UIColor.blackColor, 0.16);
+            [ball addSublayer:band];
+        }
+    } else if (kind == 2) {
+        const CGFloat spots[4][3] = {{0.3, 0.34, 0.2}, {0.62, 0.52, 0.14}, {0.4, 0.7, 0.1}, {0.7, 0.24, 0.08}};
+        for (int i = 0; i < 4; i++) {
+            CALayer *crater = [CALayer layer];
+            CGFloat across = side * spots[i][2];
+            crater.frame = CGRectMake(side * spots[i][0] - across / 2, side * spots[i][1] - across / 2, across, across);
+            crater.cornerRadius = across / 2;
+            crater.backgroundColor = (__bridge CGColorRef)cg(UIColor.blackColor, 0.22);
+            [ball addSublayer:crater];
+        }
+    } else if (kind == 0) {
+        CAShapeLayer *ring = [CAShapeLayer layer];
+        ring.frame = whole.bounds;
+        ring.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(-side * 0.45, side * 0.36, side * 1.9, side * 0.28)].CGPath;
+        ring.fillColor = UIColor.clearColor.CGColor;
+        ring.strokeColor = (__bridge CGColorRef)cg(shifted(color, 0.06), 0.75);
+        ring.lineWidth = side * 0.06;
+        ring.transform = CATransform3DMakeRotation(-0.35, 0, 0, 1);
+        [whole addSublayer:ring];
+    } else {
+        CALayer *moon = [CALayer layer];
+        moon.frame = CGRectMake(side * 1.08, side * 0.08, side * 0.2, side * 0.2);
+        moon.cornerRadius = side * 0.1;
+        moon.backgroundColor = (__bridge CGColorRef)cg([UIColor colorWithWhite:0.8 alpha:1], 0.9);
+        [whole addSublayer:moon];
+    }
+    return whole;
+}
+
+// Big Bang, one loop of 36 seconds: a small star swells and bursts, with a flash and a ring of light; the
+// view then flies through space, stars streaming past and four planets going by, each its own; a sun comes
+// in from the side as the view turns to it, the view falls into it until it fills the page, and it shrinks
+// to the small star the loop began with.
+- (void)buildBigBang:(CGSize)size still:(BOOL)still {
+    CALayer *root = self.layer;
+    UIColor *color = _color;
+    CGFloat w = size.width, h = size.height, longer = MAX(w, h);
+    CGPoint middle = CGPointMake(w / 2, h / 2);
+    const CFTimeInterval period = 36, burst = 2.6, turn = 25, arrive = 29, fill = 32, shrunk = 35.5;
+    _period = period;
+
+    CAEmitterLayer *space = [CAEmitterLayer layer];
+    space.frame = (CGRect){CGPointZero, size};
+    space.emitterPosition = middle;
+    space.emitterShape = kCAEmitterLayerPoint;
+    space.renderMode = kCAEmitterLayerAdditive;
+    UIImage *dot = [[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(8, 8)] imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        [UIColor.whiteColor setFill];
+        [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(1, 1, 6, 6)] fill];
+    }];
+    CAEmitterCell *streak = [CAEmitterCell emitterCell];
+    streak.contents = (id)dot.CGImage;
+    streak.birthRate = 26;
+    streak.lifetime = 4.5;
+    streak.velocity = longer * 0.2;
+    streak.velocityRange = longer * 0.14;
+    streak.yAcceleration = 0;
+    streak.emissionRange = 2 * M_PI;
+    streak.scale = 0.06;
+    streak.scaleSpeed = 0.1;
+    streak.alphaSpeed = -0.12;
+    streak.color = (__bridge CGColorRef)cg(UIColor.whiteColor, 0.85);
+    space.emitterCells = @[streak];
+    space.birthRate = still ? 0 : 1;
+    [root addSublayer:space];
+
+    const CGFloat ways[4][2] = {{-0.95, -0.4}, {0.95, 0.3}, {-0.85, 0.55}, {0.9, -0.5}};
+    const CGFloat hues[4] = {0.14, 0.36, 0.55, 0.78};
+    for (int i = 0; i < 4; i++) {
+        CFTimeInterval from = 4 + 5.2 * i, gone = from + 6;
+        CGFloat side = longer * (0.2 + 0.03 * i);
+        CALayer *world = planet(shifted(color, hues[i]), side, i);
+        CGPoint near = CGPointMake(middle.x + w * ways[i][0] * 0.04, middle.y + h * ways[i][1] * 0.04);
+        CGPoint past = CGPointMake(middle.x + (w + side * 2) * ways[i][0], middle.y + (h + side * 2) * ways[i][1]);
+        world.position = still && i == 0 ? CGPointMake(w * 0.72, h * 0.3) : near;
+        world.opacity = still && i == 0 ? 1 : 0;
+        world.transform = CATransform3DMakeScale(still ? 0.5 : 0.04, still ? 0.5 : 0.04, 1);
+        [root addSublayer:world];
+        if (still) continue;
+        CAMediaTimingFunction *hold = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+        CAMediaTimingFunction *rush = [CAMediaTimingFunction functionWithControlPoints:0.7 :0 :1 :0.6];
+        CAKeyframeAnimation *move = timed(@"position", @[[NSValue valueWithCGPoint:near], [NSValue valueWithCGPoint:near], [NSValue valueWithCGPoint:past], [NSValue valueWithCGPoint:past]],
+                                          @[@0, @(from), @(gone), @(period)], period);
+        move.timingFunctions = @[hold, rush, hold];
+        CAKeyframeAnimation *grow = timed(@"transform.scale", @[@0.04, @0.04, @1.5, @1.5], @[@0, @(from), @(gone), @(period)], period);
+        grow.timingFunctions = @[hold, rush, hold];
+        [world addAnimation:move forKey:@"move"];
+        [world addAnimation:grow forKey:@"grow"];
+        [world addAnimation:timed(@"opacity", @[@0, @0, @1, @1, @0, @0], @[@0, @(from), @(from + 0.8), @(gone - 0.4), @(gone), @(period)], period) forKey:@"show"];
+    }
+
+    CGFloat sunSide = longer * 0.5;
+    CALayer *star = [CALayer layer];
+    star.bounds = CGRectMake(0, 0, sunSide, sunSide);
+    star.position = middle;
+    [star addSublayer:blob(color, 0.6, sunSide, CGPointMake(sunSide / 2, sunSide / 2))];
+    [star addSublayer:blob(UIColor.whiteColor, 0.6, sunSide * 0.34, CGPointMake(sunSide / 2, sunSide / 2))];
+    star.transform = CATransform3DMakeScale(0.05, 0.05, 1);
+    [root addSublayer:star];
+
+    CAShapeLayer *ring = [CAShapeLayer layer];
+    ring.bounds = CGRectMake(0, 0, 100, 100);
+    ring.position = middle;
+    ring.path = [UIBezierPath bezierPathWithOvalInRect:ring.bounds].CGPath;
+    ring.fillColor = UIColor.clearColor.CGColor;
+    ring.strokeColor = (__bridge CGColorRef)cg(color, 0.9);
+    ring.lineWidth = 2;
+    ring.opacity = 0;
+    [root addSublayer:ring];
+
+    CALayer *flash = [CALayer layer];
+    flash.frame = (CGRect){CGPointZero, size};
+    flash.backgroundColor = UIColor.whiteColor.CGColor;
+    flash.opacity = 0;
+    [root addSublayer:flash];
+    if (still) return;
+
+    CGPoint aside = CGPointMake(w * 1.45, h * 0.34);
+    CGFloat whole = longer * 2.4 / sunSide;
+    [star addAnimation:timed(@"transform.scale",
+        @[@0.05, @0.07, @0.05, @0.07, @0.16, @(whole), @0.5, @0.5, @0.95, @(whole), @(whole), @0.05, @0.05],
+        @[@0, @0.6, @1.2, @1.8, @(burst), @(burst + 0.9), @(burst + 1), @(turn), @(arrive), @(fill), @(fill + 1.2), @(shrunk), @(period)], period) forKey:@"size"];
+    [star addAnimation:timed(@"opacity", @[@1, @1, @0, @0, @1, @1],
+        @[@0, @(burst), @(burst + 0.9), @(turn - 0.2), @(turn), @(period)], period) forKey:@"show"];
+    [star addAnimation:timed(@"position", @[[NSValue valueWithCGPoint:middle], [NSValue valueWithCGPoint:middle], [NSValue valueWithCGPoint:aside], [NSValue valueWithCGPoint:aside], [NSValue valueWithCGPoint:middle], [NSValue valueWithCGPoint:middle]],
+        @[@0, @(burst + 1), @(burst + 1.1), @(turn), @(arrive), @(period)], period) forKey:@"place"];
+    [ring addAnimation:timed(@"transform.scale", @[@0.1, @0.1, @(longer * 1.5 / 100), @(longer * 1.5 / 100)], @[@0, @(burst), @(burst + 1.8), @(period)], period) forKey:@"size"];
+    [ring addAnimation:timed(@"opacity", @[@0, @0, @0.9, @0, @0], @[@0, @(burst), @(burst + 0.1), @(burst + 1.8), @(period)], period) forKey:@"show"];
+    [flash addAnimation:timed(@"opacity", @[@0, @0, @0.55, @0, @0, @0.3, @0, @0],
+        @[@0, @(burst), @(burst + 0.12), @(burst + 0.9), @(fill - 0.3), @(fill + 0.5), @(fill + 1.6), @(period)], period) forKey:@"show"];
+    // The stars stream while the view flies: a rush at the burst, slower as it turns to the sun, none inside it.
+    [space addAnimation:timed(@"birthRate", @[@0, @0, @6, @1.2, @1.2, @0.4, @0, @0],
+        @[@0, @(burst), @(burst + 0.3), @(burst + 1.5), @(turn), @(arrive), @(fill - 0.5), @(period)], period) forKey:@"rate"];
+    // As the view turns to the sun, what streams past slides off the other way.
+    [space addAnimation:timed(@"emitterPosition", @[[NSValue valueWithCGPoint:middle], [NSValue valueWithCGPoint:middle], [NSValue valueWithCGPoint:CGPointMake(-w * 0.4, h * 0.6)], [NSValue valueWithCGPoint:middle], [NSValue valueWithCGPoint:middle]],
+        @[@0, @(turn), @(arrive), @(fill + 1), @(period)], period) forKey:@"turn"];
 }
 
 - (void)build:(CGSize)size still:(BOOL)still {
@@ -446,26 +643,27 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
             break;
         }
         case SGBackdropBars: {
-            _period = 2.4;
-            const NSInteger count = 14;
+            // Bars at rest along the bottom edge; they move with the music (-beat:), not on their own.
+            _period = 1;
+            const NSInteger count = 16;
             CGFloat step = w / count;
-            CAReplicatorLayer *bars = [CAReplicatorLayer layer];
-            bars.frame = frame;
-            bars.instanceCount = count;
-            bars.instanceDelay = 0.17;
-            bars.instanceTransform = CATransform3DMakeTranslation(step, 0, 0);
-            CAGradientLayer *bar = [CAGradientLayer layer];
-            bar.colors = @[cg(color, 0.45), cg(color, 0.05)];
-            bar.anchorPoint = CGPointMake(0.5, 1);
-            bar.bounds = CGRectMake(0, 0, step - 6, h * 0.5);
-            bar.position = CGPointMake(step / 2, h);
-            bar.cornerRadius = 6;
-            bar.transform = CATransform3DMakeScale(1, 0.3, 1);
-            [bars addSublayer:bar];
-            [root addSublayer:bars];
-            if (!still) [bar addAnimation:loop(@"transform.scale.y", @0.25, @1, 1.2, YES) forKey:@"bounce"];
+            _bars = [NSMutableArray array];
+            for (NSInteger i = 0; i < count; i++) {
+                CAGradientLayer *bar = [CAGradientLayer layer];
+                bar.colors = @[cg(color, 0.5), cg(color, 0.06)];
+                bar.anchorPoint = CGPointMake(0.5, 1);
+                bar.bounds = CGRectMake(0, 0, step - 6, h * 0.62);
+                bar.position = CGPointMake(step * (i + 0.5), h);
+                bar.cornerRadius = 6;
+                bar.transform = CATransform3DMakeScale(1, kBarRest, 1);
+                [root addSublayer:bar];
+                [_bars addObject:bar];
+            }
             break;
         }
+        case SGBackdropBigBang:
+            [self buildBigBang:size still:still];
+            break;
         default: {
             _period = 14;
             CAGradientLayer *sweep = [CAGradientLayer layer];
@@ -606,16 +804,63 @@ void SGBackdropPlace(UIView *page) {
     SGBackdropClearFills(page, host);
 }
 
+// A list's rows are filled black one by one and come back filled as they are reused: what is dark and solid
+// on a row, on its content and on what spans it is cleared, on every pass of the page and as the list scrolls.
+static BOOL darkFill(UIColor *color) {
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    return color && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.9 && MAX(r, MAX(g, b)) < 0.13;
+}
+
+static void clearRows(UICollectionView *list) {
+    for (UIView *row in list.subviews) {
+        if (![row isKindOfClass:UICollectionReusableView.class]) continue;
+        if (darkFill(row.backgroundColor)) row.backgroundColor = UIColor.clearColor;
+        CGFloat width = row.bounds.size.width * 0.9;
+        NSMutableArray<UIView *> *spans = [NSMutableArray arrayWithArray:row.subviews];
+        for (NSUInteger i = 0; i < spans.count && i < 24; i++) {
+            UIView *span = spans[i];
+            if (span.bounds.size.width < width) continue;
+            if (darkFill(span.backgroundColor)) span.backgroundColor = UIColor.clearColor;
+            [spans addObjectsFromArray:span.subviews];
+        }
+    }
+}
+
+@interface SGBackdropListWatcher : NSObject
+@end
+
+@implementation SGBackdropListWatcher
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    if ([object isKindOfClass:UICollectionView.class]) clearRows(object);
+}
+
+@end
+
+static void watchRows(UICollectionView *list) {
+    static char key;
+    clearRows(list);
+    if (objc_getAssociatedObject(list, &key)) return;
+    SGBackdropListWatcher *watcher = [SGBackdropListWatcher new];
+    objc_setAssociatedObject(list, &key, watcher, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [list addObserver:watcher forKeyPath:@"contentOffset" options:0 context:NULL];
+}
+
 void SGBackdropClearFills(UIView *page, UIView *behind) {
     CGFloat area = page.bounds.size.width * page.bounds.size.height;
     if (area < 1) return;
     NSMutableArray<UIView *> *level = [NSMutableArray arrayWithObject:page];
-    for (int depth = 0; depth < 4 && level.count; depth++) {
+    // Home's list is six views under its page (the recorded tree), the library's two.
+    for (int depth = 0; depth < 8 && level.count; depth++) {
         NSMutableArray<UIView *> *next = [NSMutableArray array];
         for (UIView *view in level) {
             if (view == behind || [view isKindOfClass:UIVisualEffectView.class]) continue;
             if (view.bounds.size.width * view.bounds.size.height < area * 0.85) continue;
             if (view.backgroundColor && CGColorGetAlpha(view.backgroundColor.CGColor) > 0.01) view.backgroundColor = UIColor.clearColor;
+            if ([view isKindOfClass:UICollectionView.class]) {
+                watchRows((UICollectionView *)view);
+                continue;
+            }
             [next addObjectsFromArray:view.subviews];
         }
         level = next;

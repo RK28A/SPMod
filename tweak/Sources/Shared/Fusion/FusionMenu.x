@@ -127,6 +127,18 @@ static NSString *headingOf(UIView *root) {
     return name;
 }
 
+// A playlist's menu is told by its rows where its heading is not a name the library is known to hold: every
+// language Spotify ships says "playlist" in at least one of them (Delete playlist, Supprimer la playlist).
+static BOOL aboutPlaylist(UITableView *table) {
+    __block BOOL found = NO;
+    SGForEachView(table, ^(UIView *view) {
+        if (found || ![view isKindOfClass:UILabel.class]) return;
+        NSString *text = ((UILabel *)view).text;
+        if (text.length && [text rangeOfString:@"playlist" options:NSCaseInsensitiveSearch].location != NSNotFound) found = YES;
+    });
+    return found;
+}
+
 static void install(UIViewController *menu) {
     UIView *root = menu.viewIfLoaded;
     if (!root) return;
@@ -135,12 +147,11 @@ static void install(UIViewController *menu) {
     if (!table || width <= 0) return;
     SGFusionMenuRow *row = objc_getAssociatedObject(menu, &kRowKey);
     if (!row) {
+        // With the library's names not read, the row still opens the merge, with no destination picked yet.
         NSString *playlist = SGFusionPlaylistNamed(headingOf(root));
         if (!playlist) {
-            // The names not read yet this launch: read once, and the menu still open lays itself out again.
-            __weak UIViewController *weakMenu = menu;
-            SGFusionWarmNames(^{ [weakMenu.viewIfLoaded setNeedsLayout]; });
-            return;
+            SGFusionWarmNames(nil);
+            if (!aboutPlaylist(table)) return;
         }
         row = [[SGFusionMenuRow alloc] initWithFrame:CGRectMake(0, 0, width, kRowHeight)];
         row.tag = 2;
