@@ -5,7 +5,23 @@
 // Under the text rather than the whole row, as the Music app draws it; the trailing end clears the page margin.
 static const CGFloat kHairline = 0.5, kHairlineGap = 12;
 
-static char kRowKey, kArtKey, kSubtitleKey, kLineKey, kToolbarKey;
+static char kRowKey, kArtKey, kSubtitleKey, kLineKey, kToolbarKey, kCardKey, kTitleKey, kTopKey;
+static const CGFloat kCardSide = 8, kCardGap = 3, kCardRadius = 18;
+
+// Glass rows (SGRKeyPlaylistGlass): a track's row on a card of glass, and from the first track down the
+// theme seen through a sheet of glass (SGRThemedPane), the cover above left as it is. Where the tracks
+// begin is the highest a track's row has been seen in the list.
+static void glassTrack(UIView *cell, UIView *row) {
+    BOOL track = SGFlag(SGRKeyPlaylistGlass, NO) && identified(row, @"Track.Row.Content.Title", &kTitleKey) != nil;
+    SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, track);
+    UIScrollView *list = [cell.superview isKindOfClass:UIScrollView.class] ? (UIScrollView *)cell.superview : nil;
+    if (!track || !list) return;
+    NSNumber *seen = objc_getAssociatedObject(list, &kTopKey);
+    CGFloat top = CGRectGetMinY(cell.frame);
+    if (seen && seen.doubleValue <= top) return;
+    objc_setAssociatedObject(list, &kTopKey, @(top), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    SGRThemedPane(list, top);
+}
 
 static UIView *identified(UIView *root, NSString *identifier, const void *cacheKey) {
     return SGRFindByIdentifier(root, identifier, cacheKey);
@@ -70,7 +86,13 @@ static void applyRow(UIView *cell) {
         if (![label.textColor isEqual:SGRSecondary()]) label.textColor = SGRSecondary();
     });
 
-    applyHairline(row, leading);
+    if (SGFlag(SGRKeyPlaylistGlass, NO)) {
+        CALayer *line = objc_getAssociatedObject(row, &kLineKey);
+        if (line && !line.hidden) line.hidden = YES;
+    } else {
+        applyHairline(row, leading);
+    }
+    glassTrack(cell, row);
 }
 
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl25ElementCollectionViewCell

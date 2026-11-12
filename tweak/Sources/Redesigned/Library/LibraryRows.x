@@ -4,7 +4,30 @@
 
 static const CGFloat kTextGap = 12;
 
-static char kThumbKey, kCoverKey, kLineKey;
+static char kThumbKey, kCoverKey, kLineKey, kCardKey;
+static const CGFloat kCardSide = 8, kCardGap = 5, kCardRadius = 22;
+
+// A row of the list: a playlist, an artist, an album, or one of the rows that adds one (Add artists,
+// Add podcasts, Import your music), all of them a ListRow 80 high across the page (the recorded library).
+static BOOL listRow(UIView *cell) {
+    CGSize size = cell.bounds.size;
+    return size.width > 300 && size.height >= 56 && size.height <= 120;
+}
+
+// Spotify's dark fill on the row and what spans it, cleared so the glass shows.
+static void clearRowFill(UIView *cell) {
+    CGFloat across = cell.bounds.size.width * 0.9;
+    NSMutableArray<UIView *> *spans = [NSMutableArray arrayWithObject:cell];
+    for (NSUInteger i = 0; i < spans.count && i < 16; i++) {
+        UIView *span = spans[i];
+        if (span.bounds.size.width < across || [span isKindOfClass:UIVisualEffectView.class]) continue;
+        CGFloat alpha = 0;
+        UIColor *fill = span.backgroundColor;
+        CGFloat r = 0, g = 0, b = 0;
+        if (fill && [fill getRed:&r green:&g blue:&b alpha:&alpha] && alpha > 0.5 && MAX(r, MAX(g, b)) < 0.15) span.backgroundColor = UIColor.clearColor;
+        [spans addObjectsFromArray:span.subviews];
+    }
+}
 
 // Spotify gives a cover a square corner and an artist's picture a circle. Only the square becomes the Kit's.
 static void roundCorners(UIView *artwork, CGFloat radius) {
@@ -49,7 +72,15 @@ static void style(UIView *cell) {
     UIView *thumb = SGRFindByIdentifier(cell, @"Artwork.Row.Library", &kThumbKey);
     if (thumb) roundCorners(thumb, SGRRadiusThumb);
     else roundCorners(SGRFindByIdentifier(cell, @"Components.UI.CardLibrary.Artwork", &kCoverKey), SGRRadiusCover);
-    hairline(cell, thumb);
+    BOOL glass = SGEnabled(SGRKeyLibraryGlass) && listRow(cell);
+    if (glass) clearRowFill(cell);
+    SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, glass);
+    if (glass) {
+        CALayer *line = objc_getAssociatedObject(cell, &kLineKey);
+        if (line && !line.hidden) line.hidden = YES;
+    } else {
+        hairline(cell, thumb);
+    }
 
     // The first cell that held an artwork, so the line says what was found rather than what had not loaded yet.
     static BOOL logged;

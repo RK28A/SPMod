@@ -2,6 +2,8 @@
 #import "Core/SGCore.h"
 #import "Settings/SGPage.h"
 #import "SGRAccentWash.h"
+#import "SGRThemedPane.h"
+#import "Settings/SGBackdrop.h"
 
 static void soften(UIScrollView *scrollView) {
     if (@available(iOS 26.0, *)) {
@@ -23,14 +25,18 @@ static void soften(UIScrollView *scrollView) {
 // white haze over it. Told once each time the list comes on screen; placed again when its page changes size.
 static char kThemedKey, kSizeKey;
 
-static BOOL alreadyLit(UIView *view) {
+// The page above `view` that already has the light or the background (Home, the library), and the view at
+// its back that draws it.
+static UIView *litAncestor(UIView *view, UIView **behind) {
     for (int depth = 0; view && depth < 10; depth++, view = view.superview) {
         for (UIView *sub in view.subviews) {
             NSString *name = NSStringFromClass(sub.class);
-            if ([name isEqualToString:@"SGBackdropHost"] || [name isEqualToString:@"SGRAccentWashView"]) return YES;
+            if (![name isEqualToString:@"SGBackdropHost"] && ![name isEqualToString:@"SGRAccentWashView"]) continue;
+            if (behind) *behind = sub;
+            return view;
         }
     }
-    return NO;
+    return nil;
 }
 
 static BOOL wholePage(UIScrollView *list) {
@@ -44,8 +50,13 @@ static BOOL wholePage(UIScrollView *list) {
     }
     UINavigationController *navigation = owner.navigationController;
     if (!navigation || navigation.presentingViewController || [owner isKindOfClass:SGPage.class]) return NO;
+    // The pages the redesign draws its own way (a playlist's, an album's, an artist's field of the cover's
+    // colour, Search's tinted categories) keep it.
     NSString *name = NSStringFromClass(owner.class);
-    return ![name containsString:@"NowPlaying"] && ![name containsString:@"Lyrics"] && ![name containsString:@"SideDrawer"];
+    for (NSString *own in @[@"NowPlaying", @"Lyrics", @"SideDrawer", @"Playlist", @"FTP", @"Album", @"Artist", @"Search", @"Podcast", @"Show"]) {
+        if ([name containsString:own]) return NO;
+    }
+    return YES;
 }
 
 static void theme(UIScrollView *list) {
@@ -62,7 +73,12 @@ static void theme(UIScrollView *list) {
     NSString *size = NSStringFromCGSize(page.bounds.size);
     if ([objc_getAssociatedObject(list, &kSizeKey) isEqualToString:size]) return;
     objc_setAssociatedObject(list, &kSizeKey, size, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    if (!alreadyLit(page)) SGRAccentWashPlace(page);
+    // Home and the library place their own; a list inside them, which Spotify swaps for a new one as the
+    // feed changes, has its fills between it and that light cleared, or the new one comes in black over it.
+    UIView *behind = nil;
+    UIView *lit = litAncestor(page, &behind);
+    if (lit) SGBackdropClearFills(lit, behind);
+    else SGRAccentWashPlace(page);
 }
 
 %hook UIScrollView
@@ -78,6 +94,7 @@ static void theme(UIScrollView *list) {
     if (!self.window) return;
     soften(self);
     theme(self);
+    SGRThemedPaneFollow(self);
 }
 %end
 
