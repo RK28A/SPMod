@@ -1,4 +1,4 @@
-name: Build SPMod IPA (macOS ARM)
+name: Build SPMod IPA
 
 on:
   workflow_dispatch:
@@ -7,6 +7,11 @@ on:
         description: "Direct link to a decrypted Spotify IPA"
         required: true
         type: string
+      runner:
+        description: "Mac to build on (ARM runners are often full)"
+        default: intel
+        type: choice
+        options: [intel, arm]
       upload_method:
         description: "Where to put the result"
         default: both
@@ -21,7 +26,8 @@ env:
 
 jobs:
   build:
-    runs-on: macos-latest
+    # Both are macOS 26: the alternate app icons need its asset tools.
+    runs-on: ${{ inputs.runner == 'arm' && 'macos-26' || 'macos-26-intel' }}
     steps:
       - uses: actions/checkout@v5
 
