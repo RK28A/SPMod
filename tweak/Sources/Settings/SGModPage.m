@@ -4,12 +4,6 @@
 #import "SGGlowSwitch.h"
 #import "Core/SGCore.h"
 #import "Core/SGPrefs.h"
-#import "SGBackdrop.h"
-
-static void installAnimatedBackground(UITableViewController *controller) {
-    UIView *backdrop = SGBackdropView();
-    if (backdrop) controller.tableView.backgroundView = backdrop;
-}
 
 NSString *const SGRestartNote = @"Changes apply after you restart Spotify.";
 
@@ -534,7 +528,6 @@ static void showProgress(UITableViewCell *cell, SGModRow *row, BOOL animated) {
     [super viewDidLoad];
     self.tableView.tableHeaderView = _intro;
     self.tableView.tableFooterView = _footer;
-    installAnimatedBackground(self);
 }
 
 - (void)viewWillLayoutSubviews {

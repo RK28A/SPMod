@@ -112,7 +112,8 @@ UIViewController *SGAppearanceSettingsPage(void) {
     }
     [rows addObjectsFromArray:SGAppFontRows()];
     [rows addObject:SGWithSymbol(SGPageRow(@"Night mode", ^UIViewController *{ return SGNightModeSettingsPage(); }), @"moon.stars")];
-    SGModRow *backdrop = SGHideRow(@"Animated background", @"A moving background behind the mod's menus. Shows on the next page you open", SGKeyBackdrop);
+    SGModRow *backdrop = SGHideRow(@"Animated background", @"A moving background behind the mod's menus", SGKeyBackdrop);
+    backdrop.changed = ^(BOOL on) { [NSNotificationCenter.defaultCenter postNotificationName:SGBackdropDidChangeNotification object:nil]; };
     SGModRow *backdropStyle = SGChoiceRow(@"Background style", nil, SGKeyBackdropStyle, SGBackdropStyleNames(), 0);
     SGModRow *backdropColor = SGChoiceRow(@"Background colour", nil, SGKeyBackdropSource, @[@"Follows the song", @"Accent colour"], 0);
     backdropColor.choiceNotes = @[@"Takes the colour of the cover playing. A new song's colour comes in once the animation ends its loop.",
