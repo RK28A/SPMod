@@ -1,5 +1,5 @@
 // The mod's settings kept outside the app, so they outlive it: every key the mod stores (themes, presets,
-// switches, the tour's answers) as one property list in the keychain, written again a few seconds after any
+// switches, the tour's answers) as one property list in the keychain, written again ten seconds after any
 // of them changes and as the app leaves the foreground. iOS keeps a keychain item when an app is deleted, and
 // an update installed over the app keeps the app's own store anyway, so nothing is asked then.
 //
@@ -17,16 +17,18 @@
 
 static NSString *const kService = @"pw.spoti.spmod.settings", *const kAccount = @"all";
 static NSString *const kMark = @"spotifyglass.vault.mark";
-static const NSTimeInterval kSaveAfter = 3;
+static const NSTimeInterval kSaveAfter = 10;
 
 static BOOL sg_saving, sg_queued;
 static NSData *sg_lastSaved;
 
-// What is the device's own and not a setting: counters, what an update check last saw, the signing check.
+// What is the device's own and not a setting: counters, what an update check last saw, the signing check,
+// and what is only remembered about the account or the song playing, which changes with every track.
 static BOOL isKept(NSString *key) {
     if (![key hasPrefix:@"spotifyglass."] || [key isEqualToString:kMark]) return NO;
     for (NSString *local in @[@"spotifyglass.adblock.counts", @"spotifyglass.privacy.counts", @"spotifyglass.update.",
-                              @"spotifyglass.signing."]) {
+                              @"spotifyglass.signing.", @"spotifyglass.animatedbg.songColor", @"spotifyglass.fusion.names",
+                              @"spotifyglass.fusion.recent", @"spotifyglass.fusion.me", @"spotifyglass.spclient."]) {
         if ([key hasPrefix:local]) return NO;
     }
     return YES;
@@ -72,8 +74,10 @@ static void save(void) {
     else SGLog(@"settings vault: not saved (%d)", (int)status);
 }
 
+// Spotify writes to the same store all the time, in the background too: nothing is queued there, where
+// leaving the foreground has already saved, so the app is not woken every few seconds to compare lists.
 static void saveSoon(void) {
-    if (!sg_saving || sg_queued) return;
+    if (!sg_saving || sg_queued || UIApplication.sharedApplication.applicationState == UIApplicationStateBackground) return;
     sg_queued = YES;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kSaveAfter * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ save(); });
 }
