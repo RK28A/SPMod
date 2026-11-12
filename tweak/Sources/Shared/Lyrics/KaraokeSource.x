@@ -55,6 +55,29 @@ static NSString *trackInURL(NSURL *url) {
     return track.length ? track : nil;
 }
 
+// The host Spotify's own requests go to, and the account they are made for, read off the requests as they
+// pass: a request for the library's list of playlists is under /playlist/v2/user/<name>/, which names the
+// account. Main thread, as the headers are.
+static NSString *sg_spclientHost, *sg_spclientUser;
+static NSString *const kSpclientUserKey = @"spotifyglass.spclient.user";
+
+NSString *SGSpclientHost(void) {
+    return sg_spclientHost ?: @"spclient.wg.spotify.com";
+}
+
+NSString *SGSpclientUsername(void) {
+    return sg_spclientUser ?: [NSUserDefaults.standardUserDefaults stringForKey:kSpclientUserKey];
+}
+
+// The account a request's address names, nil when it names none.
+static NSString *accountIn(NSURL *url) {
+    NSString *path = url.path;
+    NSRange marker = [path rangeOfString:@"/playlist/v2/user/"];
+    if (marker.location == NSNotFound) return nil;
+    NSString *name = [[path substringFromIndex:NSMaxRange(marker)] componentsSeparatedByString:@"/"].firstObject;
+    return name.length ? name : nil;
+}
+
 static void rememberHeaders(NSURLSession *session, NSURLRequest *request) {
     if (![request.URL.host containsString:@"spclient"]) return;
     NSMutableDictionary<NSString *, NSString *> *all = [NSMutableDictionary dictionary];
@@ -70,8 +93,14 @@ static void rememberHeaders(NSURLSession *session, NSURLRequest *request) {
         NSString *name = kSpclientHeaders[i];
         if (all[name]) headers[name] = all[name];
     }
+    NSString *host = request.URL.host, *user = accountIn(request.URL);
     dispatch_async(dispatch_get_main_queue(), ^{
         sg_spclientHeaders = headers;
+        if (host.length) sg_spclientHost = host;
+        if (user && ![user isEqualToString:sg_spclientUser]) {
+            sg_spclientUser = user;
+            [NSUserDefaults.standardUserDefaults setObject:user forKey:kSpclientUserKey];
+        }
         NSArray *waiting = sg_headersWaiting;
         sg_headersWaiting = nil;
         for (void (^waiter)(NSDictionary<NSString *, NSString *> *) in waiting) waiter(headers);

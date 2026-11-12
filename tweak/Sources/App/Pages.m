@@ -168,7 +168,7 @@ UIViewController *SGPlayerSettingsPage(void) {
         SGWithSymbol(SGPageRow(@"Gestures", ^UIViewController *{ return SGGesturesSettingsPage(); }), @"hand.tap"),
         SGWithSymbol(blocked, @"person.crop.circle.badge.xmark"),
         SGWithSymbol(SGKeyboardShortcutsRow(), @"command"),
-        SGWithSymbol(SGPageRow(@"Playlist Fusion", ^UIViewController *{ return SGFusionSettingsPage(); }), @"arrow.triangle.merge"),
+        SGWithImage(SGPageRow(@"Playlist Fusion", ^UIViewController *{ return SGFusionSettingsPage(); }), SGFusionIcon(SGFusionGlyphMerge, 18)),
     ])];
     NSMutableArray<SGModRow *> *pages = [NSMutableArray array];
     if (native) {

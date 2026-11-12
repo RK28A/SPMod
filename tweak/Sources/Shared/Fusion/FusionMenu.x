@@ -59,7 +59,7 @@ static void show(UIViewController *page) {
 
 - (instancetype)initWithFrame:(CGRect)frame {
     if (!(self = [super initWithFrame:frame])) return nil;
-    _icon = [[UIImageView alloc] initWithImage:SGFusionIcon(SGFusionGlyphFusion, kIconSide)];
+    _icon = [[UIImageView alloc] initWithImage:SGFusionIcon(SGFusionGlyphMerge, kIconSide)];
     _icon.tintColor = [UIColor colorWithWhite:1 alpha:UIAccessibilityDarkerSystemColorsEnabled() ? 0.80 : 0.65];
     _icon.contentMode = UIViewContentModeCenter;
     _title = [UILabel new];
@@ -301,7 +301,7 @@ static void dress(UIView *button) {
         return;
     }
     if (!glyph) {
-        glyph = [[UIImageView alloc] initWithImage:SGFusionIcon(SGFusionGlyphFusion, 26)];
+        glyph = [UIImageView new];
         glyph.userInteractionEnabled = NO;
         glyph.isAccessibilityElement = NO;
         glyph.contentMode = UIViewContentModeCenter;
@@ -309,6 +309,8 @@ static void dress(UIView *button) {
         dimmed = [NSHashTable weakObjectsHashTable];
         objc_setAssociatedObject(button, &kDimmedKey, dimmed, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
+    // Each pass: the drawing is the one chosen in the settings, which can change while the button is up.
+    glyph.image = SGFusionIcon(SGFusionGlyphFusion, 26);
     UIColor *lit = SGFusionAccent ? SGFusionAccent() : nil;
     glyph.tintColor = lit ?: [UIColor colorWithRed:0x1E / 255.0 green:0xD7 / 255.0 blue:0x60 / 255.0 alpha:1];
     if (glyph.superview != button) [button addSubview:glyph];

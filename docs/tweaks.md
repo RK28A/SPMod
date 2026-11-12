@@ -124,9 +124,13 @@ Shared:
                   as the signed-in app, reads the destination back, and only then, and only with Keep red playlists
                   off, unfollows the sources. Fusion Shuffle mixes the tracks of every playlist not excluded: one
                   track is started and the rest fed to Spotify's queue; it is also in the redesigned player's ⋯ menu.
-                  The API only gives the items of playlists the user owns or collaborates on. Neither has run
-                  against a live account from a build yet: the row under a playlist's long-press menu waits on a
-                  recorded tree of that menu.
+                  The Web API only gives the items of playlists the user owns or collaborates on, and turns the
+                  app's key away on some accounts; what it refuses goes through the endpoints Spotify's own apps use
+                  (/playlist/v2 on the spclient host, asked for JSON), which give followed playlists too. Every
+                  request is logged as "fusion: GET api/… -> 200" or "fusion: GET spclient/… -> 200". Neither door
+                  has run against a live account from a build yet, and the second is not documented: its shapes
+                  are the web player's. Fusion Shuffle's glyph has two drawings to choose from (Fusion Shuffle
+                  icon); Playlist Fusion's is two rings into one orb (SGFusionIcons.m).
                   Pause animation with playback (off until switched on, LockScreenFreeze.h) holds the clip while the
                   song is paused: the system's player takes no pause or seek, so a pause swaps in a clip of the one
                   frame the clip is reckoned to be on, and playing again swaps in the clip turned round to start there

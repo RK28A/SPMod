@@ -8,6 +8,17 @@
 #import "Settings/SGPage.h"
 #import "Settings/SGPageStyle.h"
 
+static const CGFloat kTileGlyph = 18;
+
+// A row's leading picture swapped for one of Fusion's own glyphs, in the colour the row is drawn in.
+static void showGlyph(UITableViewCell *cell, SGFusionGlyph glyph, UIColor *color) {
+    UIListContentConfiguration *content = (UIListContentConfiguration *)cell.contentConfiguration;
+    content.image = SGFusionIcon(glyph, 22);
+    content.imageProperties.tintColor = color ?: UIColor.whiteColor;
+    content.imageToTextPadding = 14;
+    cell.contentConfiguration = content;
+}
+
 typedef NS_ENUM(NSInteger, SGFusionListKind) { SGFusionListMerge, SGFusionListExclude };
 
 static NSArray<NSString *> *excludedIDs(void) {
@@ -79,6 +90,8 @@ static void alert(NSString *title, NSString *message) {
         page->_loading = NO;
         page->_all = playlists;
         page->_error = error;
+        // A destination handed in from a playlist's menu holds only if it can be added to.
+        if (playlists && ![page playlistWithID:page->_destination].editable) page->_destination = nil;
         [page filter];
     });
 }
@@ -142,7 +155,7 @@ static void alert(NSString *title, NSString *message) {
     NSString *count = playlist.total >= 0 ? [NSString stringWithFormat:@"%ld tracks", (long)playlist.total] : @"";
     NSString *owner = playlist.owner.length ? playlist.owner : @"";
     NSString *joined = count.length && owner.length ? [NSString stringWithFormat:@"%@ · %@", count, owner] : count.length ? count : owner;
-    return playlist.editable ? joined : [joined stringByAppendingString:joined.length ? @" · followed, read only" : @"Followed, read only"];
+    return playlist.editable ? joined : [joined stringByAppendingString:joined.length ? @" · followed, source only" : @"Followed, source only"];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -156,7 +169,8 @@ static void alert(NSString *title, NSString *message) {
             NSString *subtitle = !_destination ? @"Pick a destination (green), then one or more sources (red)"
                 : !_sources.count ? [NSString stringWithFormat:@"Into “%@”. Pick one or more sources (red)", into]
                 : [NSString stringWithFormat:@"%lu source%@ into “%@”. Nothing changes before you confirm", (unsigned long)_sources.count, _sources.count == 1 ? @"" : @"s", into];
-            SGFillCell(cell, title, subtitle, ready ? SGGreen() : SGGrey(), @"arrow.triangle.merge");
+            SGFillCell(cell, title, subtitle, ready ? SGGreen() : SGGrey(), nil);
+            showGlyph(cell, SGFusionGlyphMerge, ready ? SGGreen() : SGGrey());
         } else {
             NSString *identifier = [self stale][indexPath.row];
             SGFillCell(cell, @"No longer in your library", [NSString stringWithFormat:@"%@ · tap to forget", identifier], SGGrey(), @"questionmark.circle");
@@ -194,7 +208,7 @@ static void alert(NSString *title, NSString *message) {
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (![self isPlaylists:section]) return nil;
     return _kind == SGFusionListMerge
-        ? @"Spotify only gives the items of playlists you own or collaborate on, so a followed playlist can be neither destination nor source."
+        ? @"The destination is a playlist you own or collaborate on. A playlist you follow can only be a source: its tracks are copied, and removing it afterwards unfollows it."
         : @"Fusion Shuffle never reads an excluded playlist. A track that is also in a playlist you allow can still play, from that one.";
 }
 
@@ -227,13 +241,11 @@ static void alert(NSString *title, NSString *message) {
         [tableView reloadData];
         return;
     }
-    if (!playlist.editable) {
-        alert(playlist.name, @"This is a playlist you follow. Spotify does not give its items to read or let anything be added to it, so it cannot take part in a merge.");
-        return;
-    }
-    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:playlist.name message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:playlist.name
+        message:playlist.editable ? nil : @"A playlist you follow: nothing can be added to it, so it can only be a source."
+        preferredStyle:UIAlertControllerStyleActionSheet];
     __weak SGFusionListPage *weakSelf = self;
-    [sheet addAction:[UIAlertAction actionWithTitle:@"Destination (green): receives the tracks" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    if (playlist.editable) [sheet addAction:[UIAlertAction actionWithTitle:@"Destination (green): receives the tracks" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         SGFusionListPage *page = weakSelf;
         if (!page) return;
         page->_destination = playlist.identifier;
@@ -477,6 +489,14 @@ UIViewController *SGFusionSettingsPage(void) {
         NSUInteger count = excludedIDs().count;
         return count ? @(count).stringValue : @"None";
     };
+    SGModRow *icon = SGChoiceRow(@"Fusion Shuffle icon", nil, SGKeyFusionIcon, @[@"Arrows with earrings", @"Earrings on the arrows"], 0);
+    icon.choiceNotes = @[@"The shuffle arrows with a pair of earrings at their corner.", @"The pair of earrings hanging from the arrows."];
+    icon.choiceImages = @[SGFusionShuffleIcon(0, kTileGlyph), SGFusionShuffleIcon(1, kTileGlyph)];
+    // The buttons showing it take the new one at once.
+    icon.chosen = ^(NSInteger index) {
+        shuffle.image = SGFusionShuffleIcon(index, kTileGlyph);
+        [NSNotificationCenter.defaultCenter postNotificationName:SGFusionShuffleDidChangeNotification object:nil];
+    };
     SGModRow *sampling = SGChoiceRow(@"Track sampling", nil, SGKeyFusionSampling, @[@"Equal chance per track", @"Equal chance per playlist"], 0);
     sampling.choiceNotes = @[@"A long playlist is heard more than a short one.", @"Every playlist is heard as often, whatever its length."];
     SGModRow *window = SGSliderRow(@"Recent tracks avoided", nil, 5, 100, 5,
@@ -496,20 +516,21 @@ UIViewController *SGFusionSettingsPage(void) {
     SGModRow *confirm = SGStatRow(@"Double confirmation", ^NSString *{ return @"Always"; });
     return [[SGModPage alloc] initWithTitle:@"Playlist Fusion" intro:nil sections:@[
         SGNotedSection(@"Fusion Shuffle", @[
-            SGWithSymbol(shuffle, @"shuffle"),
+            SGWithImage(shuffle, SGFusionIcon(SGFusionGlyphFusion, kTileGlyph)),
+            SGWithSymbol(icon, @"paintbrush"),
             SGWithSymbol(excluded, @"nosign"),
-            SGSwitchRow(@"Deduplicate tracks", @"A track in several playlists counts once", SGKeyFusionDedupe),
-            sampling,
-            SGSwitchRow(@"Avoid recently played tracks", @"Unless too few would be left", SGKeyFusionAvoidRecent),
+            SGWithSymbol(SGSwitchRow(@"Deduplicate tracks", @"A track in several playlists counts once", SGKeyFusionDedupe), @"square.on.square"),
+            SGWithSymbol(sampling, @"dice"),
+            SGWithSymbol(SGSwitchRow(@"Avoid recently played tracks", @"Unless too few would be left", SGKeyFusionAvoidRecent), @"clock.arrow.circlepath"),
             window,
-            SGSwitchRow(@"Allow explicit tracks", nil, SGKeyFusionExplicit),
+            SGWithSymbol(SGSwitchRow(@"Allow explicit tracks", @"A track read through Spotify's own endpoints is never known to be explicit", SGKeyFusionExplicit), @"e.square"),
             SGWithSymbol(refresh, @"arrow.clockwise"),
-        ], @"Starts one track and feeds Spotify's queue with the rest, so it stops when you play something else. Tracks already queued stay in the queue. Spotify only gives the items of playlists you own or collaborate on."),
+        ], @"Starts one track and feeds Spotify's queue with the rest, so it stops when you play something else. Tracks already queued stay in the queue. A playlist Spotify does not give the items of is passed over and counted as not readable."),
         SGNotedSection(@"Playlist Fusion", @[
-            SGWithSymbol(merge, @"arrow.triangle.merge"),
-            duplicates,
-            keep,
-            confirm,
+            SGWithImage(merge, SGFusionIcon(SGFusionGlyphMerge, kTileGlyph)),
+            SGWithSymbol(duplicates, @"doc.on.doc"),
+            SGWithSymbol(keep, @"tray.full"),
+            SGWithSymbol(confirm, @"checkmark.shield"),
         ], @"Copies the red playlists onto the end of the green one. Spotify cannot delete a playlist: removing one unfollows it. Excluded playlists above do not limit a merge."),
     ] footer:nil];
 }

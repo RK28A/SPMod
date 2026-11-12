@@ -8,8 +8,9 @@
 // Fusion Shuffle plays the tracks of every playlist in the library that is not excluded, mixed. No playlist
 // is made or changed: one track is started and the rest go into Spotify's own queue a few at a time.
 //
-// Both talk to Spotify's Web API as the signed-in app (SGFusionAPI.m). The API only gives the items of
-// playlists the user owns or collaborates on; the others are passed over and named.
+// Both talk to Spotify as the signed-in app (SGFusionAPI.m): its Web API first, which only gives the items
+// of playlists the user owns or collaborates on, then the endpoints Spotify's own apps use, which give the
+// followed ones too. A playlist neither gives is passed over and named.
 #import <UIKit/UIKit.h>
 
 #define SGKeyFusionExcluded @"spotifyglass.fusion.excluded"          // playlist ids Fusion Shuffle never draws from
@@ -20,13 +21,14 @@
 #define SGKeyFusionExplicit @"spotifyglass.fusion.explicit"          // on unless switched off
 #define SGKeyFusionDuplicates @"spotifyglass.fusion.duplicates"      // 0 every entry kept, 1 the destination's skipped
 #define SGKeyFusionKeepSources @"spotifyglass.fusion.keepSources"    // on unless switched off: copy only
+#define SGKeyFusionIcon @"spotifyglass.fusion.icon"                  // Fusion Shuffle's glyph: 0 or 1 (SGFusionIcons.m)
 
 extern NSNotificationName const SGFusionShuffleDidChangeNotification;
 
 @interface SGFusionPlaylist : NSObject
 @property (nonatomic, copy) NSString *identifier, *name, *owner;
 @property (nonatomic) NSInteger total;
-@property (nonatomic) BOOL editable;   // the user's own or collaborative: its items can be read and added to
+@property (nonatomic) BOOL editable;   // the user's own or collaborative: it can be added to
 @end
 
 @interface SGFusionItem : NSObject
@@ -77,6 +79,9 @@ void SGFusionOpenSettings(void);
 // A stand-in drawn over one of Spotify's shuffle buttons says which it stands for.
 void SGFusionAttachShuffleStandIn(UIView *standIn, UIView *real);
 
-typedef NS_ENUM(NSInteger, SGFusionGlyph) { SGFusionGlyphShuffle, SGFusionGlyphNoShuffle, SGFusionGlyphSmart, SGFusionGlyphFusion };
+// Fusion is Fusion Shuffle's, in the drawing chosen in its settings; Merge is Playlist Fusion's.
+typedef NS_ENUM(NSInteger, SGFusionGlyph) { SGFusionGlyphShuffle, SGFusionGlyphNoShuffle, SGFusionGlyphSmart, SGFusionGlyphFusion, SGFusionGlyphMerge };
 // A template image `side` points square.
 UIImage *SGFusionIcon(SGFusionGlyph glyph, CGFloat side);
+// Fusion Shuffle's glyph in one given drawing, whatever is chosen: for showing the choice.
+UIImage *SGFusionShuffleIcon(NSInteger drawing, CGFloat side);
