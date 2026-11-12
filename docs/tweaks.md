@@ -130,7 +130,17 @@ Shared:
                   request is logged as "fusion: GET api/… -> 200" or "fusion: GET spclient/… -> 200". Neither door
                   has run against a live account from a build yet, and the second is not documented: its shapes
                   are the web player's. Fusion Shuffle's glyph has two drawings to choose from (Fusion Shuffle
-                  icon); Playlist Fusion's is two rings into one orb (SGFusionIcons.m).
+                  icon); Playlist Fusion's is two rings into one orb (SGFusionIcons.m). The account's name, which
+                  Spotify's own endpoint needs, is read off the app's requests, else off the folder Spotify keeps
+                  for the account (Users/<name>-user). The row under a playlist's menu shows on any menu with a
+                  row that says "playlist", whether or not the library's names were read.
+  Side menu       Misc → Display useless things in menu (off): the profile picture's menu loses its subscription
+                  row, Messages and New message, told by their text in English and French since no tree of the
+                  drawer is recorded (App/ModSettings.x, trimDrawer). The redesign puts its light behind it.
+  Backgrounds     Settings/SGBackdrop.m. Bars moves on the beat only; Big Bang is one 36 second loop (a star
+                  bursts, a flight past four planets, a turn to a sun, into it, down to the star again). Behind
+                  Home and the library the page's fills are cleared six views down and the list's dark row fills
+                  with them, again as the list scrolls.
                   Pause animation with playback (off until switched on, LockScreenFreeze.h) holds the clip while the
                   song is paused: the system's player takes no pause or seek, so a pause swaps in a clip of the one
                   frame the clip is reckoned to be on, and playing again swaps in the clip turned round to start there

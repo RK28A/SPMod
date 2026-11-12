@@ -31,12 +31,16 @@
 #import "App/About/About.h"
 #import "App/DevTools/Developer.h"
 #import "Pages.h"
+#import "Redesigned/Kit/SGRAccentWash.h"
 
 static const CGFloat kRowHeight = 56;
 static char kRowKey, kInsetKey;
 
 // The Misc page's switch that hides the Discord banner row in modSettingsPage below.
 #define SGKeyHideDiscordBanner @"spotifyglass.hide.discordBanner"
+// Off until switched on: the rows of the menu the profile picture opens that lead nowhere useful in a modded
+// app are taken out of it (trimDrawer below).
+#define SGKeyDrawerUseless @"spotifyglass.drawer.useless"
 
 static SGModRow *pageRow(NSString *title, NSString *symbol, UIViewController *(^page)(void)) {
     return SGWithSymbol(SGPageRow(title, page), symbol);
@@ -212,9 +216,12 @@ static void collectSectionsFromPage(NSString *prefix, SGModPage *page, NSMutable
 static UIViewController *miscSettingsPage(void) {
     SGModRow *hideSigning = SGHideRow(@"Hide the lock screen alert", @"Hide the notice that this build cannot be opened from the lock screen", SGKeyHideSigningWarning);
     SGModRow *hideDiscord = SGSwitchRow(@"Hide the Discord banner", @"Hide the row here that advertises the Discord server", SGKeyHideDiscordBanner);
+    SGModRow *useless = SGOptionRow(@"Display useless things in menu", @"In the menu your profile picture opens", SGKeyDrawerUseless);
+    useless.info = @"Off, these are removed from the menu your profile picture opens:\n\n• Your subscription (Votre abonnement)\n• Messages\n• New message (Nouveau message)\n\nOn, Spotify's menu is shown whole. The change shows the next time the menu opens.";
     SGModSection *banners = SGSection(nil, @[
         SGWithSymbol(hideSigning, @"lock.slash"),
         SGWithSymbol(hideDiscord, @"bubble.left.and.bubble.right"),
+        SGWithSymbol(useless, @"line.3.horizontal.decrease"),
     ]);
     SGModSection *devices = SGSection(@"Displays", @[SGWithSymbol(pageRow(@"iDotMatrix", @"dot.radiowaves.left.and.right", ^UIViewController *{ return SGMatrixSettingsPage(); }), @"dot.radiowaves.left.and.right")]);
     return [[SGModPage alloc] initWithTitle:@"Misc" intro:SGRestartNote sections:@[banners, devices] footer:nil];
@@ -532,11 +539,55 @@ static void updatePlanBadge(UIView *root) {
 }
 %end
 
+// The drawer without what is no use in it (SGKeyDrawerUseless): the row to the subscription, and Messages with
+// its New message row. No tree of the drawer is recorded, so a row is told by how its text starts, in English
+// and French. A row taken out is faded, not hidden, and stops taking touches; every row under it is moved up
+// by its height, so no gap is left. The list's own layout puts them back on each pass and this runs after it.
+static char kTrimmedKey;
+
+static BOOL uselessRow(UIView *row) {
+    __block BOOL found = NO;
+    SGForEachView(row, ^(UIView *view) {
+        if (found || ![view isKindOfClass:UILabel.class]) return;
+        NSString *text = ((UILabel *)view).text;
+        for (NSString *start in @[@"Votre abonnement", @"Your subscription", @"Your plan", @"Your Premium", @"Messages", @"Nouveau message", @"New message"]) {
+            if ([text hasPrefix:start]) found = YES;
+        }
+    });
+    return found;
+}
+
+static void trimDrawer(UICollectionView *list) {
+    BOOL whole = SGFlag(SGKeyDrawerUseless, NO);
+    NSMutableArray<UIView *> *rows = [NSMutableArray array];
+    for (UIView *sub in list.subviews) {
+        if ([sub isKindOfClass:UICollectionReusableView.class]) [rows addObject:sub];
+    }
+    [rows sortUsingComparator:^NSComparisonResult(UIView *a, UIView *b) {
+        return a.center.y < b.center.y ? NSOrderedAscending : a.center.y > b.center.y ? NSOrderedDescending : NSOrderedSame;
+    }];
+    CGFloat lift = 0;
+    for (UIView *row in rows) {
+        BOOL was = objc_getAssociatedObject(row, &kTrimmedKey) != nil;
+        BOOL out = !whole && uselessRow(row);
+        if (out != was) {
+            row.alpha = out ? 0 : 1;
+            row.userInteractionEnabled = !out;
+            objc_setAssociatedObject(row, &kTrimmedKey, out ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        CGAffineTransform moved = lift > 0 ? CGAffineTransformMakeTranslation(0, -lift) : CGAffineTransformIdentity;
+        if (!CGAffineTransformEqualToTransform(row.transform, moved)) row.transform = moved;
+        if (out) lift += row.bounds.size.height;
+    }
+}
+
 // Keep the drawer's plan badge and the SPMod settings row current as Spotify rebuilds its view.
 %hook _TtC23SideDrawer_ListPageImpl18ListViewController
 - (void)viewDidLayoutSubviews {
     %orig;
     sg_drawerRoot = ((UIViewController *)self).view;
+    // The redesign's light behind the drawer, as behind Home and the library.
+    if (SGRedesignedUI()) SGRAccentWashPlace(sg_drawerRoot);
     updatePlanBadge(sg_drawerRoot);
     SGForEachView(sg_drawerRoot, ^(UIView *view) {
         if (![view isKindOfClass:UICollectionView.class] ||
@@ -552,7 +603,10 @@ static void updatePlanBadge(UIView *root) {
     %orig;
     SGModSettingsRow *row = objc_getAssociatedObject(self, &kRowKey);
     BOOL drawerList = [NSStringFromClass(self.class) containsString:@"SideDrawerListCollectionView"];
-    if (drawerList) updatePlanBadge(self);
+    if (drawerList) {
+        updatePlanBadge(self);
+        trimDrawer(self);
+    }
     if (!row && drawerList)
         row = ensureDrawerRow(self);
     if (row && row.superview != self) [self addSubview:row];
