@@ -76,13 +76,21 @@ NSString *SGRAccentLabel(void) {
     uint32_t rgb = ((uint32_t)lround(MIN(1, MAX(0, r)) * 255) << 16)
                  | ((uint32_t)lround(MIN(1, MAX(0, g)) * 255) << 8)
                  | (uint32_t)lround(MIN(1, MAX(0, b)) * 255);
-    SGSetInt(SGRKeyAccent, rgb);
     saveRecentAccent((NSInteger)rgb);
-    sg_accent = chosen();
-    [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
+    SGRSetAccent((NSInteger)rgb);
 }
 
 @end
+
+void SGRSetAccent(NSInteger rgb) {
+    // A colour asked for by hand is the one wanted: Automatic steps aside.
+    SGSetEnabled(SGRKeyAccentAuto, NO);
+    sg_autoAccent = -1;
+    SGSetInt(SGRKeyAccent, rgb);
+    NSInteger now = chosen();
+    if (now >= 0) sg_accent = now;
+    [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
+}
 
 void SGRPickAccent(void) {
     static SGRAccentPicker *delegate;
@@ -91,7 +99,14 @@ void SGRPickAccent(void) {
     picker.supportsAlpha = NO;
     picker.selectedColor = SGRAccentColor() ?: [UIColor colorWithRed:0x1E / 255.0 green:0xD7 / 255.0 blue:0x60 / 255.0 alpha:1];
     picker.delegate = delegate;
-    [SGTopController() presentViewController:picker animated:YES completion:nil];
+    // Asked for from a sheet's button, the sheet is still on its way out: the picker goes up from what is
+    // under it, a turn of the run loop later, and not from a controller that is leaving.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIViewController *top = SGTopController();
+        while (top && (top.isBeingDismissed || [top isKindOfClass:UIAlertController.class])) top = top.presentingViewController;
+        if (!top || top.presentedViewController) return;
+        [top presentViewController:picker animated:YES completion:nil];
+    });
 }
 
 static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
@@ -100,6 +115,7 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
         unpack(kGreens[i], &gr, &gg, &gb);
         if (fabs(*r - gr) > 0.01 || fabs(*g - gg) > 0.01 || fabs(*b - gb) > 0.01) continue;
         CGFloat ar, ag, ab;
+        if (sg_accent < 0) return NO;
         unpack((uint32_t)sg_accent, &ar, &ag, &ab);
         CGFloat factor = MAX(gr, MAX(gg, gb)) / (0xD7 / 255.0);
         *r = MIN(1, ar * factor);

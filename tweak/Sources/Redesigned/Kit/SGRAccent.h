@@ -10,6 +10,7 @@ extern NSNotificationName const SGRAccentDidChangeNotification;
 
 UIColor *SGRAccentColor(void);   // nil while Spotify's own green is kept
 NSString *SGRAccentLabel(void);  // "#RRGGBB", or the name of Spotify's own
+void SGRSetAccent(NSInteger rgb); // 0xRRGGBB or -1 for Spotify's green; stored, and Automatic turned off
 void SGRPickAccent(void);        // the system colour picker over the top of the app, stored on the way out
 
 @class SGModRow;

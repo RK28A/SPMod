@@ -210,7 +210,7 @@ static void collectSectionsFromPage(NSString *prefix, SGModPage *page, NSMutable
 
 static UIViewController *miscSettingsPage(void) {
     SGModRow *hideSigning = SGHideRow(@"Hide the lock screen alert", @"Hide the notice that this build cannot be opened from the lock screen", SGKeyHideSigningWarning);
-    SGModRow *hideDiscord = SGHideRow(@"Hide the Discord banner", @"Hide the row here that advertises the Discord server", SGKeyHideDiscordBanner);
+    SGModRow *hideDiscord = SGSwitchRow(@"Hide the Discord banner", @"Hide the row here that advertises the Discord server", SGKeyHideDiscordBanner);
     SGModSection *banners = SGSection(nil, @[
         SGWithSymbol(hideSigning, @"lock.slash"),
         SGWithSymbol(hideDiscord, @"bubble.left.and.bubble.right"),
@@ -238,7 +238,7 @@ static UIViewController *modSettingsPage(void) {
     SGModRow *discord = SGLinkRow(@"Join the Discord", @"Release pings, help and previews", SGDiscordURL);
     discord.image = SGDiscordIcon();
     discord.color = SGDiscordColor();
-    discord.visible = ^BOOL { return !SGFlag(SGKeyHideDiscordBanner, NO); };
+    discord.visible = ^BOOL { return !SGFlag(SGKeyHideDiscordBanner, YES); };
     [topRows addObject:discord];
     if (signing) [topRows addObject:signing];
     [sections addObject:SGSection(nil, topRows)];
