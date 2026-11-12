@@ -32,6 +32,7 @@
 #import "App/DevTools/Developer.h"
 #import "Pages.h"
 #import "Redesigned/Kit/SGRAccentWash.h"
+#import "Redesigned/Kit/SGRAccent.h"
 
 static const CGFloat kRowHeight = 56;
 static char kRowKey, kInsetKey;
@@ -486,6 +487,7 @@ static BOOL isSettingsRoot(UIViewController *list) {
 
 static UIColor *planBadgeColor(void) {
     if (!SGRedesignedUI()) return SGGreen();
+    if (SGRAccentColor()) return SGRAccentColor();
     NSInteger rgb = SGInt(@"spotifyglass.redesign.accent", 0x37F200);
     if (rgb < 0 || rgb > 0xFFFFFF) return SGGreen();
     return [UIColor colorWithRed:((rgb >> 16) & 0xFF) / 255.0
@@ -600,10 +602,12 @@ static BOOL rowHasText(UIView *row) {
 // before its words come, and is faded from its place before it can show.
 static NSMutableSet<NSNumber *> *sg_uselessTops;
 
+// The list sets each row's alpha back from its layout on every pass, so it is set here every time too.
 static void fade(UIView *row, BOOL out) {
     BOOL was = objc_getAssociatedObject(row, &kTrimmedKey) != nil;
+    if (out && row.alpha > 0) row.alpha = 0;
     if (out == was) return;
-    row.alpha = out ? 0 : 1;
+    if (!out) row.alpha = 1;
     row.userInteractionEnabled = !out;
     objc_setAssociatedObject(row, &kTrimmedKey, out ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }

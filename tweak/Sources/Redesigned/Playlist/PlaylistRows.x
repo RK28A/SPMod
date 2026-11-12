@@ -12,7 +12,10 @@ static const CGFloat kCardSide = 8, kCardGap = 3, kCardRadius = 18;
 // theme seen through a sheet of glass (SGRThemedPane), the cover above left as it is. Where the tracks
 // begin is the highest a track's row has been seen in the list.
 static void glassTrack(UIView *cell, UIView *row) {
-    BOOL track = SGFlag(SGRKeyPlaylistGlass, NO) && SGRFindByIdentifier(row, @"Track.Row.Content.Title", &kTitleKey) != nil;
+    // A track of the playlist or one of the suggestions under it: a list row of a track's height with art.
+    CGFloat height = cell.bounds.size.height;
+    BOOL track = SGFlag(SGRKeyPlaylistGlass, NO) && height >= 48 && height <= 100
+        && (SGRFindByIdentifier(row, @"Track.Row.Content.Title", &kTitleKey) != nil || SGRFindByIdentifier(row, @"Encore.ImageView", &kArtKey) != nil);
     SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, track);
     UIScrollView *list = [cell.superview isKindOfClass:UIScrollView.class] ? (UIScrollView *)cell.superview : nil;
     if (!track || !list) return;

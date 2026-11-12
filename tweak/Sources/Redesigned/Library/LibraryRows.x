@@ -73,6 +73,7 @@ static void style(UIView *cell) {
     if (thumb) roundCorners(thumb, SGRRadiusThumb);
     else roundCorners(SGRFindByIdentifier(cell, @"Components.UI.CardLibrary.Artwork", &kCoverKey), SGRRadiusCover);
     BOOL glass = SGEnabled(SGRKeyLibraryGlass) && listRow(cell);
+    objc_setAssociatedObject(cell, &kGlassRowKey, glass ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     if (glass) clearRowFill(cell);
     SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, glass);
     if (glass) {
@@ -90,6 +91,26 @@ static void style(UIView *cell) {
               NSStringFromCGSize(cell.bounds.size), NSStringFromCGSize(thumb.bounds.size), thumb.layer.cornerRadius);
     }
 }
+
+static char kGlassRowKey;
+
+// Spotify sets a row's black fill again after its layout (as it appears, as a press ends): a dark fill set on
+// a view of a library row with glass is cleared as it is set.
+%hook UIView
+- (void)setBackgroundColor:(UIColor *)color {
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if (color && SGEnabled(SGRKeyLibraryGlass) && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.5 && MAX(r, MAX(g, b)) < 0.15) {
+        UIView *view = (UIView *)self;
+        for (int depth = 0; view && depth < 6; depth++, view = view.superview) {
+            if (objc_getAssociatedObject(view, &kGlassRowKey)) {
+                %orig(UIColor.clearColor);
+                return;
+            }
+        }
+    }
+    %orig;
+}
+%end
 
 %hook _TtC21YourLibrary_CommonKit47YourLibrarySwipeableCollectionViewCellContainer
 - (void)layoutSubviews {

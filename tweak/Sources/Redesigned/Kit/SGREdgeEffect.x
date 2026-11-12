@@ -94,6 +94,13 @@ static void theme(UIScrollView *list) {
     if (!self.window) return;
     soften(self);
     theme(self);
+    // The frosted band at the top of any page-wide list of the main window goes, themed or not: it drew a
+    // white haze over Home and a hard edge over a playlist's buttons.
+    if (@available(iOS 26.0, *)) {
+        CGSize size = self.bounds.size, screen = self.window.bounds.size;
+        if (!self.topEdgeEffect.hidden && size.width >= screen.width - 1 && size.height >= screen.height * 0.6
+            && [self.window.accessibilityIdentifier isEqualToString:@"spotify-main-window"]) self.topEdgeEffect.hidden = YES;
+    }
     SGRThemedPaneFollow(self);
 }
 %end
