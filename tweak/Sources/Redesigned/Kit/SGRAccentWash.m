@@ -22,7 +22,11 @@ static char kWashKey;
     if ((self = [super initWithFrame:frame])) {
         self.userInteractionEnabled = NO;
         self.isAccessibilityElement = NO;
-        self.backgroundColor = UIColor.clearColor;
+        // The whole page's ground: Spotify's own fills above it are cleared, so the black is this view's.
+        self.backgroundColor = UIColor.blackColor;
+        CAGradientLayer *gradient = (CAGradientLayer *)self.layer;
+        gradient.startPoint = CGPointMake(0.5, 0);
+        gradient.endPoint = CGPointMake(0.5, kReach);
         [self paint:NO];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(accentChanged) name:SGRAccentDidChangeNotification object:nil];
     }
@@ -69,6 +73,8 @@ void SGRAccentWashPlace(UIView *page) {
         objc_setAssociatedObject(page, &kWashKey, wash, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (wash.superview != page) [page insertSubview:wash atIndex:0];
-    CGRect frame = CGRectMake(0, 0, page.bounds.size.width, round(page.bounds.size.height * kReach));
-    if (!CGRectEqualToRect(wash.frame, frame)) wash.frame = frame;
+    else if (page.subviews.firstObject != wash) [page sendSubviewToBack:wash];
+    if (!CGRectEqualToRect(wash.frame, page.bounds)) wash.frame = page.bounds;
+    // The list under the header is filled black from edge to edge and would cut the light off at its top.
+    SGBackdropClearFills(page, wash);
 }

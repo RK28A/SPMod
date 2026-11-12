@@ -1,3 +1,4 @@
+#import <objc/runtime.h>
 #import "Shared/Fusion/Fusion.h"
 #import "Settings/SGBackdrop.h"
 #import "Core/SGCore.h"
@@ -57,8 +58,12 @@ static void remember(NSInteger rgb) {
     while (sg_past.count > 24) [sg_past removeObjectAtIndex:0];
 }
 
+// How far a colour may be from an accent of before and still be it: tight for a colour set as one, wider
+// for the mean of a picture's pixels, which its soft edges pull about.
+static CGFloat sg_slack = 0.012;
+
 static BOOL near(CGFloat a, CGFloat b) {
-    return fabs(a - b) < 0.012;
+    return fabs(a - b) < sg_slack;
 }
 
 // YES with the accent of now at the same brightness when (r, g, b) is an accent of before.
@@ -104,7 +109,84 @@ static CGColorRef renewedCopy(CGColorRef color) {
     return CGColorCreate(space, out);
 }
 
+// A small picture with its colour drawn in, a glyph Spotify made once in the accent it was handed: the pin
+// of a pinned playlist, the device a song plays on. One whose pixels come to an accent of before is drawn
+// again in the accent of now, through its own shape. Covers are far from one colour and never come to one.
+static const CGFloat kGlyphLimit = 64;
+static char kSeenKey;
+
+static BOOL glyphOfBefore(CGImageRef picture) {
+    if (!picture || CGImageGetWidth(picture) > 400 || CGImageGetHeight(picture) > 400) return NO;
+    uint8_t pixel[4] = {0, 0, 0, 0};
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = space ? CGBitmapContextCreate(pixel, 1, 1, 8, 4, space, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big) : NULL;
+    if (space) CGColorSpaceRelease(space);
+    if (!context) return NO;
+    CGContextDrawImage(context, CGRectMake(0, 0, 1, 1), picture);
+    CGContextRelease(context);
+    // A glyph leaves most of its square empty; a cover fills it, and is left alone whatever its colour.
+    if (pixel[3] < 8 || pixel[3] > 235) return NO;
+    CGFloat r = pixel[0] / (CGFloat)pixel[3], g = pixel[1] / (CGFloat)pixel[3], b = pixel[2] / (CGFloat)pixel[3];
+    sg_slack = 0.07;
+    BOOL was = renewed(&r, &g, &b);
+    sg_slack = 0.012;
+    return was;
+}
+
+// The same shape filled with `color`, for the caller to release.
+static CGImageRef recolored(CGImageRef picture, UIColor *color) {
+    size_t width = CGImageGetWidth(picture), height = CGImageGetHeight(picture);
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = space ? CGBitmapContextCreate(NULL, width, height, 8, 0, space, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big) : NULL;
+    if (space) CGColorSpaceRelease(space);
+    if (!context) return NULL;
+    CGRect whole = CGRectMake(0, 0, width, height);
+    CGContextDrawImage(context, whole, picture);
+    CGContextSetBlendMode(context, kCGBlendModeSourceIn);
+    CGContextSetFillColorWithColor(context, color.CGColor);
+    CGContextFillRect(context, whole);
+    CGImageRef made = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    return made;
+}
+
+// Each picture is looked at once an accent: what a view or layer was last seen holding, and under which
+// accent, is kept on it.
+static BOOL seenBefore(id holder, const void *picture) {
+    NSString *now = [NSString stringWithFormat:@"%p %ld", picture, (long)sg_accent];
+    if ([objc_getAssociatedObject(holder, &kSeenKey) isEqualToString:now]) return YES;
+    objc_setAssociatedObject(holder, &kSeenKey, now, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return NO;
+}
+
+static void sweepPicture(UIImageView *view) {
+    UIImage *image = view.image;
+    CGSize size = view.bounds.size;
+    if (!image || size.width > kGlyphLimit || size.height > kGlyphLimit || image.renderingMode == UIImageRenderingModeAlwaysTemplate) return;
+    if (seenBefore(view, (__bridge const void *)image) || image.isSymbolImage || !glyphOfBefore(image.CGImage)) return;
+    UIImage *shape = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    view.image = shape;
+    view.tintColor = SGRAccentColor();
+    seenBefore(view, (__bridge const void *)shape);
+}
+
+static void sweepContents(CALayer *layer) {
+    id contents = layer.contents;
+    CGSize size = layer.bounds.size;
+    if (!contents || size.width > kGlyphLimit || size.height > kGlyphLimit || [layer.delegate isKindOfClass:UIImageView.class]) return;
+    if (CFGetTypeID((__bridge CFTypeRef)contents) != CGImageGetTypeID()) return;
+    CGImageRef picture = (__bridge CGImageRef)contents;
+    if (seenBefore(layer, picture) || !glyphOfBefore(picture)) return;
+    UIColor *accent = SGRAccentColor();
+    CGImageRef made = accent ? recolored(picture, accent) : NULL;
+    if (!made) return;
+    layer.contents = (__bridge id)made;
+    seenBefore(layer, made);
+    CGImageRelease(made);
+}
+
 static void sweepLayer(CALayer *layer, int depth) {
+    sweepContents(layer);
     if ([layer isKindOfClass:CAShapeLayer.class]) {
         CAShapeLayer *shape = (CAShapeLayer *)layer;
         CGColorRef fill = renewedCopy(shape.fillColor);
@@ -139,6 +221,7 @@ static void sweepView(UIView *view, int depth) {
     }
     UIColor *tint = renewedColor(view.tintColor);
     if (tint) view.tintColor = tint;
+    if ([view isKindOfClass:UIImageView.class]) sweepPicture((UIImageView *)view);
     sweepLayer(view.layer, 0);
     if (depth > 60) return;
     for (UIView *sub in [view.subviews copy]) sweepView(sub, depth + 1);
@@ -168,16 +251,22 @@ static void handBackdrop(void) {
     SGBackdropSetSongColor(accent);
 }
 
+// From launch on, not only once the accent has changed: Spotify's own greens are accents of before too, and
+// what it draws in them without making the colour, a picture with the green in it, is only caught here.
+static void keepSweeping(void) {
+    remember(kDefaultAccent);
+    for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) remember(kGreens[i]);
+    if (sg_sweeper) return;
+    sg_sweeper = [NSTimer scheduledTimerWithTimeInterval:kSweepEvery repeats:YES block:^(NSTimer *timer) { sweep(NO); }];
+    sg_sweeper.tolerance = 0.5;
+}
+
 static void turned(NSInteger before) {
     handBackdrop();
     remember(before);
-    remember(kDefaultAccent);
-    for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) remember(kGreens[i]);
     dispatch_async(dispatch_get_main_queue(), ^{
+        keepSweeping();
         sweep(YES);
-        if (sg_sweeper) return;
-        sg_sweeper = [NSTimer scheduledTimerWithTimeInterval:kSweepEvery repeats:YES block:^(NSTimer *timer) { sweep(NO); }];
-        sg_sweeper.tolerance = 0.5;
     });
 }
 
@@ -369,6 +458,9 @@ static id swappedValue(id value) {
         }];
     }
     if (sg_accent >= 0 || SGHidden(SGRKeyAccentAuto)) %init;
-    dispatch_async(dispatch_get_main_queue(), ^{ handBackdrop(); });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        handBackdrop();
+        if (sg_accent >= 0 || SGHidden(SGRKeyAccentAuto)) keepSweeping();
+    });
     SGFusionAccent = ^UIColor *{ return SGRAccentColor(); };
 }
