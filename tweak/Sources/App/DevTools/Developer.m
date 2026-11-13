@@ -41,6 +41,20 @@ static UIWindow *frontWindow(void) {
     return best;
 }
 
+// A colour as #rrggbb, with its alpha when not opaque; nil when clear.
+static NSString *hexOf(CGColorRef color) {
+    if (!color || CGColorGetAlpha(color) < 0.01) return nil;
+    UIColor *ui = [UIColor colorWithCGColor:color];
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if (![ui getRed:&r green:&g blue:&b alpha:&a]) {
+        CGFloat white = 0;
+        if (![ui getWhite:&white alpha:&a]) return @"?";
+        r = g = b = white;
+    }
+    NSString *hex = [NSString stringWithFormat:@"#%02X%02X%02X", (int)lround(MIN(MAX(r, 0), 1) * 255), (int)lround(MIN(MAX(g, 0), 1) * 255), (int)lround(MIN(MAX(b, 0), 1) * 255)];
+    return a < 0.99 ? [hex stringByAppendingFormat:@"@%.2f", a] : hex;
+}
+
 static void dumpView(UIView *view, NSMutableString *out, int depth) {
     for (int i = 0; i < depth; i++) [out appendString:@"  "];
     [out appendFormat:@"%@ frame=%@", NSStringFromClass(view.class), NSStringFromCGRect(view.frame)];
@@ -56,6 +70,34 @@ static void dumpView(UIView *view, NSMutableString *out, int depth) {
     }
     if (view.accessibilityIdentifier.length) [out appendFormat:@" id=%@", view.accessibilityIdentifier];
     if (view.accessibilityLabel.length) [out appendFormat:@" a11y=\"%@\"", view.accessibilityLabel];
+    // What draws: the fill, the layer's own fill, a gradient's colours, the corners, an alpha between 0 and 1,
+    // a transform, the controller the view belongs to, an image's size, a glass or blur.
+    if (view.alpha > 0.01 && view.alpha < 0.99) [out appendFormat:@" alpha=%.2f", view.alpha];
+    NSString *fill = hexOf(view.backgroundColor.CGColor);
+    if (fill) [out appendFormat:@" bg=%@", fill];
+    else if ((fill = hexOf(view.layer.backgroundColor))) [out appendFormat:@" layerBg=%@", fill];
+    if (view.layer.cornerRadius > 0) [out appendFormat:@" radius=%.0f", view.layer.cornerRadius];
+    if (!CGAffineTransformIsIdentity(view.transform)) [out appendFormat:@" transform=%@", NSStringFromCGAffineTransform(view.transform)];
+    if (view.clipsToBounds) [out appendString:@" clips"];
+    if (!view.userInteractionEnabled) [out appendString:@" noTouch"];
+    UIResponder *next = view.nextResponder;
+    if ([next isKindOfClass:UIViewController.class]) [out appendFormat:@" vc=%@", NSStringFromClass(next.class)];
+    if ([view isKindOfClass:UIImageView.class] && ((UIImageView *)view).image) {
+        UIImage *image = ((UIImageView *)view).image;
+        [out appendFormat:@" image=%.0fx%.0f%@", image.size.width, image.size.height, image.renderingMode == UIImageRenderingModeAlwaysTemplate ? @" template" : @""];
+    }
+    if ([view isKindOfClass:UIVisualEffectView.class]) [out appendFormat:@" effect=%@", NSStringFromClass(((UIVisualEffectView *)view).effect.class)];
+    if ([view isKindOfClass:UIScrollView.class]) {
+        UIScrollView *scroll = (UIScrollView *)view;
+        [out appendFormat:@" offset=%@ content=%@", NSStringFromCGPoint(scroll.contentOffset), NSStringFromCGSize(scroll.contentSize)];
+    }
+    for (CALayer *layer in view.layer.sublayers) {
+        if ([layer isKindOfClass:CAGradientLayer.class]) {
+            NSMutableArray *colors = [NSMutableArray array];
+            for (id color in ((CAGradientLayer *)layer).colors) [colors addObject:hexOf((__bridge CGColorRef)color) ?: @"clear"];
+            [out appendFormat:@" gradient=[%@]", [colors componentsJoinedByString:@","]];
+        }
+    }
     [out appendString:@"\n"];
     for (UIView *sub in view.subviews) dumpView(sub, out, depth + 1);
 }
