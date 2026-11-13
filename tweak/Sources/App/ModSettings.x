@@ -1,3 +1,5 @@
+#import <objc/runtime.h>
+#import <objc/message.h>
 #import "Shared/Fusion/Fusion.h"
 #import "Core/SGCore.h"
 #import "Settings/SGPage.h"
@@ -598,9 +600,97 @@ static BOOL rowHasText(UIView *row) {
     return found;
 }
 
-// Where in the list a useless row has been, by its top: the subscription row is drawn as a grey skeleton
-// before its words come, and is faded from its place before it can show.
-static NSMutableSet<NSNumber *> *sg_uselessTops;
+// The useless rows, by where the list has them: a row is known by its words, and the subscription row is
+// drawn as a grey skeleton before its words come, so its place is what tells it then.
+static NSMutableSet<NSIndexPath *> *sg_gone;
+
+#pragma mark - the drawer's rows closed up
+
+// A faded row left its place empty. The list's own layout is taught to give every row under a useless one
+// that much less, so the rows close up: the layout object of this one list gets a subclass made for it,
+// whose answers are its parent's with the heights of the rows gone above taken off. No view is moved by
+// hand, which is what stacked the rows on each other before.
+static NSArray<NSValue *> *goneFrames(UICollectionViewLayout *layout, Class base) {
+    UICollectionView *list = layout.collectionView;
+    NSMutableArray<NSValue *> *frames = [NSMutableArray array];
+    for (NSIndexPath *path in sg_gone) {
+        if (path.section >= list.numberOfSections || path.item >= [list numberOfItemsInSection:path.section]) continue;
+        struct objc_super up = {layout, base};
+        UICollectionViewLayoutAttributes *given = ((id (*)(struct objc_super *, SEL, id))objc_msgSendSuper)(&up, @selector(layoutAttributesForItemAtIndexPath:), path);
+        if (given && given.frame.size.height > 0.5) [frames addObject:[NSValue valueWithCGRect:given.frame]];
+    }
+    return frames;
+}
+
+static CGFloat goneHeight(NSArray<NSValue *> *gone) {
+    CGFloat total = 0;
+    for (NSValue *each in gone) total += each.CGRectValue.size.height;
+    return total;
+}
+
+static UICollectionViewLayoutAttributes *lifted(UICollectionViewLayoutAttributes *given, NSArray<NSValue *> *gone) {
+    if (!given || !gone.count) return given;
+    BOOL out = given.representedElementCategory == UICollectionElementCategoryCell && [sg_gone containsObject:given.indexPath];
+    CGFloat top = CGRectGetMinY(given.frame), lift = 0;
+    for (NSValue *each in gone) {
+        if (CGRectGetMinY(each.CGRectValue) < top - 0.5) lift += each.CGRectValue.size.height;
+    }
+    if (!out && lift < 0.5) return given;
+    UICollectionViewLayoutAttributes *moved = [given copy];
+    CGRect frame = moved.frame;
+    frame.origin.y -= lift;
+    moved.frame = frame;
+    if (out) moved.alpha = 0;
+    return moved;
+}
+
+static void adoptLayout(UICollectionView *list) {
+    static char kAdoptedKey;
+    UICollectionViewLayout *layout = list.collectionViewLayout;
+    if (!layout || objc_getAssociatedObject(layout, &kAdoptedKey)) return;
+    objc_setAssociatedObject(layout, &kAdoptedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    Class base = object_getClass(layout);
+    NSString *name = [@"SGDrawer_" stringByAppendingString:NSStringFromClass(base)];
+    if ([NSStringFromClass(base) hasPrefix:@"NSKVONotifying_"]) return;
+    Class made = objc_getClass(name.UTF8String);
+    if (!made) {
+        made = objc_allocateClassPair(base, name.UTF8String, 0);
+        if (!made) return;
+        SEL inRect = @selector(layoutAttributesForElementsInRect:), item = @selector(layoutAttributesForItemAtIndexPath:);
+        SEL extra = @selector(layoutAttributesForSupplementaryViewOfKind:atIndexPath:), decor = @selector(layoutAttributesForDecorationViewOfKind:atIndexPath:);
+        SEL content = @selector(collectionViewContentSize);
+        class_addMethod(made, inRect, imp_implementationWithBlock(^NSArray *(UICollectionViewLayout *me, CGRect rect) {
+            NSArray<NSValue *> *gone = goneFrames(me, base);
+            struct objc_super up = {me, base};
+            rect.size.height += goneHeight(gone);
+            NSArray<UICollectionViewLayoutAttributes *> *given = ((NSArray *(*)(struct objc_super *, SEL, CGRect))objc_msgSendSuper)(&up, inRect, rect);
+            if (!gone.count) return given;
+            NSMutableArray *all = [NSMutableArray arrayWithCapacity:given.count];
+            for (UICollectionViewLayoutAttributes *each in given) [all addObject:lifted(each, gone)];
+            return all;
+        }), method_getTypeEncoding(class_getInstanceMethod(base, inRect)));
+        class_addMethod(made, item, imp_implementationWithBlock(^UICollectionViewLayoutAttributes *(UICollectionViewLayout *me, NSIndexPath *path) {
+            struct objc_super up = {me, base};
+            return lifted(((id (*)(struct objc_super *, SEL, id))objc_msgSendSuper)(&up, item, path), goneFrames(me, base));
+        }), method_getTypeEncoding(class_getInstanceMethod(base, item)));
+        for (NSValue *boxed in @[[NSValue valueWithPointer:extra], [NSValue valueWithPointer:decor]]) {
+            SEL kindAt = boxed.pointerValue;
+            class_addMethod(made, kindAt, imp_implementationWithBlock(^UICollectionViewLayoutAttributes *(UICollectionViewLayout *me, NSString *kind, NSIndexPath *path) {
+                struct objc_super up = {me, base};
+                return lifted(((id (*)(struct objc_super *, SEL, id, id))objc_msgSendSuper)(&up, kindAt, kind, path), goneFrames(me, base));
+            }), method_getTypeEncoding(class_getInstanceMethod(base, kindAt)));
+        }
+        class_addMethod(made, content, imp_implementationWithBlock(^CGSize(UICollectionViewLayout *me) {
+            struct objc_super up = {me, base};
+            CGSize size = ((CGSize (*)(struct objc_super *, SEL))objc_msgSendSuper)(&up, content);
+            size.height = MAX(0, size.height - goneHeight(goneFrames(me, base)));
+            return size;
+        }), method_getTypeEncoding(class_getInstanceMethod(base, content)));
+        objc_registerClassPair(made);
+    }
+    object_setClass(layout, made);
+    SGLog(@"side menu: the list's layout (%@) closes up over the rows taken out", NSStringFromClass(base));
+}
 
 // The list sets each row's alpha back from its layout on every pass, so it is set here every time too.
 static void fade(UIView *row, BOOL out) {
@@ -631,29 +721,35 @@ static void fadeUselessLabel(UILabel *label) {
     }
     if (!row) return;
     fade(row, YES);
-    if ([row.superview isKindOfClass:UICollectionView.class]) {
-        if (!sg_uselessTops) sg_uselessTops = [NSMutableSet set];
-        [sg_uselessTops addObject:@(round(row.frame.origin.y))];
-    }
+    if ([row.superview isKindOfClass:UICollectionView.class]) [row.superview setNeedsLayout];
 }
 
-// Rows are faded, never moved: the list places its own rows, and moving them over it stacked them on each
-// other. A row reused for something else is brought back.
+// A useless row is faded and its place given to the rows under it (adoptLayout). A row reused for something
+// else is brought back.
 static void trimDrawer(UICollectionView *list) {
-    BOOL whole = SGFlag(SGKeyDrawerUseless, NO);
+    BOOL whole = SGFlag(SGKeyDrawerUseless, NO), changed = NO;
+    if (!sg_gone) sg_gone = [NSMutableSet set];
+    if (whole && sg_gone.count) {
+        [sg_gone removeAllObjects];
+        changed = YES;
+    }
     for (UIView *row in list.subviews) {
         if (![row isKindOfClass:UICollectionReusableView.class]) continue;
+        NSIndexPath *path = [row isKindOfClass:UICollectionViewCell.class] ? [list indexPathForCell:(UICollectionViewCell *)row] : nil;
         BOOL out = NO;
         if (!whole) {
-            out = uselessRow(row);
-            if (!out && !rowHasText(row)) out = [sg_uselessTops containsObject:@(round(row.frame.origin.y))];
-        }
-        if (out && [row.superview isKindOfClass:UICollectionView.class] && rowHasText(row)) {
-            if (!sg_uselessTops) sg_uselessTops = [NSMutableSet set];
-            [sg_uselessTops addObject:@(round(row.frame.origin.y))];
+            BOOL worded = rowHasText(row), known = path && [sg_gone containsObject:path];
+            out = worded ? uselessRow(row) : known;
+            if (path && worded && out != known) {
+                if (out) [sg_gone addObject:path];
+                else [sg_gone removeObject:path];
+                changed = YES;
+            }
         }
         fade(row, out);
     }
+    if (!whole) adoptLayout(list);
+    if (changed) [list.collectionViewLayout invalidateLayout];
 }
 
 // The drawer's Listening stats row opens the mod's own stats page: a control laid over that row, which a
@@ -704,6 +800,29 @@ static BOOL statsRow(UIView *row) {
     return found;
 }
 
+// Spotify marks its stats row as new, with a dot and the word: the row opens the mod's page, which is not.
+static void quietNew(UIView *row) {
+    NSCharacterSet *around = [NSCharacterSet characterSetWithCharactersInString:@" \u00a0•·"];
+    SGForEachView(row, ^(UIView *view) {
+        if ([view isKindOfClass:UILabel.class]) {
+            UILabel *label = (UILabel *)view;
+            NSString *text = label.text;
+            NSString *bare = [text stringByTrimmingCharactersInSet:around].lowercaseString;
+            if ([@[@"nouveau", @"new", @"nouveauté", @"neu", @"nuevo"] containsObject:bare]) {
+                if (view.alpha > 0) view.alpha = 0;
+                return;
+            }
+            NSRange dot = [text rangeOfString:@"•"];
+            if (dot.location != NSNotFound && dot.location > 3) {
+                label.text = [[text substringToIndex:dot.location] stringByTrimmingCharactersInSet:around];
+            }
+        } else if (!view.subviews.count && ![view isKindOfClass:UIImageView.class] && ![view isKindOfClass:UIControl.class]) {
+            CGSize size = view.bounds.size;
+            if (size.width >= 2 && size.width <= 10 && size.height >= 2 && size.height <= 10 && view.layer.cornerRadius > 0.5 && view.alpha > 0) view.alpha = 0;
+        }
+    });
+}
+
 static void coverStats(UICollectionView *list) {
     for (UIView *row in list.subviews) {
         if (![row isKindOfClass:UICollectionReusableView.class]) continue;
@@ -712,6 +831,7 @@ static void coverStats(UICollectionView *list) {
             [cover removeFromSuperview];
             continue;
         }
+        quietNew(row);
         if (!cover) {
             cover = [SGStatsCover new];
             objc_setAssociatedObject(row, &kStatsCoverKey, cover, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -767,8 +887,15 @@ static void relightDrawer(UIViewController *drawer) {
 %hook UICollectionView
 - (void)layoutSubviews {
     %orig;
+    // Every list of the app lays out through here, each frame of a scroll: what it is is told once.
+    static char kKindKey;
+    NSNumber *kind = objc_getAssociatedObject(self, &kKindKey);
+    if (!kind) {
+        kind = @([NSStringFromClass(self.class) containsString:@"SideDrawerListCollectionView"]);
+        objc_setAssociatedObject(self, &kKindKey, kind, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     SGModSettingsRow *row = objc_getAssociatedObject(self, &kRowKey);
-    BOOL drawerList = [NSStringFromClass(self.class) containsString:@"SideDrawerListCollectionView"];
+    BOOL drawerList = kind.boolValue;
     if (drawerList) {
         updatePlanBadge(self);
         trimDrawer(self);

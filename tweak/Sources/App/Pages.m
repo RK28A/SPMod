@@ -77,6 +77,32 @@ static void offerRestart(BOOL on) {
     [SGTopController() presentViewController:alert animated:YES completion:nil];
 }
 
+// The style chosen under Background style, with its own settings: each style keeps its own.
+static UIViewController *backdropTunePage(void) {
+    NSArray<NSString *> *names = SGBackdropStyleNames();
+    NSInteger style = MAX(0, MIN((NSInteger)names.count - 1, SGInt(SGKeyBackdropStyle, 0)));
+    NSString *(^percent)(double) = ^NSString *(double value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; };
+    SGModRow *(^slider)(NSString *, NSString *, SGBackdropTune, double, double) = ^SGModRow *(NSString *title, NSString *note, SGBackdropTune what, double low, double high) {
+        return SGSliderRow(title, note, low, high, 0.05, ^double { return SGBackdropTuneValue(what, style); },
+                           ^(double value) { SGBackdropSetTune(what, style, value); }, percent);
+    };
+    SGModRow *reset = SGActionRow(@"Back to this style's own", @"Speed, brightness, colours and music as they came", ^{
+        SGBackdropResetTune(style);
+        [SGTopController().navigationController popViewControllerAnimated:YES];
+    });
+    return [[SGModPage alloc] initWithTitle:names[style] intro:nil sections:@[
+        SGNotedSection(@"Motion", @[
+            slider(@"Speed", @"How fast the style runs", SGBackdropTuneSpeed, 0.25, 2.5),
+            slider(@"Reaction to music", @"How often and how hard it answers the beat: meteors, rings, bars, flashes", SGBackdropTuneMusic, 0, 2),
+        ], @"At 0% the style ignores the music. Over 100% it answers harder, and Stars throws more meteors."),
+        SGNotedSection(@"Look", @[
+            slider(@"Brightness", @"How much of the style shows over the black", SGBackdropTuneGlow, 0.2, 1),
+            slider(@"Colour spread", @"How far its other colours stray from the theme's", SGBackdropTuneSpread, 0, 1),
+        ], @"At 0% the whole style is drawn in the theme's one colour. At 100% a red theme also shows orange and purple."),
+        SGSection(nil, @[SGWithSymbol(reset, @"arrow.counterclockwise")]),
+    ] footer:@"Each background style keeps its own settings."];
+}
+
 static SGModRow *unavailableRow(void) {
     SGModRow *row = SGStatActionRow(@"Redesigned UI", nil, ^NSString *{ return @"Needs iOS 26"; }, ^{
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Redesigned UI"
@@ -120,13 +146,20 @@ UIViewController *SGAppearanceSettingsPage(void) {
     SGModRow *backdropColor = SGChoiceRow(@"Background colour", nil, SGKeyBackdropSource, @[@"Follows the song", @"Accent colour"], 0);
     backdropColor.choiceNotes = @[@"Takes the colour of the cover playing. A new song's colour comes in once the animation ends its loop.",
                                   @"Keeps the accent colour chosen above."];
-    for (SGModRow *row in @[backdropStyle, backdropColor]) {
+    SGModRow *backdropRate = SGChoiceRow(@"Background frame rate", nil, SGKeyBackdropRate, @[@"30 a second", @"60 a second", @"As fast as the screen"], 0);
+    backdropRate.choiceNotes = @[@"The coolest on the phone and the lightest on the battery.", @"Smoother, a little warmer.",
+                                 @"Up to 120 a second on a ProMotion screen: the smoothest, and the warmest."];
+    for (SGModRow *row in @[backdropStyle, backdropColor, backdropRate]) {
         row.visible = ^BOOL { return SGHidden(SGKeyBackdrop); };
         row.chosen = ^(NSInteger index) { [NSNotificationCenter.defaultCenter postNotificationName:SGBackdropDidChangeNotification object:nil]; };
     }
+    SGModRow *backdropTune = SGPageRow(@"Customise this style", ^UIViewController *{ return backdropTunePage(); });
+    backdropTune.visible = ^BOOL { return SGHidden(SGKeyBackdrop); };
     [rows addObject:SGWithSymbol(backdrop, @"circle.hexagongrid")];
     [rows addObject:SGWithSymbol(backdropStyle, @"sparkles")];
     [rows addObject:SGWithSymbol(backdropColor, @"eyedropper")];
+    [rows addObject:SGWithSymbol(backdropTune, @"slider.horizontal.3")];
+    [rows addObject:SGWithSymbol(backdropRate, @"speedometer")];
     [rows addObject:sidebarBadgeTextRow()];
     SGModSection *section = SGNotedSection(nil, rows, @"Some changes apply after you restart Spotify.");
     return [[SGModPage alloc] initWithTitle:@"Appearance" intro:nil sections:@[section] footer:nil];

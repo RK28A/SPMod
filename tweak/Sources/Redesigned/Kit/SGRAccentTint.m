@@ -22,8 +22,11 @@ static BOOL sameColor(UIColor *one, UIColor *other) {
     return fabs(r1 - r2) < 0.01 && fabs(g1 - g2) < 0.01 && fabs(b1 - b2) < 0.01;
 }
 
-// Whether the picture itself is coloured: its pixels averaged into one. Kept on the image, read once.
-static BOOL imageIsChromatic(UIImage *image) {
+// A glyph is small; a cover is a picture, whatever its colour, and is never drawn again in one colour.
+static const CGFloat kGlyphSide = 32;
+
+// Whether the picture is drawn in Spotify's green: its pixels averaged into one. Kept on the image, read once.
+static BOOL imageIsGreen(UIImage *image) {
     NSNumber *known = objc_getAssociatedObject(image, &kChromaticKey);
     if (known) return known.boolValue;
     BOOL result = NO;
@@ -36,7 +39,10 @@ static BOOL imageIsChromatic(UIImage *image) {
         if (context) {
             CGContextDrawImage(context, CGRectMake(0, 0, 1, 1), pixels);
             CGContextRelease(context);
-            if (pixel[3] > 8) result = chromaticRGB(pixel[0] / (CGFloat)pixel[3], pixel[1] / (CGFloat)pixel[3], pixel[2] / (CGFloat)pixel[3]);
+            if (pixel[3] > 8) {
+                CGFloat r = pixel[0] / (CGFloat)pixel[3], g = pixel[1] / (CGFloat)pixel[3], b = pixel[2] / (CGFloat)pixel[3];
+                result = g > 0.45 && g > r * 1.45 && g > b * 1.3;
+            }
         }
     }
     objc_setAssociatedObject(image, &kChromaticKey, @(result), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -75,12 +81,19 @@ static void tintGlyph(UIImageView *glyph, UIView *root, UIColor *accent) {
         }
         return;
     }
-    // A picture with its colour drawn in becomes a template of itself, so the accent can draw it.
-    if (!imageIsChromatic(image)) return;
+    // A small picture with Spotify's green drawn in becomes a template of itself, so the accent can draw it.
+    CGSize size = glyph.bounds.size;
+    if (MAX(size.width, size.height) > kGlyphSide || MAX(image.size.width, image.size.height) > kGlyphSide) return;
+    if (!imageIsGreen(image)) return;
     made = templateOf(image);
     glyph.image = made;
     glyph.tintColor = accent;
     objc_setAssociatedObject(glyph, &kMadeKey, made, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+void SGRAccentRetintGlyph(UIImageView *glyph) {
+    UIColor *accent = SGRAccentColor();
+    if (glyph && accent) tintGlyph(glyph, glyph, accent);
 }
 
 void SGRAccentRetint(UIView *root) {

@@ -6,7 +6,8 @@
 //     ListeningStats.x       the player watched, a play written down once it counts
 //     ListeningStatsPage.m   the page, and the export picked and imported
 //
-// Nothing leaves the phone: the log is a file in Application Support, out of the settings backup.
+// Nothing leaves the phone: the log is a file in Application Support, and a packed copy of it is kept in the
+// keychain (StatsVault.h), so the stats come back when the app is installed again.
 // Threading: main thread only.
 #import <UIKit/UIKit.h>
 
@@ -17,3 +18,5 @@
 
 SGPlayLog *SGListeningLog(void);
 UIViewController *SGListeningStatsPage(void);
+// The log kept in the keychain now, after an import.
+void SGStatsVaultSaveLog(void);

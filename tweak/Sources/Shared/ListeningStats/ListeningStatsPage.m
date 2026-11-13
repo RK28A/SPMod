@@ -6,6 +6,7 @@
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "ListeningStats.h"
+#import "StatsVault.h"
 #import "SGPlayLog.h"
 #import "Recap.h"
 
@@ -104,6 +105,7 @@ static BOOL sg_importing;
                 return;
             }
             NSUInteger added = [SGListeningLog() merge:plays];
+            SGStatsVaultSaveLog();
             SGLog(@"stats: %lu plays in %lu files, %lu new", (unsigned long)plays.count, (unsigned long)files, (unsigned long)added);
             [page.tableView reloadData];
             showAlert(@"Imported", [NSString stringWithFormat:@"%@ added from %lu %@, %lu skipped as already here.", playsText(added),
@@ -131,6 +133,7 @@ static void confirmErase(UITableViewController *page) {
                                                            preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"Erase" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
         [SGListeningLog() erase];
+        SGStatsVaultForget();
         [page.tableView reloadData];
     }]];
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
