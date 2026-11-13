@@ -102,12 +102,18 @@ static void hideBand(UIScrollView *list) {
             objc_setAssociatedObject(list, &kWideKey, wide, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         }
         if (!wide.boolValue) return;
-        if (!list.topEdgeEffect.hidden) list.topEdgeEffect.hidden = YES;
+        if (!list.topEdgeEffect.hidden) {
+            SGLoopNote("top edge hidden");
+            list.topEdgeEffect.hidden = YES;
+        }
         for (UIView *pass in list.subviews) {
             if (sg_passClass ? object_getClass(pass) != sg_passClass : ![NSStringFromClass(pass.class) containsString:@"TouchPassthrough"]) continue;
             if (!sg_passClass) sg_passClass = object_getClass(pass);
             for (UIView *edge in pass.subviews) {
-                if (edge.alpha > 0 && [NSStringFromClass(edge.class) containsString:@"ScrollEdgeEffect"]) edge.alpha = 0;
+                if (edge.alpha > 0 && [NSStringFromClass(edge.class) containsString:@"ScrollEdgeEffect"]) {
+                    SGLoopNote("edge backdrop faded");
+                    edge.alpha = 0;
+                }
             }
         }
     }

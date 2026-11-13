@@ -53,9 +53,13 @@ void SGRGlassCard(UIView *row, const void *key, CGRect frame, CGFloat radius, BO
     // Kept behind by its layer's depth, never by moving it among the row's views: a view moved during a
     // layout pass lays its parent out again, and a list that puts its own views back in its order on every
     // pass then never finishes laying out (the playlist frozen black behind its curtain).
-    if (card.superview != row) [row insertSubview:card atIndex:0];
+    if (card.superview != row) {
+        SGLoopNote("glass card inserted");
+        [row insertSubview:card atIndex:0];
+    }
     if (card.layer.zPosition != -50) card.layer.zPosition = -50;
     if (CGRectEqualToRect(card.frame, frame)) return;
+    SGLoopNote("glass card frame");
     card.frame = frame;
     if ([card isKindOfClass:UIVisualEffectView.class]) SGShapeGlass(card, radius, NO);
     else card.layer.cornerRadius = radius;
@@ -80,16 +84,16 @@ static char kPaneKey;
 static void fadeIn(SGRThemedPaneView *pane, CGFloat lead) {
     CGFloat height = pane.bounds.size.height;
     if (height < 1) return;
-    if (lead < 0.5) {
-        if (pane.layer.mask) pane.layer.mask = nil;
-        pane.lead = 0;
-        return;
-    }
+    // The mask stays once given; with nothing coming in its gradient starts fully drawn.
+    lead = MAX(0, lead);
     if (!pane.veil) {
         pane.veil = [CAGradientLayer layer];
         pane.veil.colors = @[(id)UIColor.clearColor.CGColor, (id)[UIColor colorWithWhite:0 alpha:0.5].CGColor, (id)UIColor.blackColor.CGColor];
     }
-    if (pane.layer.mask != pane.veil) pane.layer.mask = pane.veil;
+    if (pane.layer.mask != pane.veil) {
+        SGLoopNote("pane mask");
+        pane.layer.mask = pane.veil;
+    }
     if (!CGRectEqualToRect(pane.veil.frame, pane.bounds)) pane.veil.frame = pane.bounds;
     if (fabs(pane.lead - lead) < 0.5) return;
     pane.lead = lead;
@@ -104,7 +108,10 @@ void SGRThemedPaneFollow(UIScrollView *list) {
     CGRect frame = CGRectMake(0, y, size.width, size.height);
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
-    if (!CGRectEqualToRect(pane.frame, frame)) pane.frame = frame;
+    if (!CGRectEqualToRect(pane.frame, frame)) {
+        SGLoopNote("pane frame");
+        pane.frame = frame;
+    }
     fadeIn(pane, MIN(kLead, MAX(0, pane.top - y)));
     [CATransaction commit];
     if (pane.layer.zPosition != -100) pane.layer.zPosition = -100;
@@ -123,7 +130,10 @@ void SGRThemedPane(UIScrollView *list, CGFloat top) {
         pane.lead = -1;
         objc_setAssociatedObject(list, &kPaneKey, pane, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    if (pane.superview != list) [list insertSubview:pane atIndex:0];
+    if (pane.superview != list) {
+        SGLoopNote("pane inserted");
+        [list insertSubview:pane atIndex:0];
+    }
     pane.top = top;
     SGRThemedPaneFollow(list);
     SGRAccentWashPlace(pane);

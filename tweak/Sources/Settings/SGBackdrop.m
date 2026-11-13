@@ -873,9 +873,17 @@ void SGBackdropPlace(UIView *page) {
         host.autoresizingMask = UIViewAutoresizingNone;
         objc_setAssociatedObject(page, &key, host, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    if (host.superview != page) [page insertSubview:host atIndex:0];
-    else if (page.subviews.firstObject != host) [page sendSubviewToBack:host];
-    if (!CGRectEqualToRect(host.frame, page.bounds)) host.frame = page.bounds;
+    if (host.superview != page) {
+        SGLoopNote("background inserted");
+        [page insertSubview:host atIndex:0];
+    } else if (page.subviews.firstObject != host) {
+        SGLoopNote("background sent back");
+        [page sendSubviewToBack:host];
+    }
+    if (!CGRectEqualToRect(host.frame, page.bounds)) {
+        SGLoopNote("background frame");
+        host.frame = page.bounds;
+    }
     [host colorChanged];
     SGBackdropClearFills(page, host);
 }

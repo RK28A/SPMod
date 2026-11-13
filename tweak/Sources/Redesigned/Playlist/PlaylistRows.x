@@ -159,7 +159,9 @@ static void fadeUnderBar(UIScrollView *list) {
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl32FTPTouchCancellingCollectionView
 - (void)layoutSubviews {
     %orig;
-    if (!SGLoopGuard("playlist list")) fadeUnderBar((UIScrollView *)self);
+    // The fade under the pinned bar set each track's alpha from inside the list's own pass, and the list laid
+    // out again on it 400 times a frame (the log's loop guard): off until it is done another way.
+    (void)fadeUnderBar;
 }
 %end
 

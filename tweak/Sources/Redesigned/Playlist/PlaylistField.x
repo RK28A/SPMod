@@ -49,7 +49,10 @@ static SGRArtworkField *fieldIn(UIView *page) {
     SGRRevealHold(page, SGRRevealPage);
     SGRArtworkField *field = fieldIn(page);
     if (field.superview != page) [page insertSubview:field atIndex:0];
-    else if (page.subviews.firstObject != field) [page sendSubviewToBack:field];
+    else if (page.subviews.firstObject != field) {
+        SGLoopNote("playlist field sent back");
+        [page sendSubviewToBack:field];
+    }
     if (!CGRectEqualToRect(field.frame, page.bounds)) field.frame = page.bounds;
 }
 
