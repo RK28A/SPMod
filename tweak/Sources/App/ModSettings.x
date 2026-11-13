@@ -888,8 +888,35 @@ static void relightDrawer(UIViewController *drawer) {
 // The lists lay out after their controllers and again whenever their content changes.
 // Profile menu on (Liquid Glass): each row the drawer shows on a card of glass. A row taken out, or the
 // whole switch off, has none. The account block's own grey is cleared so its glass shows.
+// The block a row draws its own grey on (the account block): the largest filled view across most of the row.
+static UIView *filledBlock(UIView *row, UIView *view, int depth) {
+    UIView *best = nil;
+    for (UIView *sub in view.subviews) {
+        CGFloat w = 0, a = 0;
+        BOOL filled = [sub.backgroundColor getWhite:&w alpha:&a] && a > 0.3 && w < 0.3 && w > 0.05;
+        if (filled && sub.bounds.size.width > row.bounds.size.width * 0.6 && sub.bounds.size.height > 40
+            && (!best || sub.bounds.size.height > best.bounds.size.height)) best = sub;
+        if (depth < 3) {
+            UIView *inner = filledBlock(row, sub, depth + 1);
+            if (inner && (!best || inner.bounds.size.height > best.bounds.size.height)) best = inner;
+        }
+    }
+    return best;
+}
+
+static void clearGreys(UIView *view, int depth) {
+    for (UIView *sub in view.subviews) {
+        CGFloat w = 0, a = 0;
+        if ([sub.backgroundColor getWhite:&w alpha:&a] && a > 0.3 && w < 0.3 && sub.bounds.size.height > 4) sub.backgroundColor = UIColor.clearColor;
+        if (depth < 3) clearGreys(sub, depth + 1);
+    }
+}
+
+// Profile menu on (Liquid Glass): each button the drawer shows on a card of glass the size of the button. A
+// row that draws its own block (the account) has the card exactly where the block was, its grey cleared; a
+// tall row of round avatars (activity, invite) has none.
 static void glassDrawer(UICollectionView *list) {
-    static char kDrawerCardKey;
+    static char kDrawerCardKey, kBlockKey;
     static BOOL logged;
     BOOL on = SGFlag(SGRKeyDrawerGlass, NO);
     NSUInteger cards = 0;
@@ -897,14 +924,22 @@ static void glassDrawer(UICollectionView *list) {
         if (![row isKindOfClass:UICollectionReusableView.class] || [row isKindOfClass:SGModSettingsRow.class]) continue;
         CGSize size = row.bounds.size;
         BOOL wanted = on && row.alpha > 0.01 && size.height >= 30 && size.width > list.bounds.size.width * 0.5;
+        CGRect frame = CGRectInset(row.bounds, 10, 4);
+        CGFloat radius = MIN(22, size.height / 2 - 4);
         if (wanted) {
-            for (UIView *span in row.subviews) {
-                CGFloat w = 0, a = 0;
-                if ([span.backgroundColor getWhite:&w alpha:&a] && a > 0.3 && w < 0.3) span.backgroundColor = UIColor.clearColor;
+            UIView *block = objc_getAssociatedObject(row, &kBlockKey) ?: filledBlock(row, row, 0);
+            if (block && block.superview && [block isDescendantOfView:row]) {
+                objc_setAssociatedObject(row, &kBlockKey, block, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                frame = [block convertRect:block.bounds toView:row];
+                radius = MAX(block.layer.cornerRadius, 18);
+                clearGreys(row, 0);
+                block.backgroundColor = UIColor.clearColor;
+            } else if (size.height > 100) {
+                wanted = NO;
             }
-            cards++;
         }
-        SGRGlassCard(row, &kDrawerCardKey, CGRectInset(row.bounds, 10, 4), MIN(22, size.height / 2 - 4), wanted);
+        if (wanted) cards++;
+        SGRGlassCard(row, &kDrawerCardKey, frame, radius, wanted);
     }
     if (on && cards && !logged) {
         logged = YES;

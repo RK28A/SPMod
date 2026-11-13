@@ -154,7 +154,10 @@ void SGRRevealHold(UIView *page, SGRRevealPart parts) {
         });
     }
     if (curtain.superview != page) [page addSubview:curtain];
-    else if (page.subviews.lastObject != curtain) [page bringSubviewToFront:curtain];
+    else if (page.subviews.lastObject != curtain) {
+        SGLoopNote("curtain brought up");
+        [page bringSubviewToFront:curtain];
+    }
     if (!CGRectEqualToRect(curtain.frame, page.bounds)) curtain.frame = page.bounds;
     liftIfComplete(page, state);
 }

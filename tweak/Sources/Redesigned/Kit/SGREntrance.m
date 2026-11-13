@@ -38,5 +38,6 @@ void SGREntrance(UIView *row, UIScrollView *list) {
     enter.beginTime = [layer convertTime:CACurrentMediaTime() fromLayer:nil] + wait;
     enter.fillMode = kCAFillModeBackwards;
     enter.preferredFrameRateRange = CAFrameRateRangeMake(80, 120, 120);
+    SGLoopNote("row entrance");
     [layer addAnimation:enter forKey:kEnter];
 }
