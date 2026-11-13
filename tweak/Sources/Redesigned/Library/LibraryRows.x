@@ -21,6 +21,8 @@ static BOOL gridCard(UIView *cell) {
 }
 
 // Spotify's dark fill on the row and what spans it, cleared so the glass shows.
+static CGFloat sg_darkest = 0.15;   // a grid card's own grey is lighter than a row's black
+
 static void clearRowFill(UIView *cell) {
     CGFloat across = cell.bounds.size.width * 0.9;
     NSMutableArray<UIView *> *spans = [NSMutableArray arrayWithObject:cell];
@@ -30,7 +32,7 @@ static void clearRowFill(UIView *cell) {
         CGFloat alpha = 0;
         UIColor *fill = span.backgroundColor;
         CGFloat r = 0, g = 0, b = 0;
-        if (fill && [fill getRed:&r green:&g blue:&b alpha:&alpha] && alpha > 0.5 && MAX(r, MAX(g, b)) < 0.15) span.backgroundColor = UIColor.clearColor;
+        if (fill && [fill getRed:&r green:&g blue:&b alpha:&alpha] && alpha > 0.5 && MAX(r, MAX(g, b)) < sg_darkest) span.backgroundColor = UIColor.clearColor;
         [spans addObjectsFromArray:span.subviews];
     }
 }
@@ -83,11 +85,17 @@ static void style(UIView *cell) {
     BOOL card = gridCard(cell), row = listRow(cell) || card;
     BOOL glass = SGEnabled(SGRKeyLibraryGlass) && row;
     objc_setAssociatedObject(cell, &kGlassRowKey, row ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    sg_darkest = card ? 0.24 : 0.15;
     if (row) clearRowFill(cell);
+    sg_darkest = 0.15;
     // Glyphs drawn in Spotify's green (pin, download) take the accent on every pass, as the row is reused.
     SGRAccentRetint(cell);
     SGRGlassCard(cell, &kCardKey, card ? CGRectInset(cell.bounds, -6, -6) : CGRectInset(cell.bounds, kCardSide, kCardGap), card ? 18 : kCardRadius, glass);
     if (card && cell.clipsToBounds) cell.clipsToBounds = NO;
+    // The grid's cards touched each other once on glass: each is drawn a little smaller around its centre,
+    // which moves nothing the list lays out.
+    CATransform3D gap = card && glass ? CATransform3DMakeScale(0.88, 0.88, 1) : CATransform3DIdentity;
+    if ((card || !row) && !CATransform3DEqualToTransform(cell.layer.sublayerTransform, gap)) cell.layer.sublayerTransform = gap;
     static BOOL loggedCard;
     if (card && !loggedCard) {
         loggedCard = YES;
@@ -130,7 +138,7 @@ static Class sg_rowClass;
         break;
     }
     CGFloat r = 0, g = 0, b = 0, a = 0;
-    if (row && objc_getAssociatedObject(row, &kGlassRowKey) && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.5 && MAX(r, MAX(g, b)) < 0.15) {
+    if (row && objc_getAssociatedObject(row, &kGlassRowKey) && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.5 && MAX(r, MAX(g, b)) < 0.24) {
         %orig(UIColor.clearColor);
         return;
     }

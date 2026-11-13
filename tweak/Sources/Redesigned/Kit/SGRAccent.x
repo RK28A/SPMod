@@ -488,7 +488,38 @@ BOOL SGRAccentPictureIsStale(UIImage *image) {
 }
 %end
 
+// Text with a picture in it (the now playing bar's line: a glyph drawn in the accent Spotify was first
+// handed, then the song's words) and words coloured in an accent of before: the picture is drawn again in
+// the accent of now and the colour swapped, before the label takes it.
+static NSAttributedString *renewedText(NSAttributedString *text) {
+    if (sg_accent < 0 || !sg_past.count || !text.length || text.length > 400) return text;
+    __block NSMutableAttributedString *changed = nil;
+    UIColor *accent = SGRAccentColor();
+    [text enumerateAttributesInRange:NSMakeRange(0, text.length) options:0 usingBlock:^(NSDictionary *attributes, NSRange range, BOOL *stop) {
+        NSTextAttachment *attachment = attributes[NSAttachmentAttributeName];
+        UIImage *picture = [attachment isKindOfClass:NSTextAttachment.class] ? attachment.image : nil;
+        if (picture && accent && picture.renderingMode != UIImageRenderingModeAlwaysTemplate && SGRAccentPictureIsStale(picture)) {
+            NSTextAttachment *fresh = [NSTextAttachment new];
+            fresh.image = [picture imageWithTintColor:accent renderingMode:UIImageRenderingModeAlwaysOriginal];
+            fresh.bounds = attachment.bounds;
+            if (!changed) changed = [text mutableCopy];
+            [changed addAttribute:NSAttachmentAttributeName value:fresh range:range];
+        }
+        UIColor *color = attributes[NSForegroundColorAttributeName];
+        UIColor *now = [color isKindOfClass:UIColor.class] ? swappedColor(color) : nil;
+        if (now && now != color) {
+            if (!changed) changed = [text mutableCopy];
+            [changed addAttribute:NSForegroundColorAttributeName value:now range:range];
+        }
+    }];
+    return changed ?: text;
+}
+
 %hook UILabel
+- (void)setAttributedText:(NSAttributedString *)text {
+    %orig(renewedText(text));
+}
+
 - (void)setTextColor:(UIColor *)color {
     UIColor *now = swappedColor(color);
     if (now != color && self.textColor == now && SGRAccentKeepsAsking(self, @"text colour")) now = color;

@@ -143,6 +143,15 @@ void SGRRevealHold(UIView *page, SGRRevealPart parts) {
             if (!weakPage || !late || late.lifted) return;
             lift(weakPage, late, [@"still without " stringByAppendingString:partNames(late.awaited & ~late.arrived)]);
         });
+        // Whatever became of the page's state, the curtain itself goes after three seconds: a black page is
+        // worse than one shown before its parts are in.
+        __weak UIView *weakCurtain = curtain;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            UIView *left = weakCurtain;
+            if (!left.superview) return;
+            SGLog(@"redesign reveal: a curtain was still up after 3 s on %@, taken down", weakPage ? pageName(weakPage) : @"a page gone");
+            [left removeFromSuperview];
+        });
     }
     if (curtain.superview != page) [page addSubview:curtain];
     else if (page.subviews.lastObject != curtain) [page bringSubviewToFront:curtain];
