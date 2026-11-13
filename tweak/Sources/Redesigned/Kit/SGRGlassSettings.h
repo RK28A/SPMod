@@ -16,6 +16,7 @@ UIVisualEffect *SGRGlassEffectNow(void);
 NSInteger SGRGlassStyleNow(void);
 // The style and its strength in one number: a card made under another is made again.
 NSInteger SGRGlassLookNow(void);
+double SGRGlassClearFill(void);   // 0 to 1
 // The row in the centre of a library's or a playlist's list drawn larger than the rows away from it.
 void SGRGlassZoomList(UIScrollView *list);
 UIViewController *SGRGlassSettingsPage(void);

@@ -111,6 +111,13 @@ static NSString *lyricsLine(NSString *trackID, NSString **next) {
     // With two voices at once, the one that came in first, and the one singing over it as the next.
     NSInteger index = SGKaraokeLeadLine(lines, position);
     *next = index + 1 < (NSInteger)lines.count ? SGKaraokeLineText(lines[index + 1]) : @"";
+    // Once a track: what the card had to go on, so a note shown over sung words says why.
+    static NSString *told;
+    if (trackID && lines && ![trackID isEqualToString:told] && position > 15000) {
+        told = trackID;
+        SGLog(@"live activity: %@ has %lu lines (timing %ld), at %ld ms line %ld of them", trackID, (unsigned long)lines.count,
+              (long)SGKaraokeLinesTiming(lines), (long)position, (long)index);
+    }
     if (index < 0) return @"♪";
     SGKaraokeLine *current = lines[index];
     BOOL nextFarOff = index + 1 == (NSInteger)lines.count || lines[index + 1].start - position > kBreakMs;

@@ -14,14 +14,14 @@ NSInteger SGRGlassStyleNow(void) {
     return [NSUserDefaults.standardUserDefaults integerForKey:SGRKeyGlassStyle];
 }
 
-static double clearAmount(void) {
+double SGRGlassClearFill(void) {
     id stored = [NSUserDefaults.standardUserDefaults objectForKey:SGRKeyGlassClear];
     return stored ? MIN(1, MAX(0, [stored doubleValue])) : 0.5;
 }
 
 NSInteger SGRGlassLookNow(void) {
     NSInteger style = SGRGlassStyleNow();
-    return style * 1000 + (style == 1 ? (NSInteger)lround(clearAmount() * 100) : 0);
+    return style * 1000 + (style == 1 ? (NSInteger)lround(SGRGlassClearFill() * 100) : 0);
 }
 
 UIVisualEffect *SGRGlassEffectNow(void) {
@@ -33,9 +33,9 @@ UIVisualEffect *SGRGlassEffectNow(void) {
     if (![effect respondsToSelector:@selector(setTintColor:)]) return effect;
     if (style == 2) {
         [effect setValue:[SGRAccentColor() ?: UIColor.whiteColor colorWithAlphaComponent:0.28] forKey:@"tintColor"];
-    } else if (style == 1 && clearAmount() > 0.01) {
-        // The clear glass with white let into it: none is the bare glass, the most is a step from frosted.
-        [effect setValue:[UIColor colorWithWhite:1 alpha:0.24 * clearAmount()] forKey:@"tintColor"];
+    } else if (style == 1 && SGRGlassClearFill() > 0.5) {
+        // Past half, white is let into the glass, up to a step from frosted.
+        [effect setValue:[UIColor colorWithWhite:1 alpha:0.3 * (SGRGlassClearFill() - 0.5)] forKey:@"tintColor"];
     }
     return effect;
 }
@@ -187,7 +187,7 @@ UIViewController *SGRGlassSettingsPage(void) {
                           @"No glass, only a bright rim: nothing is blurred, the lightest on the phone."];
     style.chosen = ^(NSInteger index) { refresh(); };
     SGModRow *clear = SGSliderRow(@"Clear glass fill", @"0% is the bare glass: its rim and the light it bends. 100% is a step from frosted.", 0, 1, 0.05,
-        ^double { return clearAmount(); },
+        ^double { return SGRGlassClearFill(); },
         ^(double value) {
             [NSUserDefaults.standardUserDefaults setDouble:value forKey:SGRKeyGlassClear];
             refresh();

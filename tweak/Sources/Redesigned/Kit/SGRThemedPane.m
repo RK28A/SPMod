@@ -19,6 +19,14 @@ static UIView *newCard(void) {
     } else {
         card = [[UIVisualEffectView alloc] initWithEffect:SGRGlassEffectNow()];
         card.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+        // Clear: the system's clear glass still greys what is behind it. The fill sets how much of it shows,
+        // a third at 0% (the bend of the light and a rim, the background seen as it is), all of it at 100%.
+        if (SGRGlassStyleNow() == 1) {
+            double fill = SGRGlassClearFill();
+            card.alpha = 0.32 + 0.68 * fill;
+            card.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.35 - 0.2 * fill].CGColor;
+            card.layer.borderWidth = 1;
+        }
     }
     objc_setAssociatedObject(card, &kStyleKey, @(SGRGlassLookNow()), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     card.userInteractionEnabled = NO;
@@ -42,8 +50,11 @@ void SGRGlassCard(UIView *row, const void *key, CGRect frame, CGFloat radius, BO
         card = newCard();
         objc_setAssociatedObject(row, key, card, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
+    // Kept behind by its layer's depth, never by moving it among the row's views: a view moved during a
+    // layout pass lays its parent out again, and a list that puts its own views back in its order on every
+    // pass then never finishes laying out (the playlist frozen black behind its curtain).
     if (card.superview != row) [row insertSubview:card atIndex:0];
-    else if (row.subviews.firstObject != card) [row sendSubviewToBack:card];
+    if (card.layer.zPosition != -50) card.layer.zPosition = -50;
     if (CGRectEqualToRect(card.frame, frame)) return;
     card.frame = frame;
     if ([card isKindOfClass:UIVisualEffectView.class]) SGShapeGlass(card, radius, NO);
@@ -96,7 +107,7 @@ void SGRThemedPaneFollow(UIScrollView *list) {
     if (!CGRectEqualToRect(pane.frame, frame)) pane.frame = frame;
     fadeIn(pane, MIN(kLead, MAX(0, pane.top - y)));
     [CATransaction commit];
-    if (list.subviews.firstObject != pane) [list sendSubviewToBack:pane];
+    if (pane.layer.zPosition != -100) pane.layer.zPosition = -100;
 }
 
 void SGRThemedPane(UIScrollView *list, CGFloat top) {
