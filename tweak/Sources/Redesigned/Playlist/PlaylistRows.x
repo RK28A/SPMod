@@ -143,7 +143,8 @@ static void fadeUnderBar(UIScrollView *list) {
     UIView *page = list.superview;
     if (!page || !list.window) return;
     CGFloat line = barBottom(page, list);
-    if (line <= 0) return;
+    // The header is the whole page tall while it opens: nothing is under a bar then.
+    if (line <= 0 || line > page.bounds.size.height * 0.45) line = -1000;
     CGFloat shift = CGRectGetMinY(list.frame) - list.contentOffset.y;
     for (UIView *cell in list.subviews) {
         if (![cell isKindOfClass:UICollectionViewCell.class]) continue;

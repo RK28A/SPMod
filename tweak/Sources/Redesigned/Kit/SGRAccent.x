@@ -6,6 +6,8 @@
 #import "SGRAccent.h"
 #import "Settings/SGPageStyle.h"
 #import "SGRAccentTint.h"
+#import "Diagnostics/SGHangSampler.h"
+#import <stdatomic.h>
 
 NSNotificationName const SGRAccentDidChangeNotification = @"SGRAccentDidChangeNotification";
 
@@ -429,7 +431,19 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
 // saw, becomes the accent of now as it is set, so the old one is never drawn.
 // The colour handed back is the same object for the same alpha, so a view set to it twice is set to what it
 // already has, and one that sets the old colour on every pass is counted and left alone (SGRAccentKeepsAsking).
+// Set by the watchdog when the main thread has stopped answering: the setters below then let everything
+// through as it is set for the rest of the launch, so a loop going round through them ends.
+static atomic_bool sg_swapsOff;
+
+static void swapsOff(void) {
+    if (atomic_exchange(&sg_swapsOff, true)) return;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        SGLog(@"accent: the main thread was stuck, colours, texts and pictures are no longer swapped as they are set until the next launch");
+    });
+}
+
 static UIColor *swappedColor(UIColor *color) {
+    if (atomic_load(&sg_swapsOff)) return color;
     static NSMutableDictionary<NSNumber *, UIColor *> *made;
     static NSInteger madeFor = -1;
     CGFloat r = 0, g = 0, b = 0, a = 0, saturation = 0;
@@ -483,7 +497,7 @@ BOOL SGRAccentPictureIsStale(UIImage *image) {
 %hook UIView
 - (void)setTintColor:(UIColor *)color {
     UIColor *now = swappedColor(color);
-    if (now != color && self.tintColor == now && SGRAccentKeepsAsking(self, @"tint")) now = color;
+    if (now != color && SGRAccentKeepsAsking(self, @"tint")) now = color;
     %orig(now);
 }
 %end
@@ -517,12 +531,14 @@ static NSAttributedString *renewedText(NSAttributedString *text) {
 
 %hook UILabel
 - (void)setAttributedText:(NSAttributedString *)text {
-    %orig(renewedText(text));
+    NSAttributedString *now = atomic_load(&sg_swapsOff) ? text : renewedText(text);
+    if (now != text && SGRAccentKeepsAsking(self, @"text")) now = text;
+    %orig(now);
 }
 
 - (void)setTextColor:(UIColor *)color {
     UIColor *now = swappedColor(color);
-    if (now != color && self.textColor == now && SGRAccentKeepsAsking(self, @"text colour")) now = color;
+    if (now != color && SGRAccentKeepsAsking(self, @"text colour")) now = color;
     %orig(now);
 }
 %end
@@ -533,6 +549,10 @@ static NSAttributedString *renewedText(NSAttributedString *text) {
 // lays out again when its picture changes never stopped: the playlist page, frozen behind its curtain.
 %hook UIImageView
 - (void)setImage:(UIImage *)image {
+    if (atomic_load(&sg_swapsOff)) {
+        %orig;
+        return;
+    }
     UIImage *drawn = SGRAccentGlyphFor(self, image);
     %orig(drawn);
     SGRAccentGlyphSet(self, drawn != image ? drawn : nil);
@@ -606,6 +626,7 @@ static id swappedValue(id value) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGHangOnStall(swapsOff);
     // Automatic starts from the colour it last had, not from the stored accent until a cover comes in.
     if (SGHidden(SGRKeyAccentAuto)) {
         NSInteger last = SGInt(kAutoLast, -1);
