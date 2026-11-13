@@ -146,7 +146,16 @@ void SGHangSamplerStop(void) {
 static atomic_uint_fast64_t sg_asked;   // mach time of the question not answered yet, 0 when none
 static atomic_bool sg_awake;            // the app is in front, not suspended
 
+static void (*sg_breakers[4])(void);
+static atomic_int sg_breakerCount;
+
+void SGHangOnStall(void (*breaker)(void)) {
+    int at = atomic_fetch_add(&sg_breakerCount, 1);
+    if (at < 4) sg_breakers[at] = breaker;
+}
+
 static void *guard(void *unused) {
+    BOOL broke = NO;
     int samples = 0;
     uint64_t last = mach_absolute_time();
     for (;;) {
@@ -164,11 +173,17 @@ static void *guard(void *unused) {
         if (!asked) {
             if (samples) SGLog(@"hang watchdog: the main thread answers again");
             samples = 0;
+            broke = NO;
             atomic_store(&sg_asked, now);
             dispatch_async(dispatch_get_main_queue(), ^{ atomic_store(&sg_asked, 0); });
             continue;
         }
         double stalled = seconds(now - asked);
+        if (stalled >= 1 && !broke) {
+            broke = YES;
+            int count = MIN(4, atomic_load(&sg_breakerCount));
+            for (int i = 0; i < count; i++) if (sg_breakers[i]) sg_breakers[i]();
+        }
         if (stalled < 2 + samples * 2.0 || samples >= 3) continue;
         uintptr_t frames[kMaxFrames];
         int count = walk(frames);

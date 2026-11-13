@@ -25,10 +25,12 @@ static BOOL sameColor(UIColor *one, UIColor *other) {
 // A glyph is small; a cover is a picture, whatever its colour, and is never drawn again in one colour.
 static const CGFloat kGlyphSide = 32;
 
-// A view whose owner sets the old colour or picture back on every pass, and lays out again when it finds
-// another, turns "set it right as it is set" into a loop that never ends: the playlist page froze black on
-// one. A view handed the same thing back kTurns times in a second is left as its owner sets it, and said.
-static const int kTurns = 200;
+// A view whose owner sets the old colour, text or picture back on every pass, and lays out again when it
+// finds another, turns "set it right as it is set" into a loop that never ends: the playlist page froze
+// black on one, inside a single layout pass. Every swap on a view is counted, and a view swapped more than
+// kTurns times in a second is left as its owner sets it from then on, and said in the log. Nothing honest
+// is swapped that often: a view takes the accent once, and again when it changes.
+static const int kTurns = 24;
 
 @interface SGRTurns : NSObject {
 @public
@@ -50,14 +52,19 @@ BOOL SGRAccentKeepsAsking(UIView *view, NSString *what) {
         turns->since = now;
         objc_setAssociatedObject(view, &kTurnsKey, turns, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    if (turns->left) return YES;
-    if (now - turns->since > 1) {
+    // Left alone for five seconds, then tried again: a loop costs kTurns turns at most, a list scrolled
+    // fast through its reused labels only that long in the old colour.
+    if (turns->left && now - turns->since < 5) return YES;
+    if (turns->left || now - turns->since > 1) {
+        turns->left = NO;
         turns->since = now;
         turns->count = 0;
     }
     if (++turns->count <= kTurns) return NO;
     turns->left = YES;
-    SGLog(@"accent: %@ in %@ was handed its old %@ back %d times in a second, left as its owner sets it",
+    turns->since = now;
+    static NSUInteger told;
+    if (told++ < 40) SGLog(@"accent: %@ in %@ was handed its old %@ back %d times in a second, left as its owner sets it",
           NSStringFromClass(view.class), NSStringFromClass(view.superview.class), what, kTurns);
     return YES;
 }
@@ -104,9 +111,8 @@ UIImage *SGRAccentGlyphFor(UIImageView *glyph, UIImage *image) {
     if (MAX(image.size.width, image.size.height) > kGlyphSide) return image;
     CGSize size = glyph.bounds.size;
     if (MAX(size.width, size.height) > kGlyphSide || !SGRAccentPictureIsStale(image)) return image;
-    UIImage *made = templateOf(image);
-    if (glyph.image == made && SGRAccentKeepsAsking(glyph, @"picture")) return image;
-    return made;
+    if (SGRAccentKeepsAsking(glyph, @"picture")) return image;
+    return templateOf(image);
 }
 
 // After the view has taken it: `made` is the template it now holds, drawn in the accent; nil when it was
