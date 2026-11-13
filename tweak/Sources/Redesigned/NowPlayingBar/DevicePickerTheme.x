@@ -1,4 +1,5 @@
 // The device button of the now playing bar and the device picker it opens, in the redesign's colours.
+#import "Core/SGCore.h"
 #import "Redesigned/Kit/SGRKit.h"
 
 // Spotify draws the button green for the moment it is pressed, before the picker opens: the accent is put
