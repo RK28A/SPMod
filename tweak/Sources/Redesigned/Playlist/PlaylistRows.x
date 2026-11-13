@@ -5,7 +5,7 @@
 // Under the text rather than the whole row, as the Music app draws it; the trailing end clears the page margin.
 static const CGFloat kHairline = 0.5, kHairlineGap = 12;
 
-static char kRowKey, kArtKey, kSubtitleKey, kLineKey, kToolbarKey, kCardKey, kTitleKey, kTopKey;
+static char kRowKey, kArtKey, kSubtitleKey, kLineKey, kToolbarKey, kCardKey, kTopKey;
 static const CGFloat kCardSide = 8, kCardGap = 3, kCardRadius = 18;
 
 // Glass rows (SGRKeyPlaylistGlass): a track's row on a card of glass, and from the first track down the
