@@ -1,3 +1,4 @@
+#import <objc/runtime.h>
 #import "Core/SGCore.h"
 #import "Core/SGGlass.h"
 #import "Settings/SGModPage.h"
@@ -7,6 +8,7 @@
 #import "SGRAccent.h"
 #import "SGRAccentWash.h"
 #import "SGRGlassSettings.h"
+#import "SGRThemedPane.h"
 
 NSInteger SGRGlassStyleNow(void) {
     return [NSUserDefaults.standardUserDefaults integerForKey:SGRKeyGlassStyle];
@@ -30,9 +32,19 @@ static double zoomAmount(void) {
 }
 
 void SGRGlassZoomList(UIScrollView *list) {
-    NSString *name = NSStringFromClass(list.class);
-    if (![name containsString:@"YourLibraryCollectionView"] && ![name containsString:@"FTPTouchCancellingCollectionView"]) return;
+    // Asked on every frame of every scroll: a list is told from its class once, and with the zoom off and
+    // never turned on in this list nothing more is done.
+    static char kListKey, kZoomedKey;
+    NSNumber *ours = objc_getAssociatedObject(list, &kListKey);
+    if (!ours) {
+        NSString *name = NSStringFromClass(list.class);
+        ours = @([name containsString:@"YourLibraryCollectionView"] || [name containsString:@"FTPTouchCancellingCollectionView"]);
+        objc_setAssociatedObject(list, &kListKey, ours, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (!ours.boolValue) return;
     BOOL on = SGFlag(SGRKeyGlassZoom, NO);
+    if (!on && !objc_getAssociatedObject(list, &kZoomedKey)) return;
+    objc_setAssociatedObject(list, &kZoomedKey, on ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     CGFloat middle = list.contentOffset.y + list.bounds.size.height / 2, half = MAX(1, list.bounds.size.height / 2);
     double amount = zoomAmount();
     for (UIView *row in list.subviews) {
@@ -98,13 +110,8 @@ void SGRGlassZoomList(UIScrollView *list) {
     for (NSUInteger i = 0; i < titles.count; i++) {
         UIView *row = [[UIView alloc] initWithFrame:CGRectMake(0, top + i * rowHeight, width, rowHeight)];
         if (glass) {
-            UIVisualEffectView *card = [[UIVisualEffectView alloc] initWithEffect:SGRGlassEffectNow()];
-            card.frame = CGRectInset(row.bounds, 8, library ? 5 : 3);
-            card.layer.cornerRadius = library ? 22 : 18;
-            card.layer.cornerCurve = kCACornerCurveContinuous;
-            card.clipsToBounds = YES;
-            card.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-            [row addSubview:card];
+            static char key;
+            SGRGlassCard(row, &key, CGRectInset(row.bounds, 8, library ? 5 : 3), library ? 22 : 18, YES);
         }
         CGFloat art = rowHeight - (library ? 20 : 16);
         UIView *cover = [[UIView alloc] initWithFrame:CGRectMake(20, (rowHeight - art) / 2, art, art)];
@@ -161,8 +168,9 @@ UIViewController *SGRGlassSettingsPage(void) {
     library.changed = ^(BOOL on) { refresh(); };
     SGModRow *playlist = SGWithSymbol(SGOptionRow(@"Playlist tracks", @"Each track and recommendation on a card of glass", SGRKeyPlaylistGlass), @"music.note.list");
     playlist.changed = ^(BOOL on) { refresh(); };
-    SGModRow *style = SGWithSymbol(SGChoiceRow(@"Glass style", nil, SGRKeyGlassStyle, @[@"Frosted", @"Clear", @"Tinted"], 0), @"drop");
-    style.choiceNotes = @[@"The system's glass, a little milky.", @"Fully see-through glass, the background sharp behind it.", @"Frosted glass tinted with the accent."];
+    SGModRow *style = SGWithSymbol(SGChoiceRow(@"Glass style", nil, SGRKeyGlassStyle, @[@"Frosted", @"Clear", @"Tinted", @"Outline"], 0), @"drop");
+    style.choiceNotes = @[@"The system's glass, a little milky.", @"Fully see-through glass, the background sharp behind it.", @"Frosted glass tinted with the accent.",
+                          @"No glass, only a bright rim: nothing is blurred, the lightest on the phone."];
     style.chosen = ^(NSInteger index) { refresh(); };
     SGModRow *zoom = SGWithSymbol(SGOptionRow(@"Zoom on lists", @"The row in the middle of the screen stands out from the others", SGRKeyGlassZoom), @"plus.magnifyingglass");
     zoom.changed = ^(BOOL on) { refresh(); };

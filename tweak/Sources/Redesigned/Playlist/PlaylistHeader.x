@@ -450,6 +450,11 @@ static void applyHeader(UIView *layout) {
     applyToolbar(headerRoot);
     applyScrims(headerRoot);
     SGRHeaderInfo *info = applyInfo(block, headerRoot, headerVC);
+    // The block rides up into the bar as the header closes, where the title and the buttons showed through
+    // the bar's own: it is faded out before it gets there.
+    CGFloat closed = layout.window.safeAreaInsets.top + 56;
+    CGFloat shown = MIN(1, MAX(0, (layout.bounds.size.height - closed - 70) / 90));
+    if (fabs(info.alpha - shown) > 0.01) info.alpha = shown;
 
     CGFloat planeHeight = plane.bounds.size.height;
     CGFloat restPlane = [objc_getAssociatedObject(plane, &kRestPlaneKey) doubleValue];

@@ -137,6 +137,9 @@ Shared:
   Side menu       Misc → Display useless things in menu (off): the profile picture's menu loses its subscription
                   row, Messages and New message, told by their text in English and French since no tree of the
                   drawer is recorded (App/ModSettings.x, trimDrawer). The redesign puts its light behind it.
+                  The rows under a removed one close up: the list's layout object is given a subclass made at run
+                  time (adoptLayout) whose attributes are its parent's less the heights gone above. Views are never
+                  moved by hand. The stats row loses its "New" mark (quietNew).
   Every page      Redesigned/Kit/SGREdgeEffect.x: a list over the whole screen in the main window's navigation
                   (feed, Recents, listening stats, preferences...) gets the light or the moving background behind
                   it and loses its frosted top band. The drawer's Listening stats row opens the mod's stats page
@@ -147,6 +150,23 @@ Shared:
                   bursts, a flight past four planets, a turn to a sun, into it, down to the star again). Behind
                   Home and the library the page's fills are cleared six views down and the list's dark row fills
                   with them, again as the list scrolls.
+                  Each style keeps its own speed, brightness, colour spread and reaction to music (Appearance →
+                  Customise this style, SGBackdropTune); the spread is 40% unless set, since at the widest a red
+                  theme showed purple. Background frame rate caps every animation of a scene at 30 a second by
+                  default (preferredFrameRateRange), which is most of what kept the phone warm under glass.
+  Accent          Automatic follows the song playing; a page's cover only counts until a song has given a colour
+                  (two sources took the accent from each other). A tint or text colour set to Spotify's green from
+                  a colour the makers' hooks never saw is swapped as it is set, and a small green picture as it
+                  is given to its image view (SGRAccent.x). Only pictures up to 32pt, and only green ones, are
+                  redrawn in the accent (SGRAccentTint.m): rows are swept every pass, and a cover must stay one.
+                  The device picker is SwiftUI: its hosting view is drawn through a hue filter (DevicePickerTheme.x).
+  Playlist rows   The theme behind the tracks comes in over 170pt above the first one through a mask
+                  (SGRThemedPane.m). A track fades out as it goes under the pinned header and pills
+                  (PlaylistRows.x, fadeUnderBar), and the header's own block fades before it rides into the bar.
+  Motion          Appearance → Interface animations (off, subtle, lively): rows of the library and of playlists
+                  fade and settle in as they come on screen (Redesigned/Kit/SGREntrance.m).
+  Stats kept      Shared/ListeningStats/StatsVault.m: the listening log, packed, in the keychain beside the
+                  settings, put back when an install finds no log; erased with the stats.
                   Pause animation with playback (off until switched on, LockScreenFreeze.h) holds the clip while the
                   song is paused: the system's player takes no pause or seek, so a pause swaps in a clip of the one
                   frame the clip is reckoned to be on, and playing again swaps in the clip turned round to start there

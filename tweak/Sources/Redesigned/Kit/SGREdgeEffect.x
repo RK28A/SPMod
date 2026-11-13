@@ -71,9 +71,10 @@ static void theme(UIScrollView *list) {
     }
     if (!told.boolValue) return;
     UIView *page = list.superview;
-    NSString *size = NSStringFromCGSize(page.bounds.size);
-    if ([objc_getAssociatedObject(list, &kSizeKey) isEqualToString:size]) return;
-    objc_setAssociatedObject(list, &kSizeKey, size, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    CGSize size = page.bounds.size;
+    NSValue *placed = objc_getAssociatedObject(list, &kSizeKey);
+    if (placed && CGSizeEqualToSize(placed.CGSizeValue, size)) return;
+    objc_setAssociatedObject(list, &kSizeKey, [NSValue valueWithCGSize:size], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     // Home and the library place their own; a list inside them, which Spotify swaps for a new one as the
     // feed changes, has its fills between it and that light cleared, or the new one comes in black over it.
     UIView *behind = nil;
@@ -82,11 +83,42 @@ static void theme(UIScrollView *list) {
     else SGRAccentWashPlace(page);
 }
 
+// The frosted band at the top of any page-wide list of the main window goes, themed or not: it drew a white
+// haze over Home and a hard edge over a playlist's buttons. Hidden, the effect still leaves its backdrop, a
+// copy of what scrolled under it, which is faded out. Whether a list is one of these is worked out once each
+// time it comes on screen with a size, and what is left for every pass, which a scroll makes each frame,
+// compares classes and never builds a string.
+static char kWideKey;
+static Class sg_passClass;
+
+static void hideBand(UIScrollView *list) {
+    if (@available(iOS 26.0, *)) {
+        NSNumber *wide = objc_getAssociatedObject(list, &kWideKey);
+        if (!wide) {
+            CGSize size = list.bounds.size, screen = list.window.bounds.size;
+            if (size.width < 1 || size.height < 1) return;
+            wide = @(size.width >= screen.width - 1 && size.height >= screen.height * 0.6
+                     && [list.window.accessibilityIdentifier isEqualToString:@"spotify-main-window"]);
+            objc_setAssociatedObject(list, &kWideKey, wide, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        if (!wide.boolValue) return;
+        if (!list.topEdgeEffect.hidden) list.topEdgeEffect.hidden = YES;
+        for (UIView *pass in list.subviews) {
+            if (sg_passClass ? object_getClass(pass) != sg_passClass : ![NSStringFromClass(pass.class) containsString:@"TouchPassthrough"]) continue;
+            if (!sg_passClass) sg_passClass = object_getClass(pass);
+            for (UIView *edge in pass.subviews) {
+                if (edge.alpha > 0 && [NSStringFromClass(edge.class) containsString:@"ScrollEdgeEffect"]) edge.alpha = 0;
+            }
+        }
+    }
+}
+
 %hook UIScrollView
 - (void)didMoveToWindow {
     %orig;
     objc_setAssociatedObject(self, &kThemedKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(self, &kSizeKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(self, &kWideKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     if (self.window) soften(self);
 }
 
@@ -95,23 +127,7 @@ static void theme(UIScrollView *list) {
     if (!self.window) return;
     soften(self);
     theme(self);
-    // The frosted band at the top of any page-wide list of the main window goes, themed or not: it drew a
-    // white haze over Home and a hard edge over a playlist's buttons.
-    if (@available(iOS 26.0, *)) {
-        CGSize size = self.bounds.size, screen = self.window.bounds.size;
-        if (!self.topEdgeEffect.hidden && size.width >= screen.width - 1 && size.height >= screen.height * 0.6
-            && [self.window.accessibilityIdentifier isEqualToString:@"spotify-main-window"]) self.topEdgeEffect.hidden = YES;
-        // Hidden, the effect still leaves its backdrop: a copy of what scrolled under it, which showed as a
-        // haze over Home and as a second list over a playlist's top. It is faded out.
-        if (self.topEdgeEffect.hidden) {
-            for (UIView *pass in self.subviews) {
-                if (![NSStringFromClass(pass.class) containsString:@"TouchPassthrough"]) continue;
-                for (UIView *edge in pass.subviews) {
-                    if ([NSStringFromClass(edge.class) containsString:@"ScrollEdgeEffect"] && edge.alpha > 0) edge.alpha = 0;
-                }
-            }
-        }
-    }
+    hideBand(self);
     SGRThemedPaneFollow(self);
     SGRGlassZoomList(self);
 }

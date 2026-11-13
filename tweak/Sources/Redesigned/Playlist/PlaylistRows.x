@@ -19,6 +19,7 @@ static void glassTrack(UIView *cell, UIView *row) {
     SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, track && SGFlag(SGRKeyPlaylistGlass, NO));
     UIScrollView *list = [cell.superview isKindOfClass:UIScrollView.class] ? (UIScrollView *)cell.superview : nil;
     if (!track || !list) return;
+    SGREntrance(cell, list);
     NSNumber *seen = objc_getAssociatedObject(list, &kTopKey);
     CGFloat top = CGRectGetMinY(cell.frame);
     if (seen && seen.doubleValue <= top) return;
@@ -115,6 +116,51 @@ static void applyRow(UIView *cell) {
     }
     glassTrack(cell, row);
 }
+
+// The header and the pills under it stay at the top of the page with nothing behind them, so the tracks
+// passed under them in full view. A row is faded out as its top goes under their lower edge, and is gone
+// before it is behind the pills. The header and the pills are the page's own views beside the list (the
+// recorded tree): PL.Header, and the curation toolbar's content view.
+static char kDimmedKey;
+static const CGFloat kUnder = 22;   // how far under the edge a row is before it is gone
+
+static CGFloat barBottom(UIView *page, UIScrollView *list) {
+    static Class pills;
+    CGFloat bottom = 0;
+    for (UIView *sub in page.subviews) {
+        if (sub == list || sub.hidden || sub.alpha < 0.01) continue;
+        if ([sub.accessibilityIdentifier isEqualToString:@"PL.Header"]) {
+            bottom = MAX(bottom, CGRectGetMaxY(sub.frame));
+        } else if (pills ? [sub isKindOfClass:pills] : [NSStringFromClass(sub.class) containsString:@"CurationActionsToolbar"]) {
+            if (!pills) pills = sub.class;
+            bottom = MAX(bottom, CGRectGetMaxY(sub.frame));
+        }
+    }
+    return bottom;
+}
+
+static void fadeUnderBar(UIScrollView *list) {
+    UIView *page = list.superview;
+    if (!page || !list.window) return;
+    CGFloat line = barBottom(page, list);
+    if (line <= 0) return;
+    CGFloat shift = CGRectGetMinY(list.frame) - list.contentOffset.y;
+    for (UIView *cell in list.subviews) {
+        if (![cell isKindOfClass:UICollectionViewCell.class]) continue;
+        CGFloat shown = MIN(1, MAX(0, (CGRectGetMinY(cell.frame) + shift - line + kUnder) / kUnder));
+        BOOL dimmed = objc_getAssociatedObject(cell, &kDimmedKey) != nil;
+        if (shown >= 1 && !dimmed) continue;
+        if (fabs(cell.alpha - shown) > 0.01) cell.alpha = shown;
+        if ((shown < 1) != dimmed) objc_setAssociatedObject(cell, &kDimmedKey, shown < 1 ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+%hook _TtC35ListUXPlatform_FreeTierPlaylistImpl32FTPTouchCancellingCollectionView
+- (void)layoutSubviews {
+    %orig;
+    fadeUnderBar((UIScrollView *)self);
+}
+%end
 
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl25ElementCollectionViewCell
 - (void)layoutSubviews {

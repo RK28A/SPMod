@@ -81,6 +81,7 @@ static void style(UIView *cell) {
     // Glyphs drawn in Spotify's green (pin, download) take the accent on every pass, as the row is reused.
     SGRAccentRetint(cell);
     SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, glass);
+    if (row && [cell.superview isKindOfClass:UIScrollView.class]) SGREntrance(cell, (UIScrollView *)cell.superview);
     if (glass) {
         CALayer *line = objc_getAssociatedObject(cell, &kLineKey);
         if (line && !line.hidden) line.hidden = YES;
@@ -99,18 +100,27 @@ static void style(UIView *cell) {
 
 
 // Spotify sets a row's black fill again after its layout (as it appears, as a press ends): a dark fill set on
-// a view of a library row with glass is cleared as it is set.
+// a view of a library row is cleared as it is set. Every view of the app sets its fill through here, so the
+// test is the cheapest that tells: nothing until the library has been opened, then the row's class up the
+// view's parents before the colour is read at all.
+static Class sg_rowClass;
+
 %hook UIView
 - (void)setBackgroundColor:(UIColor *)color {
+    if (!sg_rowClass || !color) {
+        %orig;
+        return;
+    }
+    UIView *row = nil, *view = (UIView *)self;
+    for (int depth = 0; view && depth < 6; depth++, view = view.superview) {
+        if (object_getClass(view) != sg_rowClass) continue;
+        row = view;
+        break;
+    }
     CGFloat r = 0, g = 0, b = 0, a = 0;
-    if (color && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.5 && MAX(r, MAX(g, b)) < 0.15) {
-        UIView *view = (UIView *)self;
-        for (int depth = 0; view && depth < 6; depth++, view = view.superview) {
-            if (objc_getAssociatedObject(view, &kGlassRowKey)) {
-                %orig(UIColor.clearColor);
-                return;
-            }
-        }
+    if (row && objc_getAssociatedObject(row, &kGlassRowKey) && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.5 && MAX(r, MAX(g, b)) < 0.15) {
+        %orig(UIColor.clearColor);
+        return;
     }
     %orig;
 }
@@ -119,6 +129,7 @@ static void style(UIView *cell) {
 %hook _TtC21YourLibrary_CommonKit47YourLibrarySwipeableCollectionViewCellContainer
 - (void)layoutSubviews {
     %orig;
+    if (!sg_rowClass) sg_rowClass = object_getClass(self);
     style((UIView *)self);
 }
 %end

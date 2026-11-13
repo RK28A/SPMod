@@ -167,24 +167,59 @@ static NSString *symbolFor(NSString *text) {
     return @"ellipsis.circle";
 }
 
+// Whether `view` draws a glyph anyone sees: an image view with a picture or an icon view, of a glyph's size,
+// with nothing hidden or faded between it and the row. The compact menu keeps its icon holders and hides them.
+static BOOL drawsGlyph(UIView *view, UIView *within) {
+    if ([view isKindOfClass:UIImageView.class]) {
+        if (!((UIImageView *)view).image) return NO;
+    } else if (![NSStringFromClass(view.class) containsString:@"IconView"]) {
+        return NO;
+    }
+    CGSize size = view.bounds.size;
+    if (size.width < 8 || size.height < 8 || size.width > 32) return NO;
+    for (UIView *up = view; up && up != within; up = up.superview) {
+        if (up.hidden || up.alpha < 0.01) return NO;
+    }
+    return YES;
+}
+
+// A line across the menu, drawn by a view or a layer of it: the menu has none between its options.
+static void fadeLines(UIView *view, CGFloat across, int depth) {
+    for (CALayer *layer in view.layer.sublayers) {
+        if ([layer.delegate isKindOfClass:UIView.class]) continue;
+        if (layer.bounds.size.height <= 1.5 && layer.bounds.size.width > across && layer.opacity > 0) layer.opacity = 0;
+    }
+    for (UIView *sub in view.subviews) {
+        CGSize size = sub.bounds.size;
+        if (size.height <= 1.5 && size.width > across) {
+            if (sub.alpha > 0) sub.alpha = 0;
+        } else if (depth < 3 && ![sub isKindOfClass:UILabel.class] && ![sub isKindOfClass:UIImageView.class]) {
+            fadeLines(sub, across, depth + 1);
+        }
+    }
+}
+
 static void iconRows(UITableView *table) {
     for (UITableViewCell *cell in table.visibleCells) {
+        UIView *content = cell.contentView;
         __block UILabel *label = nil;
-        SGForEachView(cell.contentView, ^(UIView *view) {
+        SGForEachView(content, ^(UIView *view) {
             if (!label && [view isKindOfClass:UILabel.class] && ((UILabel *)view).text.length && view.alpha > 0.01) label = (UILabel *)view;
         });
         if (!label) continue;
         UIImageView *ours = objc_getAssociatedObject(cell, &kIconKey);
         UIView *words = [NSStringFromClass(label.superview.class) containsString:@"EncoreLabel"] ? label.superview : label;
-        CGRect place = [words convertRect:words.bounds toView:cell.contentView];
+        // Where the words are laid out, whatever this pass moved them by before.
+        CGRect laid = CGRectMake(words.center.x - words.bounds.size.width / 2, words.center.y - words.bounds.size.height / 2,
+                                 words.bounds.size.width, words.bounds.size.height);
+        CGRect place = [words.superview convertRect:laid toView:content];
         if (!ours) {
-            // A row that has an icon of its own has one ahead of its words.
+            // A row that shows an icon of its own has one ahead of its words.
             __block BOOL has = NO;
-            SGForEachView(cell.contentView, ^(UIView *view) {
-                if (has || view.hidden || view.alpha < 0.01 || view == words || view == label) return;
-                BOOL glyph = [view isKindOfClass:UIImageView.class] || [NSStringFromClass(view.class) containsString:@"IconView"];
-                CGRect at = [view convertRect:view.bounds toView:cell.contentView];
-                if (glyph && at.size.width <= 32 && CGRectGetMaxX(at) <= CGRectGetMinX(place) + 1) has = YES;
+            SGForEachView(content, ^(UIView *view) {
+                if (has || view == words || view == label || !drawsGlyph(view, content)) return;
+                CGRect at = [view convertRect:view.bounds toView:content];
+                if (CGRectGetMaxX(at) <= CGRectGetMinX(place) + 1) has = YES;
             });
             if (has) continue;
             ours = [UIImageView new];
@@ -194,17 +229,19 @@ static void iconRows(UITableView *table) {
         }
         UIImageSymbolConfiguration *size = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightRegular];
         ours.image = [UIImage systemImageNamed:symbolFor(label.text) withConfiguration:size];
-        if (ours.superview != cell.contentView) [cell.contentView addSubview:ours];
-        CGFloat x = CGRectGetMinX(place) - (CGAffineTransformIsIdentity(words.transform) ? 0 : kIconShift);
-        ours.frame = CGRectMake(x, CGRectGetMidY(place) - 12, 24, 24);
-        CGAffineTransform moved = CGAffineTransformMakeTranslation(kIconShift, 0);
+        if (ours.superview != content) [content addSubview:ours];
+        ours.frame = CGRectMake(CGRectGetMinX(place), CGRectGetMidY(place) - 12, 24, 24);
+        // The words make room for it, and where their longest line would then leave the row they are drawn a
+        // little smaller instead, from their leading edge.
+        CGFloat written = [label textRectForBounds:label.bounds limitedToNumberOfLines:label.numberOfLines].size.width;
+        CGFloat room = content.bounds.size.width - 12 - CGRectGetMinX(place) - kIconShift;
+        CGFloat scale = written > room && written > 1 ? MAX(0.78, room / written) : 1;
+        CGAffineTransform moved = CGAffineTransformMake(scale, 0, 0, scale, kIconShift - (1 - scale) * laid.size.width / 2, 0);
         if (!CGAffineTransformEqualToTransform(words.transform, moved)) words.transform = moved;
     }
-    // No line between Spotify's options and the mod's under them.
+    // No line between Spotify's options, nor between them and the mod's under them.
     table.separatorStyle = UITableViewCellSeparatorStyleNone;
-    for (UIView *view in table.subviews) {
-        if (view.bounds.size.height <= 1.5 && view.bounds.size.width > table.bounds.size.width * 0.5 && view.alpha > 0) view.alpha = 0;
-    }
+    fadeLines(table, table.bounds.size.width * 0.5, 0);
 }
 
 static void install(UIViewController *menu) {

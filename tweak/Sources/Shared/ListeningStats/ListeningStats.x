@@ -8,14 +8,27 @@
 #import "Shared/Player/PlayerState.h"
 #import "ListeningStats.h"
 #import "SGPlayLog.h"
+#import "StatsVault.h"
+
+static NSString *logPath(void) {
+    NSString *support = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
+    return [support stringByAppendingPathComponent:@"spoti.pw/Listening.tsv"];
+}
 
 SGPlayLog *SGListeningLog(void) {
     static SGPlayLog *log;
     if (!log) {
-        NSString *support = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
-        log = [[SGPlayLog alloc] initWithPath:[support stringByAppendingPathComponent:@"spoti.pw/Listening.tsv"]];
+        // A reinstall starts with the plays the keychain kept (StatsVault.h), then keeps them there again.
+        SGStatsVaultRestore(logPath());
+        log = [[SGPlayLog alloc] initWithPath:logPath()];
+        [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue
+                                                    usingBlock:^(NSNotification *note) { SGStatsVaultSave(logPath(), YES); }];
     }
     return log;
+}
+
+void SGStatsVaultSaveLog(void) {
+    SGStatsVaultSave(logPath(), YES);
 }
 
 static NSString *stringIn(id value) {
@@ -51,6 +64,7 @@ static BOOL isMusic(NSString *uri) {
         _play.end = (int64_t)time(NULL);
         _play.ms = (int64_t)(_listened * 1000);
         [SGListeningLog() record:_play];
+        SGStatsVaultSave(logPath(), NO);
     }
     _play = nil;
 }

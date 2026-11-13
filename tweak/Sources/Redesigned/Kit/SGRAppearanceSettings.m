@@ -4,6 +4,7 @@
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "SGRAccent.h"
+#import "SGREntrance.h"
 #import "Redesigned/Home/Home.h"
 #import "Redesigned/Navbar/Navbar.h"
 #import "Shared/Presets/SGPresets.h"
@@ -46,7 +47,10 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
     SGModRow *gradient = SGSwitchRow(@"Bottom navbar gradient", @"Show the black fade behind the bottom of the glass tab bar",
                                      SGRKeyNavbarBottomGradient);
     gradient.changed = ^(BOOL on) { SGRSetTabBarGradientVisible(on); };
-    SGModRow *autoAccent = SGOptionRow(@"Automatic accent colour", @"Follows the page or song cover", SGRKeyAccentAuto);
+    SGModRow *autoAccent = SGOptionRow(@"Automatic accent colour", @"Follows the cover of the song playing", SGRKeyAccentAuto);
+    SGModRow *entrance = SGWithSymbol(SGChoiceRow(@"Interface animations", nil, SGRKeyEntrance, @[@"Off", @"Subtle", @"Lively"], 1), @"wand.and.stars");
+    entrance.choiceNotes = @[@"Rows are simply there.", @"Rows of the library and of playlists fade in and settle as they come on screen.",
+                             @"The same with more travel and a little bounce, one row after another as a page opens."];
     autoAccent.refreshOn = SGRAccentDidChangeNotification;
     SGModRow *accent = SGWithSymbol(SGStatActionRow(@"Accent colour", nil, ^NSString *{ return SGRAccentLabel(); }, ^{ chooseAccent(); }), @"paintpalette");
     accent.refreshOn = SGRAccentDidChangeNotification;
@@ -58,6 +62,7 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
         gradient,
         accent,
         autoAccent,
+        entrance,
         plainCheck,
         prettier,
         explicitMark,

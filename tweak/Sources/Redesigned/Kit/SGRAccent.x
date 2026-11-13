@@ -5,6 +5,7 @@
 #import "SGRKit.h"
 #import "SGRAccent.h"
 #import "Settings/SGPageStyle.h"
+#import "SGRAccentTint.h"
 
 NSNotificationName const SGRAccentDidChangeNotification = @"SGRAccentDidChangeNotification";
 
@@ -153,9 +154,10 @@ static CGImageRef recolored(CGImageRef picture, UIColor *color) {
 // Each picture is looked at once an accent: what a view or layer was last seen holding, and under which
 // accent, is kept on it.
 static BOOL seenBefore(id holder, const void *picture) {
-    NSString *now = [NSString stringWithFormat:@"%p %ld", picture, (long)sg_accent];
-    if ([objc_getAssociatedObject(holder, &kSeenKey) isEqualToString:now]) return YES;
-    objc_setAssociatedObject(holder, &kSeenKey, now, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    unsigned long long now = (unsigned long long)(uintptr_t)picture ^ ((unsigned long long)sg_accent << 40);
+    NSNumber *seen = objc_getAssociatedObject(holder, &kSeenKey);
+    if (seen && seen.unsignedLongLongValue == now) return YES;
+    objc_setAssociatedObject(holder, &kSeenKey, @(now), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     return NO;
 }
 
@@ -270,8 +272,16 @@ static void turned(NSInteger before) {
     });
 }
 
-static void applyAutoColor(UIColor *source) {
+// Automatic has two sources, the page's cover and the song's, and each used to take the accent from the
+// other as it came in: a page opened while a song played went to its colour, then back at the next track.
+// The song playing is the one followed; a page's colour only counts until a song has given one.
+static BOOL sg_songGave;
+static NSString *const kAutoLast = @"spotifyglass.redesign.accent.autoLast";
+
+static void applyAutoColor(UIColor *source, BOOL song) {
     if (!SGHidden(SGRKeyAccentAuto) || !source) return;
+    if (song) sg_songGave = YES;
+    else if (sg_songGave) return;
     CGFloat h = 0, s = 0, v = 0, a = 1;
     if (![source getHue:&h saturation:&s brightness:&v alpha:&a] || s < 0.12) return;
     UIColor *bright = [UIColor colorWithHue:h saturation:MIN(0.85, MAX(0.48, s * 1.35)) brightness:MAX(0.88, v) alpha:1];
@@ -282,6 +292,7 @@ static void applyAutoColor(UIColor *source) {
     NSInteger before = sg_accent;
     sg_autoAccent = rgb;
     sg_accent = rgb;
+    SGSetInt(kAutoLast, rgb);
     [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
     turned(before);
 }
@@ -375,6 +386,46 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
 }
 %end
 
+// A colour that did not come through the two makers above (an asset's, a P3 one) is caught as it is set as a
+// tint or a text colour, a little wider, since another colour space rounds its green differently.
+static UIColor *swappedColor(UIColor *color) {
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    if (sg_accent < 0 || !color || ![color getRed:&r green:&g blue:&b alpha:&a] || a < 0.02) return color;
+    for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) {
+        CGFloat gr, gg, gb;
+        unpack(kGreens[i], &gr, &gg, &gb);
+        if (fabs(r - gr) > 0.05 || fabs(g - gg) > 0.05 || fabs(b - gb) > 0.05) continue;
+        CGFloat ar, ag, ab, factor = gg / (0xD7 / 255.0);
+        unpack((uint32_t)sg_accent, &ar, &ag, &ab);
+        return [UIColor colorWithRed:MIN(1, ar * factor) green:MIN(1, ag * factor) blue:MIN(1, ab * factor) alpha:a];
+    }
+    return color;
+}
+
+%hook UIView
+- (void)setTintColor:(UIColor *)color {
+    %orig(swappedColor(color));
+}
+%end
+
+%hook UILabel
+- (void)setTextColor:(UIColor *)color {
+    %orig(swappedColor(color));
+}
+%end
+
+// A glyph's picture changes without its row being laid out again (a download starting): it is looked at as
+// it comes in. Only small views, so a cover's image costs one comparison here.
+%hook UIImageView
+- (void)setImage:(UIImage *)image {
+    %orig;
+    if (!image || image.renderingMode == UIImageRenderingModeAlwaysTemplate) return;
+    CGSize size = self.bounds.size;
+    if (size.width < 1 || size.width > 28 || size.height > 28) return;
+    SGRAccentRetintGlyph(self);
+}
+%end
+
 static CGColorRef swappedCopy(CGColorRef color) {
     if (!color || CFGetTypeID(color) != CGColorGetTypeID() || CGColorGetNumberOfComponents(color) != 4) return NULL;
     const CGFloat *c = CGColorGetComponents(color);
@@ -442,18 +493,23 @@ static id swappedValue(id value) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    // Automatic starts from the colour it last had, not from the stored accent until a cover comes in.
+    if (SGHidden(SGRKeyAccentAuto)) {
+        NSInteger last = SGInt(kAutoLast, -1);
+        if (last >= 0 && last <= 0xFFFFFF) sg_autoAccent = last;
+    }
     sg_accent = chosen();
     if (SGHidden(SGRKeyAccentAuto)) {
         [NSNotificationCenter.defaultCenter addObserverForName:SGRFieldColorDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             UIColor *color = note.userInfo[@"color"];
-            if (color) applyAutoColor(color);
+            if (color) applyAutoColor(color, NO);
         }];
         [NSNotificationCenter.defaultCenter addObserverForName:SGRNowPlayingArtworkDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             UIImage *image = note.userInfo[@"image"];
             if (!image) return;
             SGRPaletteRequest req = {0};
             [SGRPalette paletteForImage:image request:req completion:^(SGRPalette *palette) {
-                if (palette.fieldColor) applyAutoColor(palette.fieldColor);
+                if (palette.fieldColor) applyAutoColor(palette.fieldColor, YES);
             }];
         }];
     }

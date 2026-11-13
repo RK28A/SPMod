@@ -46,11 +46,63 @@ static UIColor *currentColor(void) {
     return accentColor();
 }
 
-static UIColor *shifted(UIColor *color, CGFloat by) {
+#pragma mark - each style's own settings
+
+static const double kTuneRest[] = {1, 1, 0.4, 1}, kTuneLeast[] = {0.25, 0.2, 0, 0}, kTuneMost[] = {2.5, 1, 1, 2};
+
+static NSString *tuneKey(SGBackdropTune what, NSInteger style) {
+    return [NSString stringWithFormat:@"spotifyglass.animatedbg.tune.%ld.%ld", (long)what, (long)style];
+}
+
+double SGBackdropTuneValue(SGBackdropTune what, NSInteger style) {
+    id stored = [NSUserDefaults.standardUserDefaults objectForKey:tuneKey(what, style)];
+    return stored ? MIN(kTuneMost[what], MAX(kTuneLeast[what], [stored doubleValue])) : kTuneRest[what];
+}
+
+// A slider sends a value at every step: the backgrounds are built again once it has stopped.
+static void changedSoon(void) {
+    static NSUInteger turn;
+    NSUInteger mine = ++turn;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (mine == turn) [NSNotificationCenter.defaultCenter postNotificationName:SGBackdropDidChangeNotification object:nil];
+    });
+}
+
+void SGBackdropSetTune(SGBackdropTune what, NSInteger style, double value) {
+    [NSUserDefaults.standardUserDefaults setDouble:value forKey:tuneKey(what, style)];
+    changedSoon();
+}
+
+void SGBackdropResetTune(NSInteger style) {
+    for (NSInteger what = SGBackdropTuneSpeed; what <= SGBackdropTuneMusic; what++) {
+        [NSUserDefaults.standardUserDefaults removeObjectForKey:tuneKey((SGBackdropTune)what, style)];
+    }
+    changedSoon();
+}
+
+// How far a scene's second and third colours stray from the one it is given, set as a scene is built. At
+// the widest a red came out purple on one side and orange on the other, which read as the wrong theme.
+static CGFloat sg_spread = 0.4;
+
+static UIColor *turned(UIColor *color, CGFloat by) {
     CGFloat h = 0, s = 0, v = 0, a = 1;
     if (![color getHue:&h saturation:&s brightness:&v alpha:&a]) return color;
     h = fmod(h + by + 1, 1);
     return [UIColor colorWithHue:h saturation:s brightness:v alpha:1];
+}
+
+static UIColor *shifted(UIColor *color, CGFloat by) {
+    return turned(color, by * sg_spread);
+}
+
+// Every animation of a built scene drawn `range` times a second, not as often as the screen can.
+static void pace(CALayer *layer, CAFrameRateRange range) {
+    for (NSString *key in layer.animationKeys) {
+        CAAnimation *animation = [[layer animationForKey:key] mutableCopy];
+        animation.preferredFrameRateRange = range;
+        [layer addAnimation:animation forKey:key];
+    }
+    for (CALayer *sub in layer.sublayers) pace(sub, range);
 }
 
 static BOOL sameColor(UIColor *one, UIColor *other) {
@@ -131,6 +183,7 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     CFTimeInterval _began;
     int _meteors;
     NSMutableArray<CALayer *> *_bars;
+    double _speed, _music;
 }
 
 - (instancetype)initWithStyle:(SGBackdropStyle)style color:(UIColor *)color {
@@ -152,7 +205,8 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
 
 - (CFTimeInterval)untilLoopEnds {
     if (_period <= 0 || _began <= 0) return 0;
-    return _period - fmod(CACurrentMediaTime() - _began, _period);
+    CFTimeInterval period = _period / MAX(0.1, _speed);
+    return period - fmod(CACurrentMediaTime() - _began, period);
 }
 
 - (void)layoutSubviews {
@@ -175,9 +229,27 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     _bars = nil;
     for (CALayer *layer in [self.layer.sublayers copy]) [layer removeFromSuperlayer];
     BOOL still = UIAccessibilityIsReduceMotionEnabled();
+    _speed = SGBackdropTuneValue(SGBackdropTuneSpeed, _style);
+    _music = SGBackdropTuneValue(SGBackdropTuneMusic, _style);
+    sg_spread = SGBackdropTuneValue(SGBackdropTuneSpread, _style);
+    double glow = SGBackdropTuneValue(SGBackdropTuneGlow, _style);
+    NSInteger rate = SGInt(SGKeyBackdropRate, 0);
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
     [self build:size still:still];
+    // The style's own speed and the frame rate, on what was just built; what a beat adds later runs as it is.
+    for (CALayer *layer in self.layer.sublayers) {
+        layer.speed = _speed;
+        if (rate < 2) pace(layer, rate == 1 ? CAFrameRateRangeMake(40, 60, 60) : CAFrameRateRangeMake(20, 30, 30));
+    }
+    if (glow < 0.99) {
+        CALayer *dim = [CALayer layer];
+        dim.frame = self.bounds;
+        dim.backgroundColor = UIColor.blackColor.CGColor;
+        dim.opacity = 1 - glow;
+        dim.zPosition = 1000;
+        [self.layer addSublayer:dim];
+    }
     [CATransaction commit];
 }
 
@@ -236,11 +308,15 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
 
 // The music's beat, as it is felt or reckoned (SGBackdropBeat): the styles with room for it answer.
 - (void)beat:(CGFloat)intensity {
-    if (!self.window || UIAccessibilityIsReduceMotionEnabled()) return;
+    if (!self.window || UIAccessibilityIsReduceMotionEnabled() || _music < 0.02) return;
+    // Under 1 the style lets some beats pass; over 1 it answers harder, and the stars throw a second meteor.
+    if (_music < 1 && arc4random_uniform(1000) > _music * 1000) return;
+    intensity = MIN(1, intensity * MAX(1, _music));
     CGSize size = self.bounds.size;
     switch (_style) {
         case SGBackdropStars:
             [self meteor:intensity];
+            if (_music > 1.4) [self meteor:intensity * 0.8];
             break;
         case SGBackdropRipples: {
             CAShapeLayer *ring = [CAShapeLayer layer];
@@ -419,7 +495,7 @@ static CALayer *planet(UIColor *color, CGFloat side, int kind) {
     for (int i = 0; i < 4; i++) {
         CFTimeInterval from = 4 + 5.2 * i, gone = from + 6;
         CGFloat side = longer * (0.2 + 0.03 * i);
-        CALayer *world = planet(shifted(color, hues[i]), side, i);
+        CALayer *world = planet(turned(color, hues[i]), side, i);
         CGPoint near = CGPointMake(middle.x + w * ways[i][0] * 0.04, middle.y + h * ways[i][1] * 0.04);
         CGPoint past = CGPointMake(middle.x + (w + side * 2) * ways[i][0], middle.y + (h + side * 2) * ways[i][1]);
         world.position = still && i == 0 ? CGPointMake(w * 0.72, h * 0.3) : near;
@@ -811,13 +887,34 @@ static BOOL darkFill(UIColor *color) {
     return color && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.9 && MAX(r, MAX(g, b)) < 0.13;
 }
 
-// Any view across the list's width is a row: the library's are containers of its own, not cells.
+// Not a row: a scroll indicator, a touch pass-through, the mod's own. Told once a class, since this is asked
+// of every row on every frame of a scroll.
+static BOOL passedOver(UIView *row) {
+    static char key;
+    Class kind = object_getClass(row);
+    NSNumber *known = objc_getAssociatedObject(kind, &key);
+    if (!known) {
+        NSString *name = NSStringFromClass(kind);
+        known = @([name containsString:@"ScrollIndicator"] || [name containsString:@"TouchPassthrough"] || [name containsString:@"SGModSettingsRow"]);
+        objc_setAssociatedObject(kind, &key, known, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    return known.boolValue;
+}
+
+// Any view across the list's width is a row: the library's are containers of its own, not cells. A row is
+// looked at when it comes to a new place (it is reused as the list scrolls) and at most twice a second
+// where it stays, not on every frame.
 static void clearRows(UICollectionView *list) {
+    static char kPlaceKey, kWhenKey;
     CGFloat across = list.bounds.size.width * 0.9;
+    CFTimeInterval now = CACurrentMediaTime();
     for (UIView *row in list.subviews) {
-        if (row.bounds.size.width < across || [row isKindOfClass:UIImageView.class]) continue;
-        NSString *name = NSStringFromClass(row.class);
-        if ([name containsString:@"ScrollIndicator"] || [name containsString:@"TouchPassthrough"] || [name containsString:@"SGModSettingsRow"]) continue;
+        if (row.bounds.size.width < across || [row isKindOfClass:UIImageView.class] || passedOver(row)) continue;
+        CGFloat top = CGRectGetMinY(row.frame);
+        NSNumber *place = objc_getAssociatedObject(row, &kPlaceKey), *when = objc_getAssociatedObject(row, &kWhenKey);
+        if (place && when && fabs(place.doubleValue - top) < 0.5 && now - when.doubleValue < 0.5) continue;
+        objc_setAssociatedObject(row, &kPlaceKey, @(top), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(row, &kWhenKey, @(now), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         if (darkFill(row.backgroundColor)) row.backgroundColor = UIColor.clearColor;
         CGFloat width = row.bounds.size.width * 0.9;
         NSMutableArray<UIView *> *spans = [NSMutableArray arrayWithArray:row.subviews];

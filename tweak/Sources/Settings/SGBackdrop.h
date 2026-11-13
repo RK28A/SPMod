@@ -29,3 +29,15 @@ void SGBackdropSetSongColor(UIColor *color);
 // latter a steady step stands in while a song plays. Main thread.
 void SGBackdropSetPlaying(BOOL playing);
 void SGBackdropBeat(float intensity);
+
+// Each style's own settings (Appearance → Customise this style), kept per style: how fast it runs (1 is its
+// own pace), how bright it is, how far its colours stray from the one it is given (1 is the widest), and how
+// hard it answers the music (0 not at all; under 1 it lets beats pass, over 1 it answers harder and throws
+// more). A change reaches the backgrounds on screen a moment after the last one.
+typedef NS_ENUM(NSInteger, SGBackdropTune) { SGBackdropTuneSpeed, SGBackdropTuneGlow, SGBackdropTuneSpread, SGBackdropTuneMusic };
+double SGBackdropTuneValue(SGBackdropTune what, NSInteger style);
+void SGBackdropSetTune(SGBackdropTune what, NSInteger style, double value);
+void SGBackdropResetTune(NSInteger style);
+// How often the background is drawn: 0 thirty times a second (the default, the coolest), 1 sixty, 2 as often
+// as the screen allows.
+#define SGKeyBackdropRate @"spotifyglass.animatedbg.rate"
