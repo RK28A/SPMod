@@ -121,7 +121,6 @@ static void applyRow(UIView *cell) {
 // passed under them in full view. A row is faded out as its top goes under their lower edge, and is gone
 // before it is behind the pills. The header and the pills are the page's own views beside the list (the
 // recorded tree): PL.Header, and the curation toolbar's content view.
-static char kDimmedKey;
 static const CGFloat kUnder = 22;   // how far under the edge a row is before it is gone
 
 static CGFloat barBottom(UIView *page, UIScrollView *list) {
@@ -139,29 +138,47 @@ static CGFloat barBottom(UIView *page, UIScrollView *list) {
     return bottom;
 }
 
+// One mask on the list's layer, not a write on each row: a row's alpha set from inside the list's pass made
+// the list lay out again for ever. The mask is a layer of the mod's own, so changing it lays nothing out.
+static char kVeilKey;
+
 static void fadeUnderBar(UIScrollView *list) {
     UIView *page = list.superview;
     if (!page || !list.window) return;
     CGFloat line = barBottom(page, list);
+    CAGradientLayer *veil = objc_getAssociatedObject(list, &kVeilKey);
     // The header is the whole page tall while it opens: nothing is under a bar then.
-    if (line <= 0 || line > page.bounds.size.height * 0.45) line = -1000;
-    CGFloat shift = CGRectGetMinY(list.frame) - list.contentOffset.y;
-    for (UIView *cell in list.subviews) {
-        if (![cell isKindOfClass:UICollectionViewCell.class]) continue;
-        CGFloat shown = MIN(1, MAX(0, (CGRectGetMinY(cell.frame) + shift - line + kUnder) / kUnder));
-        BOOL dimmed = objc_getAssociatedObject(cell, &kDimmedKey) != nil;
-        if (shown >= 1 && !dimmed) continue;
-        if (fabs(cell.alpha - shown) > 0.01) cell.alpha = shown;
-        if ((shown < 1) != dimmed) objc_setAssociatedObject(cell, &kDimmedKey, shown < 1 ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (line <= 0 || line > page.bounds.size.height * 0.45) {
+        if (veil && list.layer.mask == veil) {
+            SGLoopNote("track veil off");
+            list.layer.mask = nil;
+        }
+        return;
     }
+    CGFloat height = list.bounds.size.height;
+    if (height < 1) return;
+    if (!veil) {
+        veil = [CAGradientLayer layer];
+        veil.colors = @[(id)UIColor.clearColor.CGColor, (id)UIColor.clearColor.CGColor, (id)UIColor.blackColor.CGColor, (id)UIColor.blackColor.CGColor];
+        objc_setAssociatedObject(list, &kVeilKey, veil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    CGFloat edge = line - CGRectGetMinY(list.frame);
+    NSArray<NSNumber *> *stops = @[@0, @(MAX(0, edge - kUnder) / height), @(MAX(0, edge) / height), @1];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    if (list.layer.mask != veil) {
+        SGLoopNote("track veil on");
+        list.layer.mask = veil;
+    }
+    if (!CGRectEqualToRect(veil.frame, list.bounds)) veil.frame = list.bounds;
+    if (![veil.locations isEqualToArray:stops]) veil.locations = stops;
+    [CATransaction commit];
 }
 
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl32FTPTouchCancellingCollectionView
 - (void)layoutSubviews {
     %orig;
-    // The fade under the pinned bar set each track's alpha from inside the list's own pass, and the list laid
-    // out again on it 400 times a frame (the log's loop guard): off until it is done another way.
-    (void)fadeUnderBar;
+    if (!SGLoopGuard("playlist list")) fadeUnderBar((UIScrollView *)self);
 }
 %end
 

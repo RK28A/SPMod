@@ -178,6 +178,12 @@ Shared:
                   layout loop. The playlist header's pass had started setting its block's alpha as the header
                   closed, and the header lays out again on that: removed. Core/SGLoopGuard.h stops a pass of the
                   mod's that runs over 400 times before the run loop turns, and logs it ("loop guard").
+  Overlap         Tracks fade under the pinned header and pills through one gradient mask on the list's layer
+                  (PlaylistRows.x, fadeUnderBar), never a row's alpha, which looped the list's layout; the
+                  header's block fades by its layer's opacity. Each change is noted for the loop guard.
+  Speed           A background scene is built once per size, a turn after it is asked for (the page draws
+                  first), and a page coming back keeps its scene. The accent's sweep of every view runs every two
+                  seconds for twenty after a change, then every eight.
   Glass more      Clear glass fill (0 bare glass, 1 a step from frosted, 0.5 unless set) is white let into the
                   clear UIGlassEffect's tint; a card is made again when the style or the fill changes
                   (SGRGlassLookNow). Profile menu (Liquid Glass page) puts each drawer row on a card
