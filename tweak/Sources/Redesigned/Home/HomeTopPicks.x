@@ -484,7 +484,11 @@ static void stripBase(UIView *cell, NSUInteger depth) {
 }
 
 static void paintAura(UICollectionView *list, UIColor *color) {
+    // The cover's colour washed over the top of Home is gone: the theme shows there instead.
     CAGradientLayer *gradient = objc_getAssociatedObject(list, &kAuraKey);
+    [gradient removeFromSuperlayer];
+    objc_setAssociatedObject(list, &kAuraKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (list) return;
     if (!gradient) {
         gradient = [CAGradientLayer layer];
         gradient.zPosition = -1;

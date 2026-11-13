@@ -59,10 +59,6 @@ void SGRThemedPane(UIScrollView *list, CGFloat top) {
         pane = [SGRThemedPaneView new];
         pane.userInteractionEnabled = NO;
         pane.clipsToBounds = YES;
-        pane.sheet = [[UIVisualEffectView alloc] initWithEffect:SGGlassEffect()];
-        pane.sheet.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-        pane.sheet.userInteractionEnabled = NO;
-        [pane addSubview:pane.sheet];
         objc_setAssociatedObject(list, &kPaneKey, pane, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (pane.superview != list) [list insertSubview:pane atIndex:0];
@@ -70,5 +66,4 @@ void SGRThemedPane(UIScrollView *list, CGFloat top) {
     SGRThemedPaneFollow(list);
     // The theme under the sheet, at the back of the pane; the sheet over it.
     SGRAccentWashPlace(pane);
-    if (pane.subviews.lastObject != pane.sheet) [pane bringSubviewToFront:pane.sheet];
 }
