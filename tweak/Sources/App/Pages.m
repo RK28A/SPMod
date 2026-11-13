@@ -2,6 +2,7 @@
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "Pages.h"
+#import "Redesigned/Kit/SGRGlassSettings.h"
 #import "Shared/AlphaIndex/AlphaIndex.h"
 #import "Shared/ArtistBlock/ArtistBlock.h"
 #import "Shared/Concerts/Concerts.h"
@@ -102,6 +103,7 @@ UIViewController *SGAppearanceSettingsPage(void) {
         };
         [rows addObject:SGWithSymbol(redesign, @"sparkles")];
         if (SGRedesignedUIStored()) {
+            [rows addObject:SGWithSymbol(SGPageRow(@"Liquid Glass", ^UIViewController *{ return SGRGlassSettingsPage(); }), @"drop.halffull")];
             [rows addObjectsFromArray:SGRAppearanceRows()];
             [rows addObject:SGRHomeStyleRow()];
             [rows addObject:SGRHomeTopPicksRow()];

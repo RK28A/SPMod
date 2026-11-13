@@ -3,6 +3,9 @@
 #import "Core/SGGlass.h"
 #import "SGRAccentWash.h"
 #import "SGRThemedPane.h"
+#import "SGRGlassSettings.h"
+
+static char kStyleKey;
 
 void SGRGlassCard(UIView *row, const void *key, CGRect frame, CGFloat radius, BOOL wanted) {
     UIVisualEffectView *card = objc_getAssociatedObject(row, key);
@@ -11,11 +14,17 @@ void SGRGlassCard(UIView *row, const void *key, CGRect frame, CGFloat radius, BO
         return;
     }
     if (!card) {
-        card = [[UIVisualEffectView alloc] initWithEffect:SGGlassEffect()];
+        card = [[UIVisualEffectView alloc] initWithEffect:SGRGlassEffectNow()];
+        objc_setAssociatedObject(card, &kStyleKey, @(SGRGlassStyleNow()), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         card.userInteractionEnabled = NO;
         card.accessibilityElementsHidden = YES;
         card.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
         objc_setAssociatedObject(row, key, card, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    // The style chosen in Liquid Glass reaches the cards on screen at their next pass.
+    if ([objc_getAssociatedObject(card, &kStyleKey) integerValue] != SGRGlassStyleNow()) {
+        card.effect = SGRGlassEffectNow();
+        objc_setAssociatedObject(card, &kStyleKey, @(SGRGlassStyleNow()), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (card.superview != row) [row insertSubview:card atIndex:0];
     else if (row.subviews.firstObject != card) [row sendSubviewToBack:card];
