@@ -1,4 +1,5 @@
 #import "Core/SGCore.h"
+#import "Redesigned/Kit/SGRAccent.h"
 #import "Core/SGLog.h"
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
@@ -105,7 +106,9 @@ static NSURL *saveTree(NSString *tree) {
     UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:22 weight:UIImageSymbolWeightSemibold];
     [self setImage:[UIImage systemImageNamed:@"tree.fill" withConfiguration:config] forState:UIControlStateNormal];
     self.tintColor = UIColor.whiteColor;
-    self.backgroundColor = [UIColor colorWithRed:0.1 green:0.55 blue:0.25 alpha:0.92];
+    UIColor *accent = SGRedesignedUI() && SGRAccentColor() ? SGRAccentColor() : SGGreen();
+    self.backgroundColor = [accent colorWithAlphaComponent:0.92];
+    self.layer.shadowColor = accent.CGColor;
     self.layer.cornerRadius = frame.size.width / 2;
     self.layer.borderWidth = 1.5;
     self.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.6].CGColor;
@@ -187,7 +190,13 @@ static void showTreeButton(void) {
     sg_treeWindow = window;
 }
 
+// The row turns the button on and, pressed again, off.
 static void startTreeButton(void) {
+    if (sg_treeWindow) {
+        sg_treeWindow.hidden = YES;
+        sg_treeWindow = nil;
+        return;
+    }
     UIViewController *top = SGTopController();
     showTreeButton();
     // Out of the settings, so the screen to take is the one under them.
@@ -208,7 +217,7 @@ static void copyDiagnostics(void) {
 
 UIViewController *SGDeveloperPage(void) {
     SGModSection *trees = SGNotedSection(@"View trees", @[
-        SGWithSymbol(SGActionRow(@"Click on icon for tree", @"Puts a tree button over the app: open any screen and tap it", ^{ startTreeButton(); }), @"tree"),
+        SGWithSymbol(SGActionRow(@"Click on icon for tree", @"Puts a tree button over the app, or takes it away", ^{ startTreeButton(); }), @"tree"),
     ], @"Tap the tree button on the screen you want: its tree is copied to the clipboard. Drag it out of the way; hold it to put it away.");
 
     SGModSection *logs = SGSection(@"Logs & diagnostics", @[
