@@ -25,13 +25,15 @@ static UIWindow *frontWindow(void) {
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-            if (!window.hidden && [window.accessibilityIdentifier isEqualToString:@"spotify-main-window"] && !SGTopController().presentedViewController) return window;
+            // A sheet or the drawer is drawn in this same window, over the page under it.
+            if (!window.hidden && [window.accessibilityIdentifier isEqualToString:@"spotify-main-window"]) return window;
         }
     }
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
         if (![scene isKindOfClass:UIWindowScene.class]) continue;
         for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-            if (window.hidden || window.alpha <= 0.01 || [window isKindOfClass:SGTreeWindow.class]) continue;
+            if (window.hidden || window.alpha <= 0.01 || [window isKindOfClass:SGTreeWindow.class]
+                || [NSStringFromClass(window.class) containsString:@"TextEffects"] || [NSStringFromClass(window.class) containsString:@"Keyboard"]) continue;
             if (window.isKeyWindow) return window;
             if (!best || window.windowLevel >= best.windowLevel) best = window;
         }
