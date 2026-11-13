@@ -92,7 +92,11 @@ UIColor *SGCardBackground(void) { return [UIColor colorWithWhite:(lookBlack() ? 
 
 UIImage *SGTileImage(NSString *symbol) {
     UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightMedium];
-    UIImage *glyph = [[UIImage systemImageNamed:symbol withConfiguration:config] imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+    return SGTileImageOf([UIImage systemImageNamed:symbol withConfiguration:config]);
+}
+
+UIImage *SGTileImageOf(UIImage *picture) {
+    UIImage *glyph = [picture imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
     CGRect box = CGRectMake(0, 0, 28, 28);
     UIImage *tile = [[[UIGraphicsImageRenderer alloc] initWithSize:box.size] imageWithActions:^(UIGraphicsImageRendererContext *ctx) {
         [[UIColor colorWithWhite:1 alpha:0.12] setFill];

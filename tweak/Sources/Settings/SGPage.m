@@ -1,5 +1,6 @@
 #import "SGPage.h"
 #import "SGPageStyle.h"
+#import "SGBackdrop.h"
 #import "Core/SGCore.h"
 
 
@@ -14,6 +15,17 @@ static BOOL sg_pagesConform;
     self.tableView.backgroundColor = SGPageBackground();
     self.tableView.separatorColor = [UIColor colorWithWhite:1 alpha:0.1];
     self.tableView.sectionHeaderTopPadding = 0;
+    SGBackdropSync(self.tableView);
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(sg_backdropChanged) name:SGBackdropDidChangeNotification object:nil];
+}
+
+- (void)sg_backdropChanged {
+    if (self.isViewLoaded) SGBackdropSync(self.tableView);
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    SGBackdropSync(self.tableView);
 }
 
 - (NSString *)spt_pageIdentifier {

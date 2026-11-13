@@ -5,6 +5,7 @@
 #import "Settings/SGPageStyle.h"
 #import "Settings/SGSourcesPage.h"
 #import "AnimatedArtwork.h"
+#import "LockScreenFreeze.h"
 #import "Shared/LockScreenArtwork/LockScreenArtwork.h"
 #import "Shared/LockScreenLyrics/LockScreenLyrics.h"
 #import "Shared/LockScreenLyrics/SGLyricsClip.h"
@@ -68,6 +69,7 @@ NSArray *SGLockScreenMotionRows(void) {
             sources,
             lowData,
             coverSize,
+            SGLockFreezeRow(),
         ];
     }
     return @[SGLockScreenArtworkNeedsRow()];

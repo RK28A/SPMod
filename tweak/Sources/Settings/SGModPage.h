@@ -16,6 +16,8 @@
 @property (nonatomic, strong) UIColor *color;   // title, subtitle and symbol, for a warning row
 @property (nonatomic, copy) NSString *symbol;
 @property (nonatomic, strong) UIImage *image;
+// The image drawn white on the tile a symbol gets, not bare (SGWithImage).
+@property (nonatomic) BOOL tiled;
 // A switch row that changes the whole app draws SGGlowSwitch instead of a UISwitch.
 @property (nonatomic) BOOL glows;
 // An ⓘ button beside the row's switch, whose tap reads this out under the row's title.
@@ -23,6 +25,7 @@
 @property (nonatomic, copy) BOOL (^visible)(void);
 // A choice row's: a line under each name in its list, in the same order, and what runs once one is stored.
 @property (nonatomic, copy) NSArray<NSString *> *choiceNotes;
+@property (nonatomic, copy) NSArray<UIImage *> *choiceImages;   // a picture leading each name, on a tile
 @property (nonatomic, copy) NSString *choiceFooter;   // under a choice row's list
 @property (nonatomic, copy) void (^chosen)(NSInteger index);
 @property (nonatomic) double minimum, maximum, step;
@@ -75,3 +78,5 @@ SGModSection *SGSection(NSString *title, NSArray<SGModRow *> *rows);
 SGModSection *SGNotedSection(NSString *title, NSArray<SGModRow *> *rows, NSString *footer);
 // Gives a row its leading symbol, drawn on a tile unless the row has a colour of its own.
 SGModRow *SGWithSymbol(SGModRow *row, NSString *symbol);
+// The same with a picture of the caller's own where no symbol says it, on the same tile.
+SGModRow *SGWithImage(SGModRow *row, UIImage *image);

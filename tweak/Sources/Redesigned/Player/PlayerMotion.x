@@ -142,6 +142,10 @@ static NSValue *sg_savedMotionTime;
 static BOOL lyricsBlurEnabledForTrack(NSString *track);
 static NSString *currentLyricsBlurTrack(void);
 
+// A clip wider than it is tall has no top-of-the-player shape: it is drawn as a Canvas is, to the window's
+// full height, filled about its middle, its sides off the screen.
+static const CGFloat kWideAspect = 0.95;
+
 @implementation SGRPlayerMotionView {
     AVQueuePlayer *_player;
     AVPlayerLooper *_looper;
@@ -277,7 +281,7 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
     CGFloat width = bounds.size.width, total = MAX(1, bounds.size.height);
     CGFloat screen = _screenHeight > 0 ? _screenHeight : total;
     CGFloat height = round(width * _aspect);
-    if (_aspect > kCanvasAspect) height = MAX(height, screen);
+    if (_aspect > kCanvasAspect || _aspect < kWideAspect) height = MAX(height, screen);
     CGFloat seam = round(height * kFootFrom), blurFrom = MIN(seam, round(screen * kBlurByControls));
     _picture.frame = bounds;
     _seamBlur.frame = bounds;

@@ -2,6 +2,7 @@
 // screen at the top (SGLiveActivityPreview.m) over the switch, the view it shows and the card's look.
 #import "Core/SGCore.h"
 #import "Settings/SGModPage.h"
+#import "Settings/SGPageStyle.h"
 #import "LiveActivity.h"
 #import "SGLiveActivityPreview.h"
 
@@ -10,7 +11,36 @@ static NSArray<NSString *> *viewNames(void) {
 }
 
 static NSArray<NSString *> *colorNames(void) {
-    return @[@"Spotify", @"Artwork", @"Plain"];
+    return @[@"Spotify", @"Artwork", @"Plain", @"Translucent"];
+}
+
+static NSArray<NSString *> *colorNotes(void) {
+    return @[@"The cover's color, darkened, with Spotify's green on what is lit.",
+             @"The cover's color, darkened, with a light shade of it on what is lit.",
+             @"The lock screen's own material, with nothing laid over it.",
+             @"The lock screen's own material with next to nothing over it, so the card sits with the player above it. Chips are a shade darker to stay readable."];
+}
+
+// iOS draws Now Playing and every Live Activity as cards of its own, in a process of its own, and gives an
+// app nothing to join the two or to put controls into Now Playing. So there is no switch that would only
+// pretend to: the row says so, and offers the card that looks most like Now Playing's.
+static SGModRow *mergeRow(SGLiveActivityPreview *preview, void (^reload)(void)) {
+    __weak SGLiveActivityPreview *weakPreview = preview;
+    return SGStatActionRow(@"Merge with Now Playing", nil, ^NSString *{ return @"Not possible"; }, ^{
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Merge with Now Playing"
+            message:@"iOS draws Now Playing and Live Activities as two separate cards of its own. An app has no way to "
+                    @"join them, or to add Controls, Queue and Lyrics to Now Playing itself, so the card stays a card "
+                    @"of its own under the player.\n\nWhat can be done is make it sit with the player rather than "
+                    @"against it: the Translucent card lets the lock screen show through the way Now Playing's does."
+            preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:@"Use the Translucent card" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            SGSetInt(SGKeyLiveActivityColors, SGLiveActivityColorsTranslucent);
+            [weakPreview reload];
+            if (reload) reload();
+        }]];
+        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
+        [SGTopController() presentViewController:alert animated:YES completion:nil];
+    });
 }
 
 static NSArray<NSString *> *textSizeNames(void) {
@@ -26,13 +56,15 @@ static NSArray<NSString *> *alignNames(void) {
 }
 
 // The page's rows; `preview` is told when one it reads changes, so the mock under the title follows.
-static NSArray<SGModSection *> *sections(SGLiveActivityPreview *preview) {
+static NSArray<SGModSection *> *sections(SGLiveActivityPreview *preview, void (^reload)(void)) {
     __weak SGLiveActivityPreview *weakPreview = preview;
     SGModRow *on = SGOptionRow(@"Live Activity", nil, SGKeyLiveActivity);
     on.changed = ^(BOOL value) { SGSetLiveActivityEnabled(value); };
     SGModRow *view = SGChoiceRow(@"Shows", nil, SGKeyLiveActivityView, viewNames(), SGLiveActivityLyrics);
     view.chosen = ^(NSInteger index) { [weakPreview reload]; };
-    SGModRow *colors = SGChoiceRow(@"Card color", nil, SGKeyLiveActivityColors, colorNames(), SGLiveActivityColorsSpotify);
+    SGModRow *colors = SGChoiceRow(@"Card color", nil, SGKeyLiveActivityColors, colorNames(), SGLiveActivityColorsTranslucent);
+    colors.choiceNotes = colorNotes();
+    colors.choiceFooter = @"The card is the system's: the mod tints it, and cannot draw Liquid Glass of its own on the lock screen.";
     SGModRow *textSize = SGChoiceRow(@"Text size", nil, SGKeyLiveActivityTextSize, textSizeNames(), SGLiveActivityTextMedium);
     SGModRow *without = SGChoiceRow(@"No lyrics", nil, SGKeyLiveActivityWithoutLyrics, withoutLyricsNames(), SGLiveActivityWithoutLyricsNote);
     SGModRow *align = SGChoiceRow(@"Alignment", nil, SGKeyLiveActivityAlignment, alignNames(), SGLiveActivityAlignCenter);
@@ -41,9 +73,11 @@ static NSArray<SGModSection *> *sections(SGLiveActivityPreview *preview) {
     SGModRow *progress = SGOptionRow(@"Progress bar", @"Under the lines", SGKeyLiveActivityProgressBar);
     for (SGModRow *row in @[colors, textSize, without, align]) row.chosen = ^(NSInteger index) { [weakPreview reload]; };
     for (SGModRow *row in @[translation, artwork, progress]) row.changed = ^(BOOL value) { [weakPreview reload]; };
+    SGModRow *onlyPlaying = SGSwitchRow(@"Only while playing", @"The card leaves once the song is paused. iOS brings it back only when Spotify is opened again",
+                                        SGKeyLiveActivityOnlyPlaying);
     return @[
-        SGSection(nil, @[on, view]),
-        SGSection(@"Card", @[colors, textSize, without, align, translation, artwork, progress]),
+        SGSection(nil, @[on, view, onlyPlaying]),
+        SGSection(@"Card", @[colors, textSize, without, align, translation, artwork, progress, mergeRow(preview, reload)]),
     ];
 }
 
@@ -90,7 +124,11 @@ static NSArray<SGModSection *> *sections(SGLiveActivityPreview *preview) {
 
 UIViewController *SGLiveActivitySettingsPage(void) {
     SGLiveActivityPreview *preview = [SGLiveActivityPreview new];
-    SGLiveActivityPage *page = [[SGLiveActivityPage alloc] initWithTitle:@"Live Activity" intro:nil sections:sections(preview) footer:nil];
+    // The alert under Merge with Now Playing can pick a card color: the row beside it reads it again.
+    __block __weak SGLiveActivityPage *weakPage;
+    NSArray<SGModSection *> *rows = sections(preview, ^{ [weakPage.tableView reloadData]; });
+    SGLiveActivityPage *page = [[SGLiveActivityPage alloc] initWithTitle:@"Live Activity" intro:nil sections:rows footer:nil];
+    weakPage = page;
     page.preview = preview;
     return page;
 }

@@ -106,8 +106,8 @@ static void canvasFromService(NSString *uri, void (^done)(NSURL *canvas)) {
     });
 }
 
-void SGMotionClipFor(NSString *uri, NSURL *canvas, NSString *artist, NSString *album, SGMotionShape shape, CGFloat pixels,
-                     void (^done)(NSURL *file, NSString *source)) {
+void SGMotionClipForShapes(NSString *uri, NSURL *canvas, NSString *artist, NSString *album, SGMotionShape shape, CGFloat pixels,
+                           BOOL (^takes)(CGSize shown), void (^done)(NSURL *file, NSString *source)) {
     NSArray<NSString *> *order = SGMotionSourceOrder();
     // The walk holds itself until it ends, when it lets go.
     __block void (^ask)(NSUInteger) = nil;
@@ -122,8 +122,24 @@ void SGMotionClipFor(NSString *uri, NSURL *canvas, NSString *artist, NSString *a
         }
         NSString *source = order[index];
         void (^next)(NSURL *) = ^(NSURL *file) {
-            if (file) finish(file, source);
-            else ask(index + 1);
+            if (!file) {
+                ask(index + 1);
+                return;
+            }
+            if (!takes) {
+                finish(file, source);
+                return;
+            }
+            // A clip whose first frame cannot be read is left to the asker, as it was before shapes were asked about.
+            SGMotionPoster(file, ^(UIImage *poster) {
+                if (!poster || takes(poster.size)) {
+                    finish(file, source);
+                    return;
+                }
+                SGLog(@"motion: the %@ clip of %@ is %.0fx%.0f, a shape its asker does not draw, passed over", source, uri,
+                      poster.size.width, poster.size.height);
+                if (ask) ask(index + 1);
+            });
         };
         if ([source isEqualToString:kCanvas]) {
             if (canvas) SGMotionFile(canvas, next);
@@ -137,6 +153,11 @@ void SGMotionClipFor(NSString *uri, NSURL *canvas, NSString *artist, NSString *a
     };
     ask = step;
     step(0);
+}
+
+void SGMotionClipFor(NSString *uri, NSURL *canvas, NSString *artist, NSString *album, SGMotionShape shape, CGFloat pixels,
+                     void (^done)(NSURL *file, NSString *source)) {
+    SGMotionClipForShapes(uri, canvas, artist, album, shape, pixels, nil, done);
 }
 
 SGModRow *SGMotionSourcesRow(void) {

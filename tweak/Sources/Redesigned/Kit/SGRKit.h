@@ -16,6 +16,7 @@
 //     SGRBridges.h   player state, now playing artwork, the player's open and close
 //     SGRRepaint.h   the areas the redesign keeps transparent when Spotify repaints them
 //     SGRAccent.h    the redesign's accent color; its AMOLED black is SGRAmoled.x, always on
+//     SGRAccentTint.h  the accent as it is now on glyphs Spotify coloured once, at launch
 //     Settings/SGMarquee.h  a title that glides when it is too long, every layer's, imported here for the screens
 //
 // Every hook file of the redesign starts its %ctor with `if (!SGRedesignedUI()) return;` and every one
@@ -35,4 +36,6 @@
 #import "SGRReveal.h"
 #import "SGRRepaint.h"
 #import "SGRAccent.h"
+#import "SGRAccentTint.h"
+#import "SGRAccentWash.h"
 #import "Settings/SGMarquee.h"

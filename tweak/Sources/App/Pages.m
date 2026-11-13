@@ -7,6 +7,8 @@
 #import "Shared/Concerts/Concerts.h"
 #import "Shared/Gestures/Gestures.h"
 #import "Shared/NightMode/NightMode.h"
+#import "Settings/SGBackdrop.h"
+#import "Shared/Fusion/Fusion.h"
 #import "Shared/Lyrics/Lyrics.h"
 #import "Shared/LyricsMeanings/Meanings.h"
 #import "Shared/LyricsTranslation/LyricsTranslation.h"
@@ -110,7 +112,19 @@ UIViewController *SGAppearanceSettingsPage(void) {
     }
     [rows addObjectsFromArray:SGAppFontRows()];
     [rows addObject:SGWithSymbol(SGPageRow(@"Night mode", ^UIViewController *{ return SGNightModeSettingsPage(); }), @"moon.stars")];
-    [rows addObject:SGWithSymbol(SGHideRow(@"Animated background", @"Moving gradient of the accent colour behind the menus", @"spotifyglass.animatedbg"), @"circle.hexagongrid")];
+    SGModRow *backdrop = SGHideRow(@"Animated background", @"A moving background behind the mod's menus", SGKeyBackdrop);
+    backdrop.changed = ^(BOOL on) { [NSNotificationCenter.defaultCenter postNotificationName:SGBackdropDidChangeNotification object:nil]; };
+    SGModRow *backdropStyle = SGChoiceRow(@"Background style", nil, SGKeyBackdropStyle, SGBackdropStyleNames(), 0);
+    SGModRow *backdropColor = SGChoiceRow(@"Background colour", nil, SGKeyBackdropSource, @[@"Follows the song", @"Accent colour"], 0);
+    backdropColor.choiceNotes = @[@"Takes the colour of the cover playing. A new song's colour comes in once the animation ends its loop.",
+                                  @"Keeps the accent colour chosen above."];
+    for (SGModRow *row in @[backdropStyle, backdropColor]) {
+        row.visible = ^BOOL { return SGHidden(SGKeyBackdrop); };
+        row.chosen = ^(NSInteger index) { [NSNotificationCenter.defaultCenter postNotificationName:SGBackdropDidChangeNotification object:nil]; };
+    }
+    [rows addObject:SGWithSymbol(backdrop, @"circle.hexagongrid")];
+    [rows addObject:SGWithSymbol(backdropStyle, @"sparkles")];
+    [rows addObject:SGWithSymbol(backdropColor, @"eyedropper")];
     [rows addObject:sidebarBadgeTextRow()];
     SGModSection *section = SGNotedSection(nil, rows, @"Some changes apply after you restart Spotify.");
     return [[SGModPage alloc] initWithTitle:@"Appearance" intro:nil sections:@[section] footer:nil];
@@ -154,6 +168,7 @@ UIViewController *SGPlayerSettingsPage(void) {
         SGWithSymbol(SGPageRow(@"Gestures", ^UIViewController *{ return SGGesturesSettingsPage(); }), @"hand.tap"),
         SGWithSymbol(blocked, @"person.crop.circle.badge.xmark"),
         SGWithSymbol(SGKeyboardShortcutsRow(), @"command"),
+        SGWithImage(SGPageRow(@"Playlist Fusion", ^UIViewController *{ return SGFusionSettingsPage(); }), SGFusionIcon(SGFusionGlyphMerge, 18)),
     ])];
     NSMutableArray<SGModRow *> *pages = [NSMutableArray array];
     if (native) {

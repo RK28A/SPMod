@@ -147,6 +147,9 @@ static UIImage *previewFor(NSString *artworkID, SGLockLine *line, CGSize size) {
     return preview;
 }
 
+static const CFAbsoluteTime kSlowWrite = 8, kRest = 45;
+static CFAbsoluteTime sg_restUntil;
+
 static BOOL writeClip(NSString *artworkID, SGLockLine *line, CGSize size) {
     NSURL *file = clipFile(artworkID);
     if ([NSFileManager.defaultManager fileExistsAtPath:file.path]) {
@@ -163,6 +166,14 @@ static BOOL writeClip(NSString *artworkID, SGLockLine *line, CGSize size) {
         ok = SGLyricsClipWriteKaraoke(file, backdrop, line.cover.CGImage, size, line.style, line.composition, karaokeSpecFor(line));
         if (backdrop) CGImageRelease(backdrop);
     }
+    // Out of sight iOS slows the encoder to a crawl, a line taking twenty seconds where it takes a few hundred
+    // milliseconds, and an app that keeps the processor that busy in the background is one iOS ends. After a
+    // slow one the clips rest: the lines go out without one until the rest is over.
+    CFAbsoluteTime took = CFAbsoluteTimeGetCurrent() - start;
+    if (took > kSlowWrite) {
+        sg_restUntil = CFAbsoluteTimeGetCurrent() + kRest;
+        SGLog(@"lock lyrics: %@ took %.0f s to write, no clip is drawn for the next %.0f s", artworkID, took, kRest);
+    }
     // The first few of a launch, and any that fails: one a line would fill the log.
     static NSUInteger told;
     if (!ok || told++ < 5) SGLog(@"lock lyrics: %@ %@ in %.0f ms", artworkID, ok ? @"written" : @"not written",
@@ -178,6 +189,7 @@ static void drawAhead(NSString *artworkID, SGLockLine *line, BOOL urgent) {
     CGSize size = SGLyricsClipSize(SGMotionPixels());
     for (NSUInteger kind = 0; kind < 2; kind++) {
         BOOL video = kind == 1;
+        if (video && time < sg_restUntil) continue;
         if (!SGLyricsHasRecentDemand(time, video ? sg_askedAt : sg_previewAskedAt)) continue;
         if (video ? [sg_clips objectForKey:artworkID] != nil : [sg_previews objectForKey:artworkID] != nil) continue;
         NSString *key = [artworkID stringByAppendingString:video ? @"-video" : @"-preview"];

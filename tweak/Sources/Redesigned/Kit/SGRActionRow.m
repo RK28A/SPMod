@@ -1,3 +1,4 @@
+#import "Shared/Fusion/Fusion.h"
 #import "Core/SGCore.h"
 #import "SGRActionRow.h"
 #import "SGRGlass.h"
@@ -91,6 +92,8 @@ static NSString *wordIn(UIView *button) {
 - (void)feedFrom:(UIView *)source {
     if (!source) return;
     _source = source;
+    // The stand-in covers Spotify's shuffle button, so it takes the long press that one would (Shared/Fusion).
+    if ([source.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleStandIn(self, source);
 
     NSString *word = wordIn(source);
     CGSize size = source.bounds.size;
@@ -300,6 +303,8 @@ static BOOL indicatorOn(UIView *button, BOOL *found) {
 - (void)feedFrom:(UIView *)source {
     if (!source) return;
     _source = source;
+    // The stand-in covers Spotify's shuffle button, so it takes the long press that one would (Shared/Fusion).
+    if ([source.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleStandIn(self, source);
 
     if (self.readState) {
         BOOL on = NO;

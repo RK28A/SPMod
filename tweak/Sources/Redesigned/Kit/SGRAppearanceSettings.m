@@ -20,13 +20,11 @@ static void chooseAccent(void) {
         NSInteger rgb = entry.integerValue;
         NSString *hex = [NSString stringWithFormat:@"#%06lX", (long)rgb];
         [sheet addAction:[UIAlertAction actionWithTitle:hex style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            SGSetInt(SGRKeyAccent, rgb);
-            [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
+            SGRSetAccent(rgb);
         }]];
     }
     [sheet addAction:[UIAlertAction actionWithTitle:@"Spotify's green" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
-        SGSetInt(SGRKeyAccent, -1);
-        [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
+        SGRSetAccent(-1);
     }]];
     [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
     sheet.popoverPresentationController.sourceView = top.view;
@@ -47,13 +45,16 @@ NSArray<SGModRow *> *SGRAppearanceRows(void) {
                                      SGRKeyNavbarBottomGradient);
     gradient.changed = ^(BOOL on) { SGRSetTabBarGradientVisible(on); };
     SGModRow *autoAccent = SGOptionRow(@"Automatic accent colour", @"Follows the page or song cover", SGRKeyAccentAuto);
+    autoAccent.refreshOn = SGRAccentDidChangeNotification;
+    SGModRow *accent = SGWithSymbol(SGStatActionRow(@"Accent colour", nil, ^NSString *{ return SGRAccentLabel(); }, ^{ chooseAccent(); }), @"paintpalette");
+    accent.refreshOn = SGRAccentDidChangeNotification;
     SGModRow *plainCheck = SGOptionRow(@"Plain checkmark", @"Without the circle on saved songs", @"spotifyglass.redesign.plaincheck");
     SGModRow *prettier = SGSwitchRow(@"Prettier icons", @"Apple Music style explicit badge", SGRKeyPrettierIcons);
     SGModRow *explicitMark = SGHideRow(@"Explicit mark", @"The E badge next to explicit tracks", SGKeyHideExplicit);
     return @[
         profile,
         gradient,
-        SGWithSymbol(SGStatActionRow(@"Accent colour", nil, ^NSString *{ return SGRAccentLabel(); }, ^{ chooseAccent(); }), @"paintpalette"),
+        accent,
         autoAccent,
         plainCheck,
         prettier,
