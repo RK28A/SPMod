@@ -282,11 +282,21 @@ static void handBackdrop(void) {
 
 // From launch on, not only once the accent has changed: Spotify's own greens are accents of before too, and
 // what it draws in them without making the colour, a picture with the green in it, is only caught here.
+static CFTimeInterval sg_lastChange;
+
 static void keepSweeping(void) {
+    sg_lastChange = CACurrentMediaTime();
     remember(kDefaultAccent);
     for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) remember(kGreens[i]);
     if (sg_sweeper) return;
-    sg_sweeper = [NSTimer scheduledTimerWithTimeInterval:kSweepEvery repeats:YES block:^(NSTimer *timer) { sweep(NO); }];
+    // Every two seconds while the accent is new or a page has just come; once settled, every eight. The
+    // setters catch nearly everything as it is set, and a walk of a playlist's whole tree is not free.
+    static NSUInteger tick;
+    sg_sweeper = [NSTimer scheduledTimerWithTimeInterval:kSweepEvery repeats:YES block:^(NSTimer *timer) {
+        tick++;
+        if (CACurrentMediaTime() - sg_lastChange > 20 && tick % 4) return;
+        sweep(NO);
+    }];
     sg_sweeper.tolerance = 0.5;
 }
 
@@ -320,6 +330,7 @@ static void applyAutoColor(UIColor *source, BOOL song) {
     sg_autoAccent = rgb;
     sg_accent = rgb;
     SGSetInt(kAutoLast, rgb);
+    sg_lastChange = CACurrentMediaTime();
     [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
     turned(before);
 }
@@ -364,6 +375,7 @@ void SGRSetAccent(NSInteger rgb) {
     SGSetInt(SGRKeyAccent, rgb);
     NSInteger now = chosen(), before = sg_accent;
     if (now >= 0) sg_accent = now;
+    sg_lastChange = CACurrentMediaTime();
     [NSNotificationCenter.defaultCenter postNotificationName:SGRAccentDidChangeNotification object:nil];
     if (now >= 0 && now != before) turned(before);
 }

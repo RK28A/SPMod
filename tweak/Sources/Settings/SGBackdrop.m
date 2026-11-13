@@ -184,6 +184,7 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     int _meteors;
     NSMutableArray<CALayer *> *_bars;
     double _speed, _music;
+    BOOL _rebuildAsked;
 }
 
 - (instancetype)initWithStyle:(SGBackdropStyle)style color:(UIColor *)color {
@@ -212,12 +213,30 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
 - (void)layoutSubviews {
     [super layoutSubviews];
     if (CGSizeEqualToSize(_built, self.bounds.size)) return;
-    [self rebuild];
+    [self rebuildSoon];
 }
 
+// A page coming back keeps the scene it had: its animations run on whatever the window. Only a new size
+// builds it again.
 - (void)didMoveToWindow {
     [super didMoveToWindow];
-    if (self.window) [self rebuild];
+    if (!self.window) return;
+    if (CGSizeEqualToSize(_built, self.bounds.size) && self.layer.sublayers.count) return;
+    [self rebuildSoon];
+}
+
+// The scene is built once the page has drawn its first frame, and once however many times it is asked
+// for in a turn: opening a playlist no longer waits on stars being laid out.
+- (void)rebuildSoon {
+    if (_rebuildAsked) return;
+    _rebuildAsked = YES;
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        strongSelf->_rebuildAsked = NO;
+        if (strongSelf.window) [strongSelf rebuild];
+    });
 }
 
 - (void)rebuild {

@@ -460,6 +460,17 @@ static void applyHeaderNow(UIView *layout) {
     applyToolbar(headerRoot);
     applyScrims(headerRoot);
     SGRHeaderInfo *info = applyInfo(block, headerRoot, headerVC);
+    // The block rides up into the bar as the header closes, where the title and the buttons showed through the
+    // bar's own: it is faded out before it gets there, on its layer, which the header does not lay out on.
+    CGFloat closed = layout.window.safeAreaInsets.top + 56;
+    float shown = (float)MIN(1, MAX(0, (layout.bounds.size.height - closed - 70) / 90));
+    if (layout.bounds.size.height > 1 && fabsf(info.layer.opacity - shown) > 0.01) {
+        SGLoopNote("header block opacity");
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        info.layer.opacity = shown;
+        [CATransaction commit];
+    }
 
     CGFloat planeHeight = plane.bounds.size.height;
     CGFloat restPlane = [objc_getAssociatedObject(plane, &kRestPlaneKey) doubleValue];
