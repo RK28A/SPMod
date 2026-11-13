@@ -8,3 +8,9 @@ void SGRAccentRetint(UIView *root);
 // One small picture as it takes a new image: Spotify's green drawn into it becomes the accent at once, not at
 // the next pass over its row (a track's download glyph while it downloads).
 void SGRAccentRetintGlyph(UIImageView *glyph);
+// The two halves of that for the hook on an image view's setter: what it is to hold, then the tint.
+UIImage *SGRAccentGlyphFor(UIImageView *glyph, UIImage *image);
+void SGRAccentGlyphSet(UIImageView *glyph, UIImage *made);
+// YES once a view has been handed the same old colour or picture back too many times in a second to be
+// anything but a loop: the caller then lets the old one through. Logged once a view.
+BOOL SGRAccentKeepsAsking(UIView *view, NSString *what);

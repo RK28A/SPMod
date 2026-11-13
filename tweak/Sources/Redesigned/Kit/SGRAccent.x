@@ -427,16 +427,31 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
 // again long after the accent has moved on (a button as it is pressed, a label as its row is reused). A tint
 // or a text colour that is an accent of before, or Spotify's own green from a maker the hooks above never
 // saw, becomes the accent of now as it is set, so the old one is never drawn.
+// The colour handed back is the same object for the same alpha, so a view set to it twice is set to what it
+// already has, and one that sets the old colour on every pass is counted and left alone (SGRAccentKeepsAsking).
 static UIColor *swappedColor(UIColor *color) {
+    static NSMutableDictionary<NSNumber *, UIColor *> *made;
+    static NSInteger madeFor = -1;
     CGFloat r = 0, g = 0, b = 0, a = 0, saturation = 0;
     if (sg_accent < 0 || !sg_past.count || !color || ![color getRed:&r green:&g blue:&b alpha:&a]) return color;
     // White, grey and black are the interface's own, whatever accent was once picked.
     hueOf(r, g, b, &saturation);
     if (saturation < 0.25) return color;
     sg_slack = 0.03;
-    UIColor *now = renewedColor(color);
+    BOOL was = renewed(&r, &g, &b);
     sg_slack = 0.012;
-    return now ?: color;
+    if (!was) return color;
+    if (madeFor != sg_accent || !made) {
+        made = [NSMutableDictionary dictionary];
+        madeFor = sg_accent;
+    }
+    NSNumber *key = @((int)lround(a * 255));
+    UIColor *now = made[key];
+    if (!now) {
+        now = [UIColor colorWithRed:r green:g blue:b alpha:a];
+        made[key] = now;
+    }
+    return now;
 }
 
 // The same for a small picture with the colour drawn in. What a picture was found to be is kept on it with
@@ -467,25 +482,29 @@ BOOL SGRAccentPictureIsStale(UIImage *image) {
 
 %hook UIView
 - (void)setTintColor:(UIColor *)color {
-    %orig(swappedColor(color));
+    UIColor *now = swappedColor(color);
+    if (now != color && self.tintColor == now && SGRAccentKeepsAsking(self, @"tint")) now = color;
+    %orig(now);
 }
 %end
 
 %hook UILabel
 - (void)setTextColor:(UIColor *)color {
-    %orig(swappedColor(color));
+    UIColor *now = swappedColor(color);
+    if (now != color && self.textColor == now && SGRAccentKeepsAsking(self, @"text colour")) now = color;
+    %orig(now);
 }
 %end
 
 // A glyph's picture changes without its row being laid out again (a download starting): it is looked at as
-// it comes in. Only small views, so a cover's image costs one comparison here.
+// it comes in, and the view is handed the right one in its place, once. Handing it Spotify's and then the
+// right one made two changes of every one of Spotify's, and a button that sets its picture on every pass and
+// lays out again when its picture changes never stopped: the playlist page, frozen behind its curtain.
 %hook UIImageView
 - (void)setImage:(UIImage *)image {
-    %orig;
-    if (!image || image.renderingMode == UIImageRenderingModeAlwaysTemplate) return;
-    CGSize size = self.bounds.size;
-    if (size.width < 1 || size.width > 28 || size.height > 28) return;
-    SGRAccentRetintGlyph(self);
+    UIImage *drawn = SGRAccentGlyphFor(self, image);
+    %orig(drawn);
+    SGRAccentGlyphSet(self, drawn != image ? drawn : nil);
 }
 %end
 

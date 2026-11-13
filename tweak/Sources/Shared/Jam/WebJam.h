@@ -6,7 +6,7 @@
 #define SGKeyWebJam @"spotifyglass.jam.web"
 #define SGWebJamPort 8787
 
-@class UIViewController;
+@class UIViewController, UIImage;
 
 extern NSNotificationName SGWebJamDidChangeNotification;
 
@@ -21,3 +21,8 @@ void SGWebJamRuntimeStart(void);     // at launch: start when the stored switch 
 UIViewController *SGWebJamPage(void);
 // The guest page served at / (WebJamPage.m); all guest data goes in text nodes.
 NSString *SGWebJamHTMLPage(void);
+
+// The join address as a QR code, black on white.
+UIImage *SGWebJamQRCode(NSString *text);
+// A sheet with the code and the address under it, over whatever is on screen (a long press on Start a Jam).
+void SGWebJamShowSheet(void);

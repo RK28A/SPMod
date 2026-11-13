@@ -90,6 +90,8 @@ public final class SGLiveActivityBridge: NSObject {
         }
     }
 
+    private static var requests = 0
+
     @objc public static func show(view: Int, paused: Bool, line: String, nextLine: String,
                                   titles: [String], artists: [String], uris: [String],
                                   tab: Int, title: String, artist: String, shuffle: Bool, repeatMode: Int,
@@ -116,7 +118,8 @@ public final class SGLiveActivityBridge: NSObject {
         }
         do {
             let activity = try Activity.request(attributes: SGLyricsAttributes(), content: content, pushType: nil)
-            log.notice("[spotifyglass] live activity: started \(activity.id, privacy: .public)")
+            requests += 1
+            log.notice("[spotifyglass] live activity: started \(activity.id, privacy: .public), request \(requests, privacy: .public) of this launch")
         } catch {
             log.error("[spotifyglass] live activity: request failed: \(String(describing: error), privacy: .public)")
         }

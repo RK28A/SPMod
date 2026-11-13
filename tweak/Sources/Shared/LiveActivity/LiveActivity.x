@@ -27,7 +27,10 @@ typedef NS_ENUM(NSInteger, SGLiveActivityTab) {
 
 static const NSTimeInterval kTick = 0.25;
 static const NSTimeInterval kPausedTick = 1;
-static const CFAbsoluteTime kPausedGrace = 8;
+// Each card taken down is a new one asked for at the next play, and iOS asks again whether to allow it until
+// "Always Allow" is chosen: a pause of a few seconds took it down and brought the question back over and
+// over. Paused, the card now stays five minutes.
+static const CFAbsoluteTime kPausedGrace = 300;
 // Past a line's sung end by this much, with the next line at least this far off, the line gives way to a note.
 static const NSInteger kBreakMs = 4000;
 // Seconds between attempts to start one, so a refused request (activities turned off) is not retried every tick.

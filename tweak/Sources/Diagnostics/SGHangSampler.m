@@ -137,3 +137,64 @@ void SGHangSamplerStart(NSString *reason, NSTimeInterval duration) {
 void SGHangSamplerStop(void) {
     if (atomic_load(&sg_watches) > 0) atomic_fetch_sub(&sg_watches, 1);
 }
+
+#pragma mark - the watchdog
+
+// Always on, from the launch: the main thread is asked every half second, and one that has not answered for
+// two is sampled, three times a stall, into the log. A freeze (a loop that never ends: the black playlist
+// page) then says where it is, since the log is written off the main thread and read at the next launch.
+static atomic_uint_fast64_t sg_asked;   // mach time of the question not answered yet, 0 when none
+static atomic_bool sg_awake;            // the app is in front, not suspended
+
+static void *guard(void *unused) {
+    int samples = 0;
+    uint64_t last = mach_absolute_time();
+    for (;;) {
+        usleep(500000);
+        uint64_t now = mach_absolute_time();
+        // This thread stopped too (the app was suspended): what it measured is no stall.
+        BOOL slept = seconds(now - last) > 1.5;
+        last = now;
+        uint64_t asked = atomic_load(&sg_asked);
+        if (slept || !atomic_load(&sg_awake)) {
+            atomic_store(&sg_asked, 0);
+            samples = 0;
+            continue;
+        }
+        if (!asked) {
+            if (samples) SGLog(@"hang watchdog: the main thread answers again");
+            samples = 0;
+            atomic_store(&sg_asked, now);
+            dispatch_async(dispatch_get_main_queue(), ^{ atomic_store(&sg_asked, 0); });
+            continue;
+        }
+        double stalled = seconds(now - asked);
+        if (stalled < 2 + samples * 2.0 || samples >= 3) continue;
+        uintptr_t frames[kMaxFrames];
+        int count = walk(frames);
+        samples++;
+        if (count) logSample(frames, count, stalled, samples, @"watchdog: the main thread is stuck");
+    }
+    return NULL;
+}
+
+__attribute__((constructor)) static void startGuard(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!sg_main) {
+            sg_main = mach_thread_self();
+            pthread_t main = pthread_self();
+            sg_stackHigh = (uintptr_t)pthread_get_stackaddr_np(main);
+            sg_stackLow = sg_stackHigh - pthread_get_stacksize_np(main);
+        }
+        atomic_store(&sg_awake, true);
+        NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+        [center addObserverForName:@"UIApplicationDidEnterBackgroundNotification" object:nil queue:nil
+                        usingBlock:^(NSNotification *note) { atomic_store(&sg_awake, false); }];
+        [center addObserverForName:@"UIApplicationDidBecomeActiveNotification" object:nil queue:nil usingBlock:^(NSNotification *note) {
+            atomic_store(&sg_asked, 0);
+            atomic_store(&sg_awake, true);
+        }];
+        pthread_t thread;
+        if (pthread_create(&thread, NULL, guard, NULL) == 0) pthread_detach(thread);
+    });
+}
