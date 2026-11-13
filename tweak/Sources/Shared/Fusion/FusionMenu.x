@@ -139,6 +139,74 @@ static BOOL aboutPlaylist(UITableView *table) {
     return found;
 }
 
+// Every option of the menu with an icon: a row Spotify gives none gets one told by its words, drawn where
+// the others have theirs, its words moved over by as much.
+static char kIconKey;
+static const CGFloat kIconShift = 36;
+
+static NSString *symbolFor(NSString *text) {
+    NSString *t = text.lowercaseString;
+    NSArray<NSArray<NSString *> *> *table = @[
+        @[@"vidéo", @"play.rectangle"], @[@"video", @"play.rectangle"],
+        @[@"exclure", @"person.crop.circle.badge.xmark"], @[@"exclude", @"person.crop.circle.badge.xmark"],
+        @[@"publique", @"globe"], @[@"public", @"globe"], @[@"privée", @"lock"], @[@"private", @"lock"],
+        @[@"supprimer", @"trash"], @[@"delete", @"trash"], @[@"remove", @"minus.circle"], @[@"retirer", @"minus.circle"],
+        @[@"file d'attente", @"text.line.first.and.arrowtriangle.forward"], @[@"queue", @"text.line.first.and.arrowtriangle.forward"],
+        @[@"dossier", @"folder"], @[@"folder", @"folder"], @[@"collabor", @"person.2"],
+        @[@"désépingler", @"pin.slash"], @[@"unpin", @"pin.slash"], @[@"épingler", @"pin"], @[@"pin", @"pin"],
+        @[@"partager", @"square.and.arrow.up"], @[@"share", @"square.and.arrow.up"],
+        @[@"télécharger", @"arrow.down.circle"], @[@"download", @"arrow.down.circle"],
+        @[@"radio", @"dot.radiowaves.left.and.right"], @[@"modifier", @"pencil"], @[@"edit", @"pencil"],
+        @[@"artiste", @"person"], @[@"artist", @"person"], @[@"album", @"square.stack"],
+        @[@"j'aime", @"heart"], @[@"like", @"heart"], @[@"manger", @"fork.knife"],
+        @[@"autre playlist", @"plus.circle"], @[@"playlist", @"music.note.list"], @[@"profil", @"person.crop.circle"],
+    ];
+    for (NSArray<NSString *> *pair in table) {
+        if ([t containsString:pair[0]]) return pair[1];
+    }
+    return @"ellipsis.circle";
+}
+
+static void iconRows(UITableView *table) {
+    for (UITableViewCell *cell in table.visibleCells) {
+        __block UILabel *label = nil;
+        SGForEachView(cell.contentView, ^(UIView *view) {
+            if (!label && [view isKindOfClass:UILabel.class] && ((UILabel *)view).text.length && view.alpha > 0.01) label = (UILabel *)view;
+        });
+        if (!label) continue;
+        UIImageView *ours = objc_getAssociatedObject(cell, &kIconKey);
+        UIView *words = [NSStringFromClass(label.superview.class) containsString:@"EncoreLabel"] ? label.superview : label;
+        CGRect place = [words convertRect:words.bounds toView:cell.contentView];
+        if (!ours) {
+            // A row that has an icon of its own has one ahead of its words.
+            __block BOOL has = NO;
+            SGForEachView(cell.contentView, ^(UIView *view) {
+                if (has || view.hidden || view.alpha < 0.01 || view == words || view == label) return;
+                BOOL glyph = [view isKindOfClass:UIImageView.class] || [NSStringFromClass(view.class) containsString:@"IconView"];
+                CGRect at = [view convertRect:view.bounds toView:cell.contentView];
+                if (glyph && at.size.width <= 32 && CGRectGetMaxX(at) <= CGRectGetMinX(place) + 1) has = YES;
+            });
+            if (has) continue;
+            ours = [UIImageView new];
+            ours.contentMode = UIViewContentModeScaleAspectFit;
+            ours.tintColor = UIColor.whiteColor;
+            objc_setAssociatedObject(cell, &kIconKey, ours, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        UIImageSymbolConfiguration *size = [UIImageSymbolConfiguration configurationWithPointSize:19 weight:UIImageSymbolWeightRegular];
+        ours.image = [UIImage systemImageNamed:symbolFor(label.text) withConfiguration:size];
+        if (ours.superview != cell.contentView) [cell.contentView addSubview:ours];
+        CGFloat x = CGRectGetMinX(place) - (CGAffineTransformIsIdentity(words.transform) ? 0 : kIconShift);
+        ours.frame = CGRectMake(x, CGRectGetMidY(place) - 12, 24, 24);
+        CGAffineTransform moved = CGAffineTransformMakeTranslation(kIconShift, 0);
+        if (!CGAffineTransformEqualToTransform(words.transform, moved)) words.transform = moved;
+    }
+    // No line between Spotify's options and the mod's under them.
+    table.separatorStyle = UITableViewCellSeparatorStyleNone;
+    for (UIView *view in table.subviews) {
+        if (view.bounds.size.height <= 1.5 && view.bounds.size.width > table.bounds.size.width * 0.5 && view.alpha > 0) view.alpha = 0;
+    }
+}
+
 static void install(UIViewController *menu) {
     UIView *root = menu.viewIfLoaded;
     if (!root) return;
@@ -160,6 +228,7 @@ static void install(UIViewController *menu) {
         objc_setAssociatedObject(menu, &kRowKey, row, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     SGLosslessFooterPlace(table, row, width, kRowHeight);
+    iconRows(table);
 }
 
 %hook _TtC24ContextMenu_InternalImpl25ContextMenuViewController
