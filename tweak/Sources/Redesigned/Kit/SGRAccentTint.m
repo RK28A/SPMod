@@ -25,6 +25,43 @@ static BOOL sameColor(UIColor *one, UIColor *other) {
 // A glyph is small; a cover is a picture, whatever its colour, and is never drawn again in one colour.
 static const CGFloat kGlyphSide = 32;
 
+// A view whose owner sets the old colour or picture back on every pass, and lays out again when it finds
+// another, turns "set it right as it is set" into a loop that never ends: the playlist page froze black on
+// one. A view handed the same thing back kTurns times in a second is left as its owner sets it, and said.
+static const int kTurns = 200;
+
+@interface SGRTurns : NSObject {
+@public
+    CFTimeInterval since;
+    int count;
+    BOOL left;
+}
+@end
+
+@implementation SGRTurns
+@end
+
+BOOL SGRAccentKeepsAsking(UIView *view, NSString *what) {
+    static char kTurnsKey;
+    SGRTurns *turns = objc_getAssociatedObject(view, &kTurnsKey);
+    CFTimeInterval now = CACurrentMediaTime();
+    if (!turns) {
+        turns = [SGRTurns new];
+        turns->since = now;
+        objc_setAssociatedObject(view, &kTurnsKey, turns, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (turns->left) return YES;
+    if (now - turns->since > 1) {
+        turns->since = now;
+        turns->count = 0;
+    }
+    if (++turns->count <= kTurns) return NO;
+    turns->left = YES;
+    SGLog(@"accent: %@ in %@ was handed its old %@ back %d times in a second, left as its owner sets it",
+          NSStringFromClass(view.class), NSStringFromClass(view.superview.class), what, kTurns);
+    return YES;
+}
+
 static UIImage *templateOf(UIImage *image) {
     UIImage *made = objc_getAssociatedObject(image, &kTemplateKey);
     if (made) return made;
@@ -39,11 +76,7 @@ static UIImage *templateOf(UIImage *image) {
 static void tintGlyph(UIImageView *glyph, UIView *root, UIColor *accent) {
     UIImage *image = glyph.image;
     if (!image) return;
-    UIImage *made = objc_getAssociatedObject(glyph, &kMadeKey);
-    if (made && made != image) {
-        objc_setAssociatedObject(glyph, &kMadeKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        glyph.tintColor = nil;
-    }
+    SGRAccentGlyphSet(glyph, nil);
     UIButton *button = [glyph.superview isKindOfClass:UIButton.class] ? (UIButton *)glyph.superview : nil;
     BOOL drawnWithTint = image.renderingMode == UIImageRenderingModeAlwaysTemplate
         || (image.renderingMode == UIImageRenderingModeAutomatic && (image.isSymbolImage || button.buttonType == UIButtonTypeSystem));
@@ -57,15 +90,38 @@ static void tintGlyph(UIImageView *glyph, UIView *root, UIColor *accent) {
         }
         return;
     }
-    // A small picture drawn in an accent of before, or in Spotify's green, becomes a template of itself, so
-    // the accent of now can draw it. Any other colour is the picture's own and stays.
+    UIImage *drawn = SGRAccentGlyphFor(glyph, image);
+    if (drawn == image) return;
+    glyph.image = drawn;
+    SGRAccentGlyphSet(glyph, drawn);
+}
+
+// What an image view is to hold when it is handed `image`: the image, or for a small picture drawn in an
+// accent of before (or in Spotify's green) a template of it, the same one every time, so the view never goes
+// from one to the other and back. Any other colour is the picture's own and stays; a cover is no glyph.
+UIImage *SGRAccentGlyphFor(UIImageView *glyph, UIImage *image) {
+    if (!image || image.renderingMode == UIImageRenderingModeAlwaysTemplate || image.isSymbolImage) return image;
+    if (MAX(image.size.width, image.size.height) > kGlyphSide) return image;
     CGSize size = glyph.bounds.size;
-    if (MAX(size.width, size.height) > kGlyphSide || MAX(image.size.width, image.size.height) > kGlyphSide) return;
-    if (!SGRAccentPictureIsStale(image)) return;
-    made = templateOf(image);
-    glyph.image = made;
-    glyph.tintColor = accent;
-    objc_setAssociatedObject(glyph, &kMadeKey, made, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (MAX(size.width, size.height) > kGlyphSide || !SGRAccentPictureIsStale(image)) return image;
+    UIImage *made = templateOf(image);
+    if (glyph.image == made && SGRAccentKeepsAsking(glyph, @"picture")) return image;
+    return made;
+}
+
+// After the view has taken it: `made` is the template it now holds, drawn in the accent; nil when it was
+// handed anything else, and the tint a template of before left on it goes.
+void SGRAccentGlyphSet(UIImageView *glyph, UIImage *made) {
+    UIImage *before = objc_getAssociatedObject(glyph, &kMadeKey);
+    if (!made) {
+        if (!before || glyph.image == before) return;
+        objc_setAssociatedObject(glyph, &kMadeKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        glyph.tintColor = nil;
+        return;
+    }
+    if (before != made) objc_setAssociatedObject(glyph, &kMadeKey, made, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    UIColor *accent = SGRAccentColor();
+    if (accent && !sameColor(glyph.tintColor, accent)) glyph.tintColor = accent;
 }
 
 void SGRAccentRetintGlyph(UIImageView *glyph) {

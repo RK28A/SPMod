@@ -35,6 +35,8 @@
 #import "Pages.h"
 #import "Redesigned/Kit/SGRAccentWash.h"
 #import "Redesigned/Kit/SGRAccent.h"
+#import "Redesigned/Kit/SGRThemedPane.h"
+#import "Redesigned/Kit/SGRGlassSettings.h"
 
 static const CGFloat kRowHeight = 56;
 static char kRowKey, kInsetKey;
@@ -884,6 +886,32 @@ static void relightDrawer(UIViewController *drawer) {
 %end
 
 // The lists lay out after their controllers and again whenever their content changes.
+// Profile menu on (Liquid Glass): each row the drawer shows on a card of glass. A row taken out, or the
+// whole switch off, has none. The account block's own grey is cleared so its glass shows.
+static void glassDrawer(UICollectionView *list) {
+    static char kDrawerCardKey;
+    static BOOL logged;
+    BOOL on = SGFlag(SGRKeyDrawerGlass, NO);
+    NSUInteger cards = 0;
+    for (UIView *row in list.subviews) {
+        if (![row isKindOfClass:UICollectionReusableView.class] || [row isKindOfClass:SGModSettingsRow.class]) continue;
+        CGSize size = row.bounds.size;
+        BOOL wanted = on && row.alpha > 0.01 && size.height >= 30 && size.width > list.bounds.size.width * 0.5;
+        if (wanted) {
+            for (UIView *span in row.subviews) {
+                CGFloat w = 0, a = 0;
+                if ([span.backgroundColor getWhite:&w alpha:&a] && a > 0.3 && w < 0.3) span.backgroundColor = UIColor.clearColor;
+            }
+            cards++;
+        }
+        SGRGlassCard(row, &kDrawerCardKey, CGRectInset(row.bounds, 10, 4), MIN(22, size.height / 2 - 4), wanted);
+    }
+    if (on && cards && !logged) {
+        logged = YES;
+        SGLog(@"side menu: %lu rows on glass", (unsigned long)cards);
+    }
+}
+
 %hook UICollectionView
 - (void)layoutSubviews {
     %orig;
@@ -903,6 +931,7 @@ static void relightDrawer(UIViewController *drawer) {
         // The redesign's light right behind the list, where the drawer's own grey is.
         if (SGRedesignedUI() && self.superview) SGRAccentWashPlace(self.superview);
     }
+    if (drawerList && SGRedesignedUI()) glassDrawer(self);
     if (!row && drawerList)
         row = ensureDrawerRow(self);
     if (row && row.superview != self) [self addSubview:row];

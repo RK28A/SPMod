@@ -75,9 +75,16 @@ static BOOL start(NSString *uri) {
     id player = SGPlaybackPlayer();
     Class contextClass = NSClassFromString(@"ESPContext");
     SEL play = NSSelectorFromString(@"playContext:options:loggingParams:origin:"), setURI = NSSelectorFromString(@"setUri:");
-    if (!player || !contextClass || ![player respondsToSelector:play]) return NO;
+    if (!player || !contextClass || ![player respondsToSelector:play]) {
+        SGLog(@"fusion shuffle: cannot start, player %@, ESPContext %@, playContext %@", player ? NSStringFromClass([player class]) : @"not found yet",
+              contextClass ? @"found" : @"missing", [player respondsToSelector:play] ? @"answered" : @"not answered");
+        return NO;
+    }
     NSObject *context = [[contextClass alloc] init];
-    if (![context respondsToSelector:setURI]) return NO;
+    if (![context respondsToSelector:setURI]) {
+        SGLog(@"fusion shuffle: cannot start, ESPContext takes no setUri:");
+        return NO;
+    }
     @try {
         ((void (*)(id, SEL, id))objc_msgSend)(context, setURI, uri);
         ((id (*)(id, SEL, id, id, id, id))objc_msgSend)(player, play, context, nil, nil, nil);

@@ -12,7 +12,7 @@
 
 // CIQRCodeGenerator draws black on transparent; a false-colour pass puts it on
 // white so it scans in a dark page, and 16× keeps the modules crisp.
-static UIImage *WebJamQRCode(NSString *text) {
+UIImage *SGWebJamQRCode(NSString *text) {
     CIFilter *generator = [CIFilter filterWithName:@"CIQRCodeGenerator"];
     if (!generator || !text.length) return nil;
     [generator setValue:[text dataUsingEncoding:NSUTF8StringEncoding] forKey:@"inputMessage"];
@@ -53,7 +53,7 @@ static UIImage *WebJamQRCode(NSString *text) {
     _card.layer.cornerRadius = 18;
     _card.layer.masksToBounds = YES;
     [self addSubview:_card];
-    _code = [[UIImageView alloc] initWithImage:WebJamQRCode(url)];
+    _code = [[UIImageView alloc] initWithImage:SGWebJamQRCode(url)];
     _code.contentMode = UIViewContentModeScaleAspectFit;
     _code.layer.magnificationFilter = kCAFilterNearest;
     _code.isAccessibilityElement = YES;

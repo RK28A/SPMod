@@ -14,14 +14,28 @@ NSInteger SGRGlassStyleNow(void) {
     return [NSUserDefaults.standardUserDefaults integerForKey:SGRKeyGlassStyle];
 }
 
+static double clearAmount(void) {
+    id stored = [NSUserDefaults.standardUserDefaults objectForKey:SGRKeyGlassClear];
+    return stored ? MIN(1, MAX(0, [stored doubleValue])) : 0.5;
+}
+
+NSInteger SGRGlassLookNow(void) {
+    NSInteger style = SGRGlassStyleNow();
+    return style * 1000 + (style == 1 ? (NSInteger)lround(clearAmount() * 100) : 0);
+}
+
 UIVisualEffect *SGRGlassEffectNow(void) {
     Class glass = NSClassFromString(@"UIGlassEffect");
     if (![glass respondsToSelector:@selector(effectWithStyle:)]) return SGGlassEffect();
     NSInteger style = SGRGlassStyleNow();
     // UIGlassEffectStyle: 0 regular, 1 clear.
     UIVisualEffect *effect = [glass effectWithStyle:style == 1 ? 1 : 0];
-    if (style == 2 && [effect respondsToSelector:@selector(setTintColor:)]) {
+    if (![effect respondsToSelector:@selector(setTintColor:)]) return effect;
+    if (style == 2) {
         [effect setValue:[SGRAccentColor() ?: UIColor.whiteColor colorWithAlphaComponent:0.28] forKey:@"tintColor"];
+    } else if (style == 1 && clearAmount() > 0.01) {
+        // The clear glass with white let into it: none is the bare glass, the most is a step from frosted.
+        [effect setValue:[UIColor colorWithWhite:1 alpha:0.24 * clearAmount()] forKey:@"tintColor"];
     }
     return effect;
 }
@@ -172,6 +186,13 @@ UIViewController *SGRGlassSettingsPage(void) {
     style.choiceNotes = @[@"The system's glass, a little milky.", @"Fully see-through glass, the background sharp behind it.", @"Frosted glass tinted with the accent.",
                           @"No glass, only a bright rim: nothing is blurred, the lightest on the phone."];
     style.chosen = ^(NSInteger index) { refresh(); };
+    SGModRow *clear = SGSliderRow(@"Clear glass fill", @"0% is the bare glass: its rim and the light it bends. 100% is a step from frosted.", 0, 1, 0.05,
+        ^double { return clearAmount(); },
+        ^(double value) {
+            [NSUserDefaults.standardUserDefaults setDouble:value forKey:SGRKeyGlassClear];
+            refresh();
+        }, ^NSString *(double value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; });
+    SGModRow *drawer = SGWithSymbol(SGOptionRow(@"Profile menu", @"Each row of the side menu on a card of glass", SGRKeyDrawerGlass), @"sidebar.left");
     SGModRow *zoom = SGWithSymbol(SGOptionRow(@"Zoom on lists", @"The row in the middle of the screen stands out from the others", SGRKeyGlassZoom), @"plus.magnifyingglass");
     zoom.changed = ^(BOOL on) { refresh(); };
     SGModRow *amount = SGSliderRow(@"Zoom strength", nil, 0.02, 0.2, 0.01, ^double { return zoomAmount(); },
@@ -180,8 +201,8 @@ UIViewController *SGRGlassSettingsPage(void) {
             refresh();
         }, ^NSString *(double value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; });
     SGRGlassPage *page = [[SGRGlassPage alloc] initWithTitle:@"Liquid Glass" intro:nil sections:@[
-        SGNotedSection(@"Surfaces", @[library, playlist], @"What is drawn on glass. Changes show at once."),
-        SGSection(@"Glass", @[style]),
+        SGNotedSection(@"Surfaces", @[library, playlist, drawer], @"What is drawn on glass. Changes show at once."),
+        SGNotedSection(@"Glass", @[style, clear], @"The fill only applies to the Clear style."),
         SGNotedSection(@"Zoom", @[zoom, amount], @"In the library and in playlists, the rows away from the middle of the screen are drawn a little smaller."),
     ] footer:nil];
     page.preview = preview;

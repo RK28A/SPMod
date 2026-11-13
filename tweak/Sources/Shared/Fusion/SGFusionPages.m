@@ -479,7 +479,12 @@ UIViewController *SGFusionMergePage(NSString *destination) {
 
 UIViewController *SGFusionSettingsPage(void) {
     SGModRow *shuffle = SGStatActionRow(@"Fusion Shuffle", @"Mixes the tracks of every playlist you allow. No playlist is made or changed",
-        ^NSString *{ return SGFusionShuffleStatus(); }, ^{
+        ^NSString *{
+            // The whole status squeezed the row's title into a column: the row says on or off, the sheet says the rest.
+            if (SGFusionShuffleActive()) return @"On";
+            NSString *status = SGFusionShuffleStatus();
+            return [status hasPrefix:@"Reading"] ? @"Reading…" : [status isEqualToString:@"Off"] || !status.length ? @"Off" : @"Didn't start";
+        }, ^{
             if (SGFusionShuffleActive()) SGFusionShuffleStop();
             else SGFusionShuffleStart();
         });

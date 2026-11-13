@@ -168,6 +168,22 @@ Shared:
   Playlist rows   The theme behind the tracks comes in over 170pt above the first one through a mask
                   (SGRThemedPane.m). A track fades out as it goes under the pinned header and pills
                   (PlaylistRows.x, fadeUnderBar), and the header's own block fades before it rides into the bar.
+  Freezes        A view whose owner sets the old colour or picture back on every pass (and lays out again when
+                  it finds another) made the accent's setter hooks a loop that never ended: a playlist froze black
+                  behind its curtain. An image view is now handed the right picture once, in place of Spotify's,
+                  and a view handed the same old thing back 200 times in a second is left alone and logged
+                  (SGRAccentKeepsAsking). Diagnostics/SGHangSampler.m also runs a watchdog from launch: a main
+                  thread silent for two seconds is sampled into the log ("hang watchdog").
+  Glass more      Clear glass fill (0 bare glass, 1 a step from frosted, 0.5 unless set) is white let into the
+                  clear UIGlassEffect's tint; a card is made again when the style or the fill changes
+                  (SGRGlassLookNow). Profile menu (Liquid Glass page) puts each drawer row on a card
+                  (App/ModSettings.x, glassDrawer). The library's Grid view cards get the same treatment as the
+                  list's rows (LibraryRows.x, gridCard).
+  Web Jam door    Shared/Jam/WebJamPicker.x: the device picker's Start a Jam is SwiftUI, found by its
+                  accessibility label; with Web Jam running it gets an accent ring, and a long press there
+                  opens WebJamSheet.m (the code and the address). The real Jam needs Premium on Spotify's side.
+  Live Activity   Paused, the card stays five minutes: each one taken down was a new request at the next play,
+                  and iOS asks again until "Always Allow".
   Motion          Appearance → Interface animations (off, subtle, lively): rows of the library and of playlists
                   fade and settle in as they come on screen (Redesigned/Kit/SGREntrance.m).
   Stats kept      Shared/ListeningStats/StatsVault.m: the listening log, packed, in the keychain beside the

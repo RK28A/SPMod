@@ -20,7 +20,7 @@ static UIView *newCard(void) {
         card = [[UIVisualEffectView alloc] initWithEffect:SGRGlassEffectNow()];
         card.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
     }
-    objc_setAssociatedObject(card, &kStyleKey, @(SGRGlassStyleNow()), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(card, &kStyleKey, @(SGRGlassLookNow()), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     card.userInteractionEnabled = NO;
     card.accessibilityElementsHidden = YES;
     return card;
@@ -34,7 +34,7 @@ void SGRGlassCard(UIView *row, const void *key, CGRect frame, CGFloat radius, BO
     }
     // A style chosen in Liquid Glass reaches the cards on screen at their next pass, each as a new card: an
     // effect view keeps the look of the glass it was made with when it is only handed another.
-    if (card && [objc_getAssociatedObject(card, &kStyleKey) integerValue] != SGRGlassStyleNow()) {
+    if (card && [objc_getAssociatedObject(card, &kStyleKey) integerValue] != SGRGlassLookNow()) {
         [card removeFromSuperview];
         card = nil;
     }

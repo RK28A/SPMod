@@ -14,6 +14,12 @@ static BOOL listRow(UIView *cell) {
     return size.width > 300 && size.height >= 56 && size.height <= 120;
 }
 
+// A card of the grid (Grid view): a cover over its two lines, narrower than the page and taller than wide.
+static BOOL gridCard(UIView *cell) {
+    CGSize size = cell.bounds.size;
+    return size.width >= 70 && size.width <= 220 && size.height > size.width && size.height <= size.width * 2;
+}
+
 // Spotify's dark fill on the row and what spans it, cleared so the glass shows.
 static void clearRowFill(UIView *cell) {
     CGFloat across = cell.bounds.size.width * 0.9;
@@ -73,14 +79,20 @@ static void style(UIView *cell) {
     // A playlist's square with rounded corners; an artist's circle stays a circle.
     if (thumb) roundCorners(thumb, 12);
     else roundCorners(SGRFindByIdentifier(cell, @"Components.UI.CardLibrary.Artwork", &kCoverKey), SGRRadiusCover);
-    BOOL glass = SGEnabled(SGRKeyLibraryGlass) && listRow(cell);
-    // Every row of the list is kept clear of Spotify's black, glass or not, so the background shows.
-    BOOL row = listRow(cell);
+    // The grid's cards as the list's rows: clear of Spotify's black, and on glass when the library is.
+    BOOL card = gridCard(cell), row = listRow(cell) || card;
+    BOOL glass = SGEnabled(SGRKeyLibraryGlass) && row;
     objc_setAssociatedObject(cell, &kGlassRowKey, row ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     if (row) clearRowFill(cell);
     // Glyphs drawn in Spotify's green (pin, download) take the accent on every pass, as the row is reused.
     SGRAccentRetint(cell);
-    SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, glass);
+    SGRGlassCard(cell, &kCardKey, card ? CGRectInset(cell.bounds, -6, -6) : CGRectInset(cell.bounds, kCardSide, kCardGap), card ? 18 : kCardRadius, glass);
+    if (card && cell.clipsToBounds) cell.clipsToBounds = NO;
+    static BOOL loggedCard;
+    if (card && !loggedCard) {
+        loggedCard = YES;
+        SGLog(@"redesign library: grid card %@ styled, glass %@", NSStringFromCGSize(cell.bounds.size), glass ? @"on" : @"off");
+    }
     if (row && [cell.superview isKindOfClass:UIScrollView.class]) SGREntrance(cell, (UIScrollView *)cell.superview);
     if (glass) {
         CALayer *line = objc_getAssociatedObject(cell, &kLineKey);
