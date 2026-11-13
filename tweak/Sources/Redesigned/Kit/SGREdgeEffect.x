@@ -124,7 +124,7 @@ static void hideBand(UIScrollView *list) {
 
 - (void)layoutSubviews {
     %orig;
-    if (!self.window) return;
+    if (!self.window || SGLoopGuard("list pass")) return;
     soften(self);
     theme(self);
     hideBand(self);

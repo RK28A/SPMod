@@ -159,7 +159,7 @@ static void fadeUnderBar(UIScrollView *list) {
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl32FTPTouchCancellingCollectionView
 - (void)layoutSubviews {
     %orig;
-    fadeUnderBar((UIScrollView *)self);
+    if (!SGLoopGuard("playlist list")) fadeUnderBar((UIScrollView *)self);
 }
 %end
 

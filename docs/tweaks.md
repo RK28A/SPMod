@@ -174,6 +174,10 @@ Shared:
                   and a view handed the same old thing back 200 times in a second is left alone and logged
                   (SGRAccentKeepsAsking). Diagnostics/SGHangSampler.m also runs a watchdog from launch: a main
                   thread silent for two seconds is sampled into the log ("hang watchdog").
+  Black playlist  The watchdog's samples (no frame of the mod's, deep in Core Animation's layout) showed a
+                  layout loop. The playlist header's pass had started setting its block's alpha as the header
+                  closed, and the header lays out again on that: removed. Core/SGLoopGuard.h stops a pass of the
+                  mod's that runs over 400 times before the run loop turns, and logs it ("loop guard").
   Glass more      Clear glass fill (0 bare glass, 1 a step from frosted, 0.5 unless set) is white let into the
                   clear UIGlassEffect's tint; a card is made again when the style or the fill changes
                   (SGRGlassLookNow). Profile menu (Liquid Glass page) puts each drawer row on a card
