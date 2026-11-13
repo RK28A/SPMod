@@ -15,3 +15,9 @@ void SGRPickAccent(void);        // the system colour picker over the top of the
 
 @class SGModRow;
 NSArray<SGModRow *> *SGRAppearanceRows(void);   // the accent colour, for the Appearance card
+
+// The accent Spotify's green became the first time it was made, nil before that: what Spotify draws from a
+// colour it keeps is still in this one. And whether a small picture is drawn in an accent of before or in
+// Spotify's green, so it is to be drawn again in the accent of now.
+UIColor *SGRAccentHanded(void);
+BOOL SGRAccentPictureIsStale(UIImage *image);

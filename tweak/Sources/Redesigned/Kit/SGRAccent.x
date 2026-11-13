@@ -116,7 +116,8 @@ static CGColorRef renewedCopy(CGColorRef color) {
 static const CGFloat kGlyphLimit = 64;
 static char kSeenKey;
 
-static BOOL glyphOfBefore(CGImageRef picture) {
+// A picture's pixels come to one colour. NO for a picture that fills its square, or is no glyph's size.
+static BOOL meanOf(CGImageRef picture, CGFloat *r, CGFloat *g, CGFloat *b) {
     if (!picture || CGImageGetWidth(picture) > 400 || CGImageGetHeight(picture) > 400) return NO;
     uint8_t pixel[4] = {0, 0, 0, 0};
     CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
@@ -127,11 +128,35 @@ static BOOL glyphOfBefore(CGImageRef picture) {
     CGContextRelease(context);
     // A glyph leaves most of its square empty; a cover fills it, and is left alone whatever its colour.
     if (pixel[3] < 8 || pixel[3] > 235) return NO;
-    CGFloat r = pixel[0] / (CGFloat)pixel[3], g = pixel[1] / (CGFloat)pixel[3], b = pixel[2] / (CGFloat)pixel[3];
+    *r = pixel[0] / (CGFloat)pixel[3];
+    *g = pixel[1] / (CGFloat)pixel[3];
+    *b = pixel[2] / (CGFloat)pixel[3];
+    return YES;
+}
+
+static BOOL glyphOfBefore(CGImageRef picture) {
+    CGFloat r = 0, g = 0, b = 0;
+    if (!meanOf(picture, &r, &g, &b)) return NO;
     sg_slack = 0.07;
     BOOL was = renewed(&r, &g, &b);
     sg_slack = 0.012;
     return was;
+}
+
+static CGFloat hueOf(CGFloat r, CGFloat g, CGFloat b, CGFloat *saturation) {
+    CGFloat high = MAX(r, MAX(g, b)), low = MIN(r, MIN(g, b)), span = high - low;
+    *saturation = high > 0 ? span / high : 0;
+    if (span < 0.001) return 0;
+    CGFloat hue = (high == r ? fmod((g - b) / span, 6) : high == g ? (b - r) / span + 2 : (r - g) / span + 4) / 6;
+    return hue < 0 ? hue + 1 : hue;
+}
+
+static BOOL hueOfRGB(NSInteger rgb, CGFloat hue) {
+    CGFloat r, g, b, saturation = 0;
+    if (rgb < 0) return NO;
+    unpack((uint32_t)rgb, &r, &g, &b);
+    CGFloat other = hueOf(r, g, b, &saturation), apart = fabs(other - hue);
+    return saturation > 0.15 && MIN(apart, 1 - apart) < 0.035;
 }
 
 // The same shape filled with `color`, for the caller to release.
@@ -358,6 +383,17 @@ void SGRPickAccent(void) {
     });
 }
 
+// The accent Spotify's green first became: what it makes once and keeps (a SwiftUI page's colours) stays in
+// this one however the accent moves afterwards.
+static NSInteger sg_handed = -1;
+
+UIColor *SGRAccentHanded(void) {
+    if (sg_handed < 0) return nil;
+    CGFloat r, g, b;
+    unpack((uint32_t)sg_handed, &r, &g, &b);
+    return [UIColor colorWithRed:r green:g blue:b alpha:1];
+}
+
 static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
     for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) {
         CGFloat gr, gg, gb;
@@ -365,6 +401,7 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
         if (fabs(*r - gr) > 0.01 || fabs(*g - gg) > 0.01 || fabs(*b - gb) > 0.01) continue;
         CGFloat ar, ag, ab;
         if (sg_accent < 0) return NO;
+        if (sg_handed < 0) sg_handed = sg_accent;
         unpack((uint32_t)sg_accent, &ar, &ag, &ab);
         CGFloat factor = MAX(gr, MAX(gg, gb)) / (0xD7 / 255.0);
         *r = MIN(1, ar * factor);
@@ -386,20 +423,46 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
 }
 %end
 
-// A colour that did not come through the two makers above (an asset's, a P3 one) is caught as it is set as a
-// tint or a text colour, a little wider, since another colour space rounds its green differently.
+// Spotify keeps the colour it was handed when it made its green, the accent of that moment, and sets it
+// again long after the accent has moved on (a button as it is pressed, a label as its row is reused). A tint
+// or a text colour that is an accent of before, or Spotify's own green from a maker the hooks above never
+// saw, becomes the accent of now as it is set, so the old one is never drawn.
 static UIColor *swappedColor(UIColor *color) {
-    CGFloat r = 0, g = 0, b = 0, a = 0;
-    if (sg_accent < 0 || !color || ![color getRed:&r green:&g blue:&b alpha:&a] || a < 0.02) return color;
-    for (size_t i = 0; i < sizeof(kGreens) / sizeof(kGreens[0]); i++) {
-        CGFloat gr, gg, gb;
-        unpack(kGreens[i], &gr, &gg, &gb);
-        if (fabs(r - gr) > 0.05 || fabs(g - gg) > 0.05 || fabs(b - gb) > 0.05) continue;
-        CGFloat ar, ag, ab, factor = gg / (0xD7 / 255.0);
-        unpack((uint32_t)sg_accent, &ar, &ag, &ab);
-        return [UIColor colorWithRed:MIN(1, ar * factor) green:MIN(1, ag * factor) blue:MIN(1, ab * factor) alpha:a];
+    CGFloat r = 0, g = 0, b = 0, a = 0, saturation = 0;
+    if (sg_accent < 0 || !sg_past.count || !color || ![color getRed:&r green:&g blue:&b alpha:&a]) return color;
+    // White, grey and black are the interface's own, whatever accent was once picked.
+    hueOf(r, g, b, &saturation);
+    if (saturation < 0.25) return color;
+    sg_slack = 0.03;
+    UIColor *now = renewedColor(color);
+    sg_slack = 0.012;
+    return now ?: color;
+}
+
+// The same for a small picture with the colour drawn in. What a picture was found to be is kept on it with
+// the accent it was judged under.
+BOOL SGRAccentPictureIsStale(UIImage *image) {
+    static char kJudgedKey;
+    if (sg_accent < 0 || !image) return NO;
+    NSNumber *fine = objc_getAssociatedObject(image, &kJudgedKey);
+    if (fine && fine.integerValue == sg_accent) return NO;
+    CGFloat r = 0, g = 0, b = 0, saturation = 0;
+    if (meanOf(image.CGImage, &r, &g, &b)) {
+        sg_slack = 0.07;
+        CGFloat mr = r, mg = g, mb = b;
+        BOOL was = renewed(&mr, &mg, &mb);
+        sg_slack = 0.012;
+        if (was) return YES;
+        // A glyph with white or black drawn into it (a download on its way: an arrow in a disc) comes to a
+        // paler or darker colour than the one it was drawn in, of the same hue. The hues Spotify holds are
+        // few: its own green, and the accent its green first became.
+        CGFloat hue = hueOf(r, g, b, &saturation);
+        if (saturation > 0.3 && !hueOfRGB(sg_accent, hue)) {
+            if (hueOfRGB(sg_handed, hue) || hueOfRGB(kDefaultAccent, hue) || hueOfRGB(kGreens[0], hue)) return YES;
+        }
     }
-    return color;
+    objc_setAssociatedObject(image, &kJudgedKey, @(sg_accent), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return NO;
 }
 
 %hook UIView

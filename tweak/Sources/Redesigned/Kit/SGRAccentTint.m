@@ -3,7 +3,7 @@
 #import "SGRAccent.h"
 #import "SGRAccentTint.h"
 
-static char kChromaticKey, kTemplateKey, kMadeKey;
+static char kTemplateKey, kMadeKey;
 
 static BOOL chromaticRGB(CGFloat r, CGFloat g, CGFloat b) {
     CGFloat high = MAX(r, MAX(g, b)), low = MIN(r, MIN(g, b));
@@ -24,30 +24,6 @@ static BOOL sameColor(UIColor *one, UIColor *other) {
 
 // A glyph is small; a cover is a picture, whatever its colour, and is never drawn again in one colour.
 static const CGFloat kGlyphSide = 32;
-
-// Whether the picture is drawn in Spotify's green: its pixels averaged into one. Kept on the image, read once.
-static BOOL imageIsGreen(UIImage *image) {
-    NSNumber *known = objc_getAssociatedObject(image, &kChromaticKey);
-    if (known) return known.boolValue;
-    BOOL result = NO;
-    CGImageRef pixels = image.CGImage;
-    if (pixels) {
-        uint8_t pixel[4] = {0, 0, 0, 0};
-        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
-        CGContextRef context = space ? CGBitmapContextCreate(pixel, 1, 1, 8, 4, space, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big) : NULL;
-        if (space) CGColorSpaceRelease(space);
-        if (context) {
-            CGContextDrawImage(context, CGRectMake(0, 0, 1, 1), pixels);
-            CGContextRelease(context);
-            if (pixel[3] > 8) {
-                CGFloat r = pixel[0] / (CGFloat)pixel[3], g = pixel[1] / (CGFloat)pixel[3], b = pixel[2] / (CGFloat)pixel[3];
-                result = g > 0.45 && g > r * 1.45 && g > b * 1.3;
-            }
-        }
-    }
-    objc_setAssociatedObject(image, &kChromaticKey, @(result), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    return result;
-}
 
 static UIImage *templateOf(UIImage *image) {
     UIImage *made = objc_getAssociatedObject(image, &kTemplateKey);
@@ -81,10 +57,11 @@ static void tintGlyph(UIImageView *glyph, UIView *root, UIColor *accent) {
         }
         return;
     }
-    // A small picture with Spotify's green drawn in becomes a template of itself, so the accent can draw it.
+    // A small picture drawn in an accent of before, or in Spotify's green, becomes a template of itself, so
+    // the accent of now can draw it. Any other colour is the picture's own and stays.
     CGSize size = glyph.bounds.size;
     if (MAX(size.width, size.height) > kGlyphSide || MAX(image.size.width, image.size.height) > kGlyphSide) return;
-    if (!imageIsGreen(image)) return;
+    if (!SGRAccentPictureIsStale(image)) return;
     made = templateOf(image);
     glyph.image = made;
     glyph.tintColor = accent;

@@ -154,12 +154,17 @@ Shared:
                   Customise this style, SGBackdropTune); the spread is 40% unless set, since at the widest a red
                   theme showed purple. Background frame rate caps every animation of a scene at 30 a second by
                   default (preferredFrameRateRange), which is most of what kept the phone warm under glass.
-  Accent          Automatic follows the song playing; a page's cover only counts until a song has given a colour
-                  (two sources took the accent from each other). A tint or text colour set to Spotify's green from
-                  a colour the makers' hooks never saw is swapped as it is set, and a small green picture as it
-                  is given to its image view (SGRAccent.x). Only pictures up to 32pt, and only green ones, are
-                  redrawn in the accent (SGRAccentTint.m): rows are swept every pass, and a cover must stay one.
-                  The device picker is SwiftUI: its hosting view is drawn through a hue filter (DevicePickerTheme.x).
+  Accent          Spotify's green is swapped for the accent where the colour is made, and Spotify keeps what it
+                  was handed: under Automatic, whose accent moves with the song, what it sets later is the accent
+                  of then. The "green" left on icons was the mod's own default accent, the one Automatic started
+                  from at launch (measured on screenshots: #37F200, not Spotify's #1ED760). So Automatic starts
+                  from the colour it last had; it follows the song playing, a page's cover only counting until a
+                  song has given a colour; and a tint or text colour that is an accent of before becomes the one
+                  of now as it is set, as does a small picture given to an image view (SGRAccent.x: swappedColor,
+                  SGRAccentPictureIsStale, by colour and, for the few hues Spotify holds, by hue). Only pictures
+                  up to 32pt are redrawn (SGRAccentTint.m): rows are swept every pass, and a cover must stay one.
+                  The device picker is SwiftUI: its hosting view is drawn through a filter that turns the hue
+                  Spotify was first handed (SGRAccentHanded) to the accent's (DevicePickerTheme.x).
   Playlist rows   The theme behind the tracks comes in over 170pt above the first one through a mask
                   (SGRThemedPane.m). A track fades out as it goes under the pinned header and pills
                   (PlaylistRows.x, fadeUnderBar), and the header's own block fades before it rides into the bar.
