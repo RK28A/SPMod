@@ -3,6 +3,7 @@
 #import "Settings/SGPage.h"
 #import "SGRAccentWash.h"
 #import "SGRThemedPane.h"
+#import "SGRGlassSettings.h"
 #import "Settings/SGBackdrop.h"
 
 static void soften(UIScrollView *scrollView) {
@@ -112,6 +113,7 @@ static void theme(UIScrollView *list) {
         }
     }
     SGRThemedPaneFollow(self);
+    SGRGlassZoomList(self);
 }
 %end
 
