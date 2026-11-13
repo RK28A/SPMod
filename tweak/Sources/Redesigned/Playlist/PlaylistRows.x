@@ -55,7 +55,14 @@ static void applyHairline(UIView *row, CGFloat leading) {
 }
 
 static void glassTrack(UIView *cell, UIView *row);
-static char kExtenderKey;
+static char kExtenderKey, kMoreKey;
+
+// The ⋯ at the end of a track's row, drawn a little in from the edge.
+static void insetMore(UIView *row) {
+    UIView *more = SGRFindByIdentifier(row, @"Components.UI.ContextMenuButton", &kMoreKey);
+    CGAffineTransform inset = CGAffineTransformMakeTranslation(-12, 0);
+    if (more && !CGAffineTransformEqualToTransform(more.transform, inset)) more.transform = inset;
+}
 
 static void applyRow(UIView *cell) {
     clearSurface(cell);
@@ -68,6 +75,7 @@ static void applyRow(UIView *cell) {
         if (extender) glassTrack(cell, extender);
         return;
     }
+    insetMore(row);
     clearSurface(row);
 
     UIView *page = SGRPlaylistPageOf(cell);
