@@ -14,9 +14,9 @@ static const CGFloat kCardSide = 8, kCardGap = 3, kCardRadius = 18;
 static void glassTrack(UIView *cell, UIView *row) {
     // A track of the playlist or one of the suggestions under it: a list row of a track's height with art.
     CGFloat height = cell.bounds.size.height;
-    BOOL track = SGFlag(SGRKeyPlaylistGlass, NO) && height >= 48 && height <= 100
-        && (SGRFindByIdentifier(row, @"Track.Row.Content.Title", &kTitleKey) != nil || SGRFindByIdentifier(row, @"Encore.ImageView", &kArtKey) != nil);
-    SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, track);
+    // The theme stands behind the tracks in place of the cover's colour fading out, glass rows or not.
+    BOOL track = row && height >= 48 && height <= 100;
+    SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, track && SGFlag(SGRKeyPlaylistGlass, NO));
     UIScrollView *list = [cell.superview isKindOfClass:UIScrollView.class] ? (UIScrollView *)cell.superview : nil;
     if (!track || !list) return;
     NSNumber *seen = objc_getAssociatedObject(list, &kTopKey);
@@ -54,10 +54,20 @@ static void applyHairline(UIView *row, CGFloat leading) {
     [CATransaction commit];
 }
 
+static void glassTrack(UIView *cell, UIView *row);
+static char kExtenderKey;
+
 static void applyRow(UIView *cell) {
     clearSurface(cell);
+    // Glyphs drawn in Spotify's green (download) take the accent on every pass, as the row is reused.
+    SGRAccentRetint(cell);
     UIView *row = identified(cell, @"Encore.ListRow", &kRowKey);
-    if (!row) return;
+    if (!row) {
+        // A recommended track under the playlist is a row of another kind.
+        UIView *extender = identified(cell, @"PlaylistExtender.Row", &kExtenderKey);
+        if (extender) glassTrack(cell, extender);
+        return;
+    }
     clearSurface(row);
 
     UIView *page = SGRPlaylistPageOf(cell);

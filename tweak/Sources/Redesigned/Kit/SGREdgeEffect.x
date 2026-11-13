@@ -100,6 +100,16 @@ static void theme(UIScrollView *list) {
         CGSize size = self.bounds.size, screen = self.window.bounds.size;
         if (!self.topEdgeEffect.hidden && size.width >= screen.width - 1 && size.height >= screen.height * 0.6
             && [self.window.accessibilityIdentifier isEqualToString:@"spotify-main-window"]) self.topEdgeEffect.hidden = YES;
+        // Hidden, the effect still leaves its backdrop: a copy of what scrolled under it, which showed as a
+        // haze over Home and as a second list over a playlist's top. It is faded out.
+        if (self.topEdgeEffect.hidden) {
+            for (UIView *pass in self.subviews) {
+                if (![NSStringFromClass(pass.class) containsString:@"TouchPassthrough"]) continue;
+                for (UIView *edge in pass.subviews) {
+                    if ([NSStringFromClass(edge.class) containsString:@"ScrollEdgeEffect"] && edge.alpha > 0) edge.alpha = 0;
+                }
+            }
+        }
     }
     SGRThemedPaneFollow(self);
 }

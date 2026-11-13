@@ -70,11 +70,16 @@ static void hairline(UIView *cell, UIView *thumb) {
 
 static void style(UIView *cell) {
     UIView *thumb = SGRFindByIdentifier(cell, @"Artwork.Row.Library", &kThumbKey);
-    if (thumb) roundCorners(thumb, SGRRadiusThumb);
+    // A playlist's square with rounded corners; an artist's circle stays a circle.
+    if (thumb) roundCorners(thumb, 12);
     else roundCorners(SGRFindByIdentifier(cell, @"Components.UI.CardLibrary.Artwork", &kCoverKey), SGRRadiusCover);
     BOOL glass = SGEnabled(SGRKeyLibraryGlass) && listRow(cell);
-    objc_setAssociatedObject(cell, &kGlassRowKey, glass ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    if (glass) clearRowFill(cell);
+    // Every row of the list is kept clear of Spotify's black, glass or not, so the background shows.
+    BOOL row = listRow(cell);
+    objc_setAssociatedObject(cell, &kGlassRowKey, row ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (row) clearRowFill(cell);
+    // Glyphs drawn in Spotify's green (pin, download) take the accent on every pass, as the row is reused.
+    SGRAccentRetint(cell);
     SGRGlassCard(cell, &kCardKey, CGRectInset(cell.bounds, kCardSide, kCardGap), kCardRadius, glass);
     if (glass) {
         CALayer *line = objc_getAssociatedObject(cell, &kLineKey);
@@ -98,7 +103,7 @@ static void style(UIView *cell) {
 %hook UIView
 - (void)setBackgroundColor:(UIColor *)color {
     CGFloat r = 0, g = 0, b = 0, a = 0;
-    if (color && SGEnabled(SGRKeyLibraryGlass) && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.5 && MAX(r, MAX(g, b)) < 0.15) {
+    if (color && [color getRed:&r green:&g blue:&b alpha:&a] && a > 0.5 && MAX(r, MAX(g, b)) < 0.15) {
         UIView *view = (UIView *)self;
         for (int depth = 0; view && depth < 6; depth++, view = view.superview) {
             if (objc_getAssociatedObject(view, &kGlassRowKey)) {
@@ -118,8 +123,27 @@ static void style(UIView *cell) {
 }
 %end
 
+// A row laid out before it had its size is styled again from the list's own pass, and a change of the glass
+// switch reaches the rows on screen at once.
+static NSHashTable<UIView *> *sg_lists;
+
+%hook _TtC21YourLibrary_CommonKit25YourLibraryCollectionView
+- (void)layoutSubviews {
+    %orig;
+    if (!sg_lists) sg_lists = [NSHashTable weakObjectsHashTable];
+    [sg_lists addObject:(UIView *)self];
+    for (UIView *row in ((UIView *)self).subviews) {
+        if ([NSStringFromClass(row.class) containsString:@"SwipeableCollectionViewCellContainer"]) style(row);
+    }
+}
+%end
+
 %ctor {
     if (!SGRedesignedUI()) return;
     %init;
     SGRequireClasses(@[@"_TtC21YourLibrary_CommonKit47YourLibrarySwipeableCollectionViewCellContainer"]);
+    [NSNotificationCenter.defaultCenter addObserverForName:NSUserDefaultsDidChangeNotification object:nil queue:NSOperationQueue.mainQueue
+                                                usingBlock:^(NSNotification *note) {
+        for (UIView *list in sg_lists.allObjects) [list setNeedsLayout];
+    }];
 }
