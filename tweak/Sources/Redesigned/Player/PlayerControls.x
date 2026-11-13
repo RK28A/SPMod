@@ -17,6 +17,7 @@
 // is id=...-internal (:227). The sticky header has a play button of its own (:492), which a search
 // inside the unit's view never reaches.
 #import <UIKit/UIGestureRecognizerSubclass.h>
+#import "Shared/Fusion/Fusion.h"
 #import "Core/SGCore.h"
 #import "Redesigned/Kit/SGRKit.h"
 #import "Redesigned/Kit/SGRAccent.h"
@@ -187,6 +188,7 @@ static void modeButtons(UIView *host) {
     UIView *shuffle = SGRFindByIdentifier(host, @"NowPlaying-ShuffleButton", &kShuffleKey);
     if (!shuffle) shuffle = SGRFindByIdentifier(host, @"SPTNowPlayingShuffleButton", &kShuffleKey);
     if (shuffle) {
+        SGFusionAttachShuffleMenu(shuffle);
         if (SGHidden(SGRKeyPlayerHideShuffle)) {
             SGRPlayerVanish(shuffle);
         } else if (SGRPlayerMusicIconsOn()) {

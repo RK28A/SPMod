@@ -1,8 +1,10 @@
 #import <UIKit/UIKit.h>
+#import <MediaPlayer/MediaPlayer.h>
 #import <objc/runtime.h>
 #import "Core/SGCore.h"
 #import "Headers/SPTPlayer.h"
 #import "Shared/Lyrics/Lyrics.h"
+#import "Shared/Player/NowPlayingExtras.h"
 #import "LiveActivity.h"
 
 API_AVAILABLE(ios(17.0))
@@ -11,7 +13,8 @@ API_AVAILABLE(ios(17.0))
 + (void)showWithView:(NSInteger)view paused:(BOOL)paused line:(NSString *)line nextLine:(NSString *)nextLine
               titles:(NSArray<NSString *> *)titles artists:(NSArray<NSString *> *)artists uris:(NSArray<NSString *> *)uris
                  tab:(NSInteger)tab title:(NSString *)title artist:(NSString *)artist shuffle:(BOOL)shuffle repeatMode:(NSInteger)repeatMode
-            timerEnd:(NSDate *)timerEnd timerEndOfTrack:(BOOL)timerEndOfTrack;
+            timerEnd:(NSDate *)timerEnd timerEndOfTrack:(BOOL)timerEndOfTrack
+                fill:(NSInteger)fill fillAlpha:(double)fillAlpha accent:(NSInteger)accent;
 + (void)end;
 @end
 
@@ -24,6 +27,7 @@ typedef NS_ENUM(NSInteger, SGLiveActivityTab) {
 
 static const NSTimeInterval kTick = 0.25;
 static const NSTimeInterval kPausedTick = 1;
+static const CFAbsoluteTime kPausedGrace = 8;
 // Past a line's sung end by this much, with the next line at least this far off, the line gives way to a note.
 static const NSInteger kBreakMs = 4000;
 // Seconds between attempts to start one, so a refused request (activities turned off) is not retried every tick.
@@ -110,6 +114,93 @@ static NSString *lyricsLine(NSString *trackID, NSString **next) {
     return position > current.end + kBreakMs && nextFarOff ? @"♪" : SGKaraokeLineText(current);
 }
 
+#pragma mark - the card's colors
+
+// The lit color below zero is the widget's own green.
+static const NSInteger kWidgetGreen = -1, kWhite = 0xFFFFFF, kBlack = 0x000000;
+// The fill a card had before it took the cover's color, kept for a track whose cover has not been read.
+static const double kDarkAlpha = 0.75;
+// The veil Translucent lays over the system's material: next to nothing, so the card is no darker than the
+// player above it. The widget fills its chips a shade darker on such a card, which keeps them readable.
+static const double kVeilAlpha = 0.06;
+// Seconds between looks at the now playing info for the cover.
+static const CFAbsoluteTime kCoverEvery = 1;
+
+static MPMediaItemArtwork *sg_coverArtwork;
+static NSString *sg_coverTrack;
+static NSInteger sg_coverFill = -1, sg_coverAccent = -1;
+static CFAbsoluteTime sg_coverLooked;
+
+static NSInteger packed(CGFloat hue, CGFloat saturation, CGFloat brightness) {
+    CGFloat r = 0, g = 0, b = 0, a = 0;
+    [[UIColor colorWithHue:hue saturation:saturation brightness:brightness alpha:1] getRed:&r green:&g blue:&b alpha:&a];
+    return ((NSInteger)lround(MIN(1, MAX(0, r)) * 255) << 16) | ((NSInteger)lround(MIN(1, MAX(0, g)) * 255) << 8)
+        | (NSInteger)lround(MIN(1, MAX(0, b)) * 255);
+}
+
+// The cover's color from the artwork Spotify hands the system, all its pixels as one: darkened it fills the
+// card, lightened it lights the controls. Spotify names a track before it has its cover, so the info is
+// looked at again while the artwork it carries is not the one read.
+static void readCover(NSString *track, NSString *title) {
+    if (track != sg_coverTrack && ![track isEqualToString:sg_coverTrack]) {
+        sg_coverTrack = [track copy];
+        sg_coverFill = sg_coverAccent = -1;
+        sg_coverLooked = 0;
+    }
+    CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+    if (now - sg_coverLooked < kCoverEvery) return;
+    sg_coverLooked = now;
+    NSDictionary *info = MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo;
+    MPMediaItemArtwork *artwork = info[MPMediaItemPropertyArtwork];
+    if (![artwork isKindOfClass:MPMediaItemArtwork.class] || artwork == sg_coverArtwork) return;
+    if (!SGNowPlayingTitlesMatch(info[MPMediaItemPropertyTitle], title)) return;
+    CGImageRef pixels = [artwork imageWithSize:CGSizeMake(64, 64)].CGImage;
+    if (!pixels) return;
+    uint8_t pixel[4] = {0, 0, 0, 0};
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = space ? CGBitmapContextCreate(pixel, 1, 1, 8, 4, space, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big) : NULL;
+    if (space) CGColorSpaceRelease(space);
+    if (!context) return;
+    CGContextDrawImage(context, CGRectMake(0, 0, 1, 1), pixels);
+    CGContextRelease(context);
+    if (pixel[3] < 8) return;
+    CGFloat alpha = pixel[3], hue = 0, saturation = 0, brightness = 0, a = 0;
+    [[UIColor colorWithRed:pixel[0] / alpha green:pixel[1] / alpha blue:pixel[2] / alpha alpha:1]
+        getHue:&hue saturation:&saturation brightness:&brightness alpha:&a];
+    sg_coverArtwork = artwork;
+    // A grey cover has no hue worth keeping: a dark grey card, lit in near white.
+    BOOL grey = saturation < 0.08;
+    sg_coverFill = packed(hue, grey ? 0 : MIN(0.6, MAX(0.3, saturation)), grey ? 0.2 : 0.32);
+    sg_coverAccent = packed(hue, grey ? 0 : MIN(0.25, saturation * 0.5), 0.88);
+    SGLog(@"live activity: the cover's color #%06lX fills the card, #%06lX lights it", (long)sg_coverFill, (long)sg_coverAccent);
+}
+
+// What Card color asks for: the fill (below zero for the system's material), how opaque, and the lit color.
+static void cardLook(NSInteger *fill, double *fillAlpha, NSInteger *accent) {
+    BOOL cover = sg_coverFill >= 0;
+    switch (SGInt(SGKeyLiveActivityColors, SGLiveActivityColorsTranslucent)) {
+        case SGLiveActivityColorsArtwork:
+            *fill = cover ? sg_coverFill : kBlack;
+            *fillAlpha = cover ? 1 : kDarkAlpha;
+            *accent = cover ? sg_coverAccent : kWidgetGreen;
+            break;
+        case SGLiveActivityColorsPlain:
+            *fill = -1;
+            *fillAlpha = 0;
+            *accent = kWhite;
+            break;
+        case SGLiveActivityColorsSpotify:
+            *fill = cover ? sg_coverFill : kBlack;
+            *fillAlpha = cover ? 1 : kDarkAlpha;
+            *accent = kWidgetGreen;
+            break;
+        default:
+            *fill = kBlack;
+            *fillAlpha = kVeilAlpha;
+            *accent = kWhite;
+    }
+}
+
 static void clearSleepTimer(void) {
     sg_sleepEnd = nil;
     sg_sleepTrack = nil;
@@ -141,6 +232,20 @@ static void tick(void) API_AVAILABLE(ios(17.0)) {
 
     NSInteger view = SGInt(SGKeyLiveActivityView, SGLiveActivityLyrics);
     BOOL paused = state.isPaused;
+    // Paused past the grace, the card goes; a skip's short pause does not take it down.
+    static CFAbsoluteTime pausedSince;
+    if (!paused) pausedSince = 0;
+    else if (pausedSince == 0) pausedSince = CFAbsoluteTimeGetCurrent();
+    if (paused && SGEnabled(SGKeyLiveActivityOnlyPlaying) && CFAbsoluteTimeGetCurrent() - pausedSince > kPausedGrace) {
+        if (sg_shown || SGLiveActivityBridge.isShowing) {
+            [SGLiveActivityBridge end];
+            sg_shown = nil;
+            sg_lastStart = nil;
+            SGLog(@"live activity: paused, taken down");
+        }
+        if (sg_timer && sg_tickEvery != kPausedTick) startTimer(kPausedTick);
+        return;
+    }
     NSTimeInterval every = paused ? kPausedTick : kTick;
     if (sg_timer && sg_tickEvery != every) startTimer(every);
     NSString *line = @"", *next = @"";
@@ -164,15 +269,21 @@ static void tick(void) API_AVAILABLE(ios(17.0)) {
     NSInteger tab = panel ? sg_tab : 0;
     NSDate *sleepEnd = sg_sleepEnd;
     BOOL endOfTrack = sg_sleepTrack != nil;
+    readCover(trackID ?: track.trackTitle, track.trackTitle);
+    NSInteger fill = -1, accent = kWidgetGreen;
+    double fillAlpha = 0;
+    cardLook(&fill, &fillAlpha, &accent);
 
     NSMutableArray<NSString *> *parts = [NSMutableArray arrayWithObjects:@(view).stringValue, paused ? @"1" : @"0", line, next,
         @(tab).stringValue, title, artist, shuffle ? @"1" : @"0", @(repeatMode).stringValue,
-        @((long long)sleepEnd.timeIntervalSince1970).stringValue, endOfTrack ? @"1" : @"0", nil];
+        @((long long)sleepEnd.timeIntervalSince1970).stringValue, endOfTrack ? @"1" : @"0",
+        [NSString stringWithFormat:@"%ld %.2f %ld", (long)fill, fillAlpha, (long)accent], nil];
     for (NSUInteger i = 0; i < titles.count; i++) [parts addObject:[NSString stringWithFormat:@"%@\t%@\t%@", titles[i], artists[i], uris[i]]];
     send([parts componentsJoinedByString:@"\n"], ^{
         [SGLiveActivityBridge showWithView:view paused:paused line:line nextLine:next titles:titles artists:artists uris:uris
                                         tab:tab title:title artist:artist shuffle:shuffle repeatMode:repeatMode
-                                   timerEnd:sleepEnd timerEndOfTrack:endOfTrack];
+                                   timerEnd:sleepEnd timerEndOfTrack:endOfTrack
+                                       fill:fill fillAlpha:fillAlpha accent:accent];
     });
 }
 

@@ -1,4 +1,5 @@
 // Saved choices stay separate from a track's temporary fallback artwork.
+#import "Shared/LiveActivity/LiveActivity.h"
 #import "Core/SGCore.h"
 #import "AnimatedArtwork.h"
 #import "Shared/LockScreenArtwork/LockScreenArtwork.h"
@@ -83,7 +84,9 @@ NSArray<NSString *> *SGLockScreenStarViewOrder(void) {
     return order.count ? order : defaultStarViewOrder();
 }
 
+// With the Live Activity showing the lyrics under the player, the artwork behind does not write them too.
 BOOL SGLockScreenLyricsViewEnabled(void) {
+    if (SGFlag(SGKeyLiveActivity, NO) && SGInt(SGKeyLiveActivityView, SGLiveActivityLyrics) == SGLiveActivityLyrics) return NO;
     return SGEnabled(SGKeyLockScreenLyricsView);
 }
 

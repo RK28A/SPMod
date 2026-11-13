@@ -43,6 +43,7 @@
 #import "Shared/Audio/SGAudioPipeline.h"
 #import "Shared/Player/SpeedPitch.h"
 #import "Haptics.h"
+#import "Settings/SGBackdrop.h"
 #import "SGMusicAnalyzer.h"
 
 // Core Haptics takes about this long from a scheduled time to the Taptic Engine's peak.
@@ -344,6 +345,13 @@ static void tellWatcher(float intensity, double lead) {
     });
 }
 
+// The settings' moving background answers each tap as it is felt (Settings/SGBackdrop.h).
+static void tellBackdrop(float intensity, double lead) {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(MAX(0, lead) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        SGBackdropBeat(intensity);
+    });
+}
+
 static void playTap(const SGMusicEvent *event) {
     double lead;
     NSTimeInterval at = engineTime(event->hostTime, &lead);
@@ -366,6 +374,7 @@ static void playTap(const SGMusicEvent *event) {
     }
     sg_stats.taps++;
     if (atomic_load_explicit(&sg_watched, memory_order_relaxed)) tellWatcher(event->intensity, lead);
+    tellBackdrop(event->intensity, lead);
     sg_stats.leadSum += lead;
     sg_stats.leadMin = sg_stats.taps == 1 ? lead : MIN(sg_stats.leadMin, lead);
 }

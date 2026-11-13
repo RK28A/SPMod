@@ -119,6 +119,39 @@ Shared:
                   menu selects the current lock-screen style; the lock-screen star cycles through its configured views.
                   The star can
                   cycle through Canvas, Lyrics, Fill, Colourful and Default; its order and enabled views are configurable.
+  Playlist Fusion Mod Settings → Player → Playlist Fusion (Shared/Fusion, Fusion.h). Merge playlists copies the
+                  playlists picked as sources (red) onto the end of a destination (green) through Spotify's Web API
+                  as the signed-in app, reads the destination back, and only then, and only with Keep red playlists
+                  off, unfollows the sources. Fusion Shuffle mixes the tracks of every playlist not excluded: one
+                  track is started and the rest fed to Spotify's queue; it is also in the redesigned player's ⋯ menu.
+                  The Web API only gives the items of playlists the user owns or collaborates on, and turns the
+                  app's key away on some accounts; what it refuses goes through the endpoints Spotify's own apps use
+                  (/playlist/v2 on the spclient host, asked for JSON), which give followed playlists too. Every
+                  request is logged as "fusion: GET api/… -> 200" or "fusion: GET spclient/… -> 200". Neither door
+                  has run against a live account from a build yet, and the second is not documented: its shapes
+                  are the web player's. Fusion Shuffle's glyph has two drawings to choose from (Fusion Shuffle
+                  icon); Playlist Fusion's is two rings into one orb (SGFusionIcons.m). The account's name, which
+                  Spotify's own endpoint needs, is read off the app's requests, else off the folder Spotify keeps
+                  for the account (Users/<name>-user). The row under a playlist's menu shows on any menu with a
+                  row that says "playlist", whether or not the library's names were read.
+  Side menu       Misc → Display useless things in menu (off): the profile picture's menu loses its subscription
+                  row, Messages and New message, told by their text in English and French since no tree of the
+                  drawer is recorded (App/ModSettings.x, trimDrawer). The redesign puts its light behind it.
+  Every page      Redesigned/Kit/SGREdgeEffect.x: a list over the whole screen in the main window's navigation
+                  (feed, Recents, listening stats, preferences...) gets the light or the moving background behind
+                  it and loses its frosted top band. The drawer's Listening stats row opens the mod's stats page
+                  through a control laid over it; its SPMod row is an accent pill.
+  Developer       Click on icon for tree: a draggable tree button over the app; a tap copies the tree of the
+                  screen under it (and keeps a copy in Documents/SPMod trees), a hold puts it away.
+  Backgrounds     Settings/SGBackdrop.m. Bars moves on the beat only; Big Bang is one 36 second loop (a star
+                  bursts, a flight past four planets, a turn to a sun, into it, down to the star again). Behind
+                  Home and the library the page's fills are cleared six views down and the list's dark row fills
+                  with them, again as the list scrolls.
+                  Pause animation with playback (off until switched on, LockScreenFreeze.h) holds the clip while the
+                  song is paused: the system's player takes no pause or seek, so a pause swaps in a clip of the one
+                  frame the clip is reckoned to be on, and playing again swaps in the clip turned round to start there
+                  (SGFreezeClip.h); a clip that cannot be turned round starts over. The frame is an estimate, a clock
+                  of the mod's run from when the system took the file.
                   In Every song mode, Fallback album art size controls the square cover shown over the blurred
                   fallback when no moving artwork or lyrics clip is available; 50% is the original size.
                   The sources are asked in the user's order (Spotify Canvas, then Apple Music until set, on the
@@ -194,7 +227,12 @@ Shared:
                   sends a new state only when what the view shows changes, local updates only, no push. Taps are
                   LiveActivityIntents run inside Spotify and take a second or two to show on the card. The widget is extension/LiveActivity; ActivityKit pairs the two
                   by the attributes' type in LiveActivityShared.swift, compiled into both. It starts only with Spotify
-                  in front; its switch and its view apply at once
+                  in front; its switch and its view apply at once. Card color is worked out in the tweak and sent
+                  with the state (the fill, how opaque, and the lit color): the cover's color read from the artwork
+                  Spotify hands the system, the system's material (Plain), or that material under a thin dark veil
+                  (Translucent). The lock screen's card is the system's, which a widget tints and cannot replace
+                  with glass of its own; Now Playing is the system's too and nothing joins the two, which is what
+                  the page's Merge with Now Playing row says
 
 Native:
 
