@@ -1,6 +1,7 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import "Shared/Fusion/Fusion.h"
+#import "App/Transition/PageTransition.h"
 #import "Core/SGCore.h"
 #import "Settings/SGPage.h"
 #import "Settings/SGPageStyle.h"
@@ -65,7 +66,7 @@ static SGModRow *pageRow(NSString *title, NSString *symbol, UIViewController *(^
 }
 
 - (instancetype)initWithSections:(NSArray<SGModSection *> *)sections {
-    if (!(self = [super initWithTitle:@"SPMod" intro:nil sections:sections footer:@"Contributor: @Pulse-Ice (EeveeImmersive)\nBug fixes: @darkit"])) return nil;
+    if (!(self = [super initWithTitle:@"SPMod" intro:nil sections:sections footer:nil])) return nil;
     _allSections = [sections copy];
     return self;
 }
@@ -404,6 +405,7 @@ static UINavigationController *navigationIn(UIViewController *page) {
     }
     UIViewController *presenting = self.drawer ? owner.presentingViewController : nil;
     if (presenting) {
+        SGPageVeilUp([self convertPoint:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds)) toView:nil]);
         [presenting dismissViewControllerAnimated:YES completion:^{
             SGShowPage(navigationIn(presenting).topViewController ?: presenting, modSettingsPage());
         }];
@@ -797,6 +799,7 @@ static void trimDrawer(UICollectionView *list) {
     }
     UIViewController *presenting = owner.presentingViewController;
     if (presenting) {
+        SGPageVeilUp([self convertPoint:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds)) toView:nil]);
         [presenting dismissViewControllerAnimated:YES completion:^{
             SGShowPage(navigationIn(presenting).topViewController ?: presenting, SGListeningStatsPage());
         }];
@@ -937,6 +940,35 @@ static void clearGreys(UIView *view, int depth) {
 // Profile menu on (Liquid Glass): each button the drawer shows on a card of glass the size of the button. A
 // row that draws its own block (the account) has the card exactly where the block was, its grey cleared; a
 // tall row of round avatars (activity, invite) has none.
+// A tap on one of Spotify's rows of the drawer: the veil goes up from it before Spotify closes the drawer onto
+// Home (PageTransition.h). The recogniser cancels nothing, so Spotify's row still fires.
+@interface SGDrawerTapWatcher : NSObject
+@end
+
+@implementation SGDrawerTapWatcher
+- (void)tapped:(UITapGestureRecognizer *)tap {
+    if (tap.state != UIGestureRecognizerStateEnded) return;
+    UICollectionView *list = (UICollectionView *)tap.view;
+    CGPoint at = [tap locationInView:list];
+    NSIndexPath *path = [list indexPathForItemAtPoint:at];
+    UICollectionViewCell *cell = path ? [list cellForItemAtIndexPath:path] : nil;
+    if (!cell || cell.alpha < 0.01 || !rowHasText(cell)) return;
+    SGPageVeilUp([list convertPoint:at toView:nil]);
+}
+@end
+
+static void watchDrawerTaps(UICollectionView *list) {
+    static char kTapWatchKey;
+    static SGDrawerTapWatcher *watcher;
+    if (objc_getAssociatedObject(list, &kTapWatchKey)) return;
+    if (!watcher) watcher = [SGDrawerTapWatcher new];
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:watcher action:@selector(tapped:)];
+    tap.cancelsTouchesInView = NO;
+    tap.delaysTouchesEnded = NO;
+    [list addGestureRecognizer:tap];
+    objc_setAssociatedObject(list, &kTapWatchKey, tap, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
 static void glassDrawer(UICollectionView *list) {
     static char kDrawerCardKey, kBlockKey;
     static BOOL logged;
@@ -990,6 +1022,7 @@ static void glassDrawer(UICollectionView *list) {
         if (SGRedesignedUI() && self.superview) SGRAccentWashPlace(self.superview);
     }
     if (drawerList && SGRedesignedUI()) glassDrawer(self);
+    if (drawerList) watchDrawerTaps(self);
     if (!row && drawerList)
         row = ensureDrawerRow(self);
     if (row && row.superview != self) [self addSubview:row];

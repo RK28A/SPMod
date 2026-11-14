@@ -138,41 +138,50 @@ static CGFloat barBottom(UIView *page, UIScrollView *list) {
     return bottom;
 }
 
-// One mask on the list's layer, not a write on each row: a row's alpha set from inside the list's pass made
-// the list lay out again for ever. The mask is a layer of the mod's own, so changing it lays nothing out.
-static char kVeilKey;
+// A mask of the mod's own on each row the bar's edge crosses, never a row's alpha (which looped the list's
+// layout). One mask on the whole list did the same with no loop, but drew the whole list off screen on every
+// frame, glass cards and all, which is what made a playlist on glass lag: only the one or two rows at the
+// edge are masked now, and those wholly under the bar take an empty one.
+static char kRowVeilKey;
+
+static void veilRow(UIView *cell, CGFloat shown, CGFloat edgeInCell) {
+    CAGradientLayer *veil = objc_getAssociatedObject(cell, &kRowVeilKey);
+    if (shown >= 1) {
+        if (veil && cell.layer.mask == veil) cell.layer.mask = nil;
+        return;
+    }
+    if (!veil) {
+        veil = [CAGradientLayer layer];
+        veil.colors = @[(id)UIColor.clearColor.CGColor, (id)UIColor.clearColor.CGColor, (id)UIColor.blackColor.CGColor, (id)UIColor.blackColor.CGColor];
+        objc_setAssociatedObject(cell, &kRowVeilKey, veil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    CGFloat height = MAX(1, cell.bounds.size.height);
+    NSArray<NSNumber *> *stops = @[@0, @(MIN(1, MAX(0, (edgeInCell - kUnder) / height))), @(MIN(1, MAX(0, edgeInCell / height))), @1];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    if (cell.layer.mask != veil) {
+        SGLoopNote("track veil on a row");
+        cell.layer.mask = veil;
+    }
+    if (!CGRectEqualToRect(veil.frame, cell.bounds)) veil.frame = cell.bounds;
+    if (![veil.locations isEqualToArray:stops]) veil.locations = stops;
+    [CATransaction commit];
+}
 
 static void fadeUnderBar(UIScrollView *list) {
     UIView *page = list.superview;
     if (!page || !list.window) return;
     CGFloat line = barBottom(page, list);
-    CAGradientLayer *veil = objc_getAssociatedObject(list, &kVeilKey);
     // The header is the whole page tall while it opens: nothing is under a bar then.
-    if (line <= 0 || line > page.bounds.size.height * 0.45) {
-        if (veil && list.layer.mask == veil) {
-            SGLoopNote("track veil off");
-            list.layer.mask = nil;
-        }
-        return;
+    BOOL under = line > 0 && line <= page.bounds.size.height * 0.45;
+    if (list.layer.mask) list.layer.mask = nil;
+    CGFloat shift = CGRectGetMinY(list.frame) - list.contentOffset.y;
+    for (UIView *cell in list.subviews) {
+        if (![cell isKindOfClass:UICollectionViewCell.class]) continue;
+        CGFloat top = CGRectGetMinY(cell.frame) + shift;
+        CGFloat edgeInCell = under ? line - top : -1000;
+        veilRow(cell, edgeInCell <= 0 ? 1 : 0, edgeInCell);
     }
-    CGFloat height = list.bounds.size.height;
-    if (height < 1) return;
-    if (!veil) {
-        veil = [CAGradientLayer layer];
-        veil.colors = @[(id)UIColor.clearColor.CGColor, (id)UIColor.clearColor.CGColor, (id)UIColor.blackColor.CGColor, (id)UIColor.blackColor.CGColor];
-        objc_setAssociatedObject(list, &kVeilKey, veil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    CGFloat edge = line - CGRectGetMinY(list.frame);
-    NSArray<NSNumber *> *stops = @[@0, @(MAX(0, edge - kUnder) / height), @(MAX(0, edge) / height), @1];
-    [CATransaction begin];
-    [CATransaction setDisableActions:YES];
-    if (list.layer.mask != veil) {
-        SGLoopNote("track veil on");
-        list.layer.mask = veil;
-    }
-    if (!CGRectEqualToRect(veil.frame, list.bounds)) veil.frame = list.bounds;
-    if (![veil.locations isEqualToArray:stops]) veil.locations = stops;
-    [CATransaction commit];
 }
 
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl32FTPTouchCancellingCollectionView

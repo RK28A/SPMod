@@ -428,10 +428,11 @@ static void dress(UIView *button) {
         objc_setAssociatedObject(button, &kDimmedKey, dimmed, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     // Each pass: the drawing is the one chosen in the settings, which can change while the button is up.
-    glyph.image = SGFusionIcon(SGFusionGlyphFusion, 26);
+    glyph.image = SGFusionIcon(SGFusionGlyphFusion, 29);
     UIColor *lit = SGFusionAccent ? SGFusionAccent() : nil;
     glyph.tintColor = lit ?: [UIColor colorWithRed:0x1E / 255.0 green:0xD7 / 255.0 blue:0x60 / 255.0 alpha:1];
     if (glyph.superview != button) [button addSubview:glyph];
+    else if (button.subviews.lastObject != glyph) [button bringSubviewToFront:glyph];
     glyph.frame = button.bounds;
     glyph.alpha = 1;
     for (UIView *view in button.subviews) {
@@ -455,8 +456,23 @@ static void dress(UIView *button) {
     sg_tapAt = CFAbsoluteTimeGetCurrent();
 }
 
+// The redesign's player draws its shuffle button again from Spotify's after a tap, after the moment Fusion
+// Shuffle starts, and brought the plain shuffle glyph back over the mod's. While Fusion Shuffle is on, the
+// buttons are dressed again a few times a second: a handful of views, nothing to lay out.
+static NSTimer *sg_redress;
+
 - (void)fusionChanged {
     for (UIView *button in sg_attached.allObjects) dress(button);
+    if (SGFusionShuffleActive() && !sg_redress) {
+        sg_redress = [NSTimer scheduledTimerWithTimeInterval:0.35 repeats:YES block:^(NSTimer *timer) {
+            if (!SGFusionShuffleActive()) {
+                [timer invalidate];
+                sg_redress = nil;
+            }
+            for (UIView *button in sg_attached.allObjects) if (button.window) dress(button);
+        }];
+        SGDebug(@"fusion shuffle: its glyph kept on the shuffle buttons (%lu)", (unsigned long)sg_attached.count);
+    }
 }
 
 - (void)playerStateDidChange:(SPTPlayerState *)state {
@@ -516,6 +532,41 @@ void SGFusionAttachShuffleStandIn(UIView *standIn, UIView *real) {
     box.view = real;
     SGFusionAttachShuffleMenu(standIn);
 }
+
+// Spotify's Listening modes sheet (SmartShuffle_CoreImpl.PlayModePickerViewController, the recorded sheet)
+// comes up the first time shuffle is tapped, in place of turning it on. It is not shown: the tap turns plain
+// shuffle on, as it would have once the sheet was answered, and Fusion Shuffle stays one tap further.
+static BOOL isModePicker(UIViewController *controller, int depth) {
+    if (!controller || depth > 3) return NO;
+    if ([NSStringFromClass(controller.class) containsString:@"PlayModePicker"]) return YES;
+    for (UIViewController *child in controller.childViewControllers) if (isModePicker(child, depth + 1)) return YES;
+    return NO;
+}
+
+%hook UIViewController
+- (void)presentViewController:(UIViewController *)presented animated:(BOOL)animated completion:(void (^)(void))completion {
+    if (isModePicker(presented, 0)) {
+        SGLog(@"fusion shuffle: Spotify's Listening modes sheet not shown, plain shuffle turned on");
+        setSpotifyShuffle(YES);
+        if (completion) completion();
+        return;
+    }
+    %orig;
+}
+%end
+
+// A sheet built so that the picker comes in after it was presented: closed as soon as it shows.
+%hook _TtC21SmartShuffle_CoreImpl28PlayModePickerViewController
+- (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    UIViewController *sheet = ((UIViewController *)self).parentViewController ?: (UIViewController *)self;
+    UIViewController *under = sheet.presentingViewController;
+    if (!under) return;
+    SGLog(@"fusion shuffle: Spotify's Listening modes sheet closed as it came, plain shuffle turned on");
+    setSpotifyShuffle(YES);
+    dispatch_async(dispatch_get_main_queue(), ^{ [under dismissViewControllerAnimated:NO completion:nil]; });
+}
+%end
 
 %hook _TtC19LegacyUI_ECMCoreKitP33_7AC6ABDB5A3E514EA5239D6986C3C90912EncoreButton
 - (void)didMoveToWindow {

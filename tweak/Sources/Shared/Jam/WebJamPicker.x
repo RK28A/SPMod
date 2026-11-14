@@ -42,10 +42,13 @@ static CGRect jamFrame(UIView *host) {
     }
     if (!logged) {
         logged = YES;
-        SGLog(@"web jam: no Start a Jam button among the picker's %lu elements (%@)", (unsigned long)elements.count,
+        SGLog(@"web jam: no Start a Jam button among the picker's %lu elements (%@), its place at the foot of the sheet is used", (unsigned long)elements.count,
               [labels componentsJoinedByString:@" | "]);
     }
-    return CGRectNull;
+    // The recorded sheet: Start a Jam is the left of the two buttons along its foot.
+    CGSize size = host.bounds.size;
+    if (size.height < 200) return CGRectNull;
+    return CGRectMake(16, size.height - 118, size.width / 2 - 24, 70);
 }
 
 @interface SGWebJamPress : UILongPressGestureRecognizer
@@ -55,20 +58,51 @@ static CGRect jamFrame(UIView *host) {
 @implementation SGWebJamPress
 @end
 
-static char kRingKey, kPressKey;
+static char kRingKey, kPressKey, kTapKey;
 
-@interface SGWebJamPressTarget : NSObject
-+ (void)pressed:(SGWebJamPress *)press;
+// Spotify's own Jam needs Premium on its server and only says an error came: the button starts the Web Jam
+// instead and opens its sheet, a tap or a hold alike. Spotify never sees the touch.
+static void openWebJam(NSString *how) {
+    [[UIImpactFeedbackGenerator new] impactOccurred];
+    BOOL was = SGWebJamRunning();
+    if (!was) SGWebJamSetEnabled(YES);
+    SGLog(@"web jam: %@ on Start a Jam, %@", how, was ? @"already running" : @"started");
+    SGWebJamShowSheet();
+}
+
+@interface SGWebJamTap : UITapGestureRecognizer
+@property (nonatomic) CGRect target;
+@end
+
+@implementation SGWebJamTap
+@end
+
+@interface SGWebJamPressTarget : NSObject <UIGestureRecognizerDelegate>
++ (instancetype)shared;
 @end
 
 @implementation SGWebJamPressTarget
-+ (void)pressed:(SGWebJamPress *)press {
-    if (press.state != UIGestureRecognizerStateBegan) return;
-    CGPoint at = [press locationInView:press.view];
-    if (!CGRectContainsPoint(CGRectInset(press.target, -8, -8), at)) return;
-    [[UIImpactFeedbackGenerator new] impactOccurred];
-    SGLog(@"web jam: long press on Start a Jam");
-    SGWebJamShowSheet();
++ (instancetype)shared {
+    static SGWebJamPressTarget *one;
+    if (!one) one = [SGWebJamPressTarget new];
+    return one;
+}
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture {
+    CGRect target = [gesture isKindOfClass:SGWebJamTap.class] ? ((SGWebJamTap *)gesture).target : ((SGWebJamPress *)gesture).target;
+    return !CGRectIsNull(target) && CGRectContainsPoint(CGRectInset(target, -6, -6), [gesture locationInView:gesture.view]);
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gesture shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)other {
+    return NO;
+}
+
+- (void)tapped:(SGWebJamTap *)tap {
+    if (tap.state == UIGestureRecognizerStateEnded) openWebJam(@"tap");
+}
+
+- (void)pressed:(SGWebJamPress *)press {
+    if (press.state == UIGestureRecognizerStateBegan) openWebJam(@"long press");
 }
 @end
 
@@ -76,16 +110,23 @@ static void markJam(UIView *host) {
     CGRect frame = jamFrame(host);
     CAShapeLayer *ring = objc_getAssociatedObject(host, &kRingKey);
     SGWebJamPress *press = objc_getAssociatedObject(host, &kPressKey);
+    SGWebJamTap *tap = objc_getAssociatedObject(host, &kTapKey);
     if (!press) {
-        press = [[SGWebJamPress alloc] initWithTarget:SGWebJamPressTarget.class action:@selector(pressed:)];
-        press.cancelsTouchesInView = NO;
-        press.delaysTouchesBegan = NO;
+        SGWebJamPressTarget *target = SGWebJamPressTarget.shared;
+        press = [[SGWebJamPress alloc] initWithTarget:target action:@selector(pressed:)];
+        press.delegate = target;
         press.minimumPressDuration = 0.45;
         [host addGestureRecognizer:press];
         objc_setAssociatedObject(host, &kPressKey, press, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        tap = [[SGWebJamTap alloc] initWithTarget:target action:@selector(tapped:)];
+        tap.delegate = target;
+        [tap requireGestureRecognizerToFail:press];
+        [host addGestureRecognizer:tap];
+        objc_setAssociatedObject(host, &kTapKey, tap, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        SGDebug(@"web jam: Start a Jam taken over at %@", NSStringFromCGRect(frame));
     }
     press.target = frame;
-    press.enabled = !CGRectIsNull(frame);
+    tap.target = frame;
     BOOL lit = SGWebJamRunning() && !CGRectIsNull(frame);
     if (!lit) {
         ring.hidden = YES;

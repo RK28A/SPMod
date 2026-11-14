@@ -2,6 +2,7 @@
 #import "Settings/SGModPage.h"
 #import "Settings/SGPageStyle.h"
 #import "Pages.h"
+#import "App/Transition/PageTransition.h"
 #import "Redesigned/Kit/SGRGlassSettings.h"
 #import "Shared/AlphaIndex/AlphaIndex.h"
 #import "Shared/ArtistBlock/ArtistBlock.h"
@@ -163,6 +164,10 @@ UIViewController *SGAppearanceSettingsPage(void) {
     gradient.visible = ^BOOL { return SGHidden(SGKeyBackdrop) && SGInt(SGKeyBackdropStyle, 0) == SGBackdropGradientStyle(); };
     backdropTune.visible = ^BOOL { return SGHidden(SGKeyBackdrop); };
     [rows addObject:SGWithSymbol(backdrop, @"circle.hexagongrid")];
+    SGModRow *transition = SGWithSymbol(SGChoiceRow(@"Page transitions", @"Opening a page from the profile menu", SGKeyPageTransition,
+                                                   SGPageTransitionNames(), SGPageTransitionZoom), @"rectangle.on.rectangle.angled");
+    transition.choiceNotes = SGPageTransitionNotes();
+    [rows addObject:transition];
     [rows addObject:SGWithSymbol(backdropStyle, @"sparkles")];
     [rows addObject:SGWithSymbol(backdropColor, @"eyedropper")];
     [rows addObject:gradient];

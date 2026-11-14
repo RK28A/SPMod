@@ -187,6 +187,15 @@ Shared:
   Gradient        A twelfth background style: up to three colours (the theme's, the theme's turned, or picked),
                   linear, radial or conic, at an angle, fading to black, still or drifting, turning or
                   breathing, swelling on a beat (Settings/SGBackdrop.m buildGradient, Settings/SGGradientPage.m).
+  Transitions     App/Transition/PageTransition.m: a page opened from the profile menu goes straight there. A
+                  veil in the page's own background covers the screen from the tap, the page is pushed under it,
+                  and it goes in one of seven styles (Appearance → Page transitions; Off is Spotify's own).
+  Shuffle sheet   Spotify's Listening modes sheet (SmartShuffle_CoreImpl.PlayModePickerViewController) is not
+                  presented; the tap turns plain shuffle on (Shared/Fusion/FusionMenu.x). While Fusion Shuffle
+                  is on its glyph is put back on the shuffle buttons every 0.35 s: the redesign's player draws
+                  its button again from Spotify's after a tap.
+  Start a Jam     In the device picker, a tap or a hold starts the Web Jam and opens its sheet; Spotify's Jam
+                  needs Premium on its server. The button is found by its accessibility label, else by its place.
   Glass more      Clear glass fill (0 bare glass, 1 a step from frosted, 0.5 unless set) is white let into the
                   clear UIGlassEffect's tint; a card is made again when the style or the fill changes
                   (SGRGlassLookNow). Profile menu (Liquid Glass page) puts each drawer row on a card
