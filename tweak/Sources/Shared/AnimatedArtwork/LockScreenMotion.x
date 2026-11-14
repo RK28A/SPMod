@@ -138,17 +138,75 @@ static void show(NSURL *file) {
     });
 }
 
-// The cover Spotify handed the system for `title`, read on the main thread as LyricsArtwork.x reads it,
-// then `then` on sg_queue with it, or with NULL when the info is another song's or has none.
-static void withCover(NSString *title, void (^then)(CGImageRef cover)) {
+// Spotify hands the system a grey picture glyph while a cover loads; a clip made from it would be kept for
+// the album. Dark and without colour, at a glance.
+static BOOL looksLikePlaceholder(CGImageRef image) {
+    if (!image) return YES;
+    enum { kSide = 12 };
+    uint8_t pixels[kSide * kSide * 4] = {0};
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(pixels, kSide, kSide, 8, kSide * 4, space, kCGImageAlphaPremultipliedLast);
+    CGColorSpaceRelease(space);
+    if (!context) return NO;
+    CGContextDrawImage(context, CGRectMake(0, 0, kSide, kSide), image);
+    CGContextRelease(context);
+    int most = 0;
+    double light = 0;
+    for (int i = 0; i < kSide * kSide; i++) {
+        int r = pixels[i * 4], g = pixels[i * 4 + 1], b = pixels[i * 4 + 2];
+        most = MAX(most, abs(r - g) + abs(g - b));
+        light += (r + g + b) / 765.0;
+    }
+    return most < 12 && light / (kSide * kSide) < 0.45;
+}
+
+static NSURL *pictureURL(NSString *picture) {
+    if ([picture hasPrefix:@"spotify:image:"]) return [NSURL URLWithString:[@"https://i.scdn.co/image/" stringByAppendingString:[picture substringFromIndex:14]]];
+    if ([picture hasPrefix:@"https://"]) return [NSURL URLWithString:picture];
+    return nil;
+}
+
+// The cover Spotify handed the system for `title`, read on the main thread as LyricsArtwork.x reads it, then
+// `then` on sg_queue with it, or with NULL when the info is another song's, has none or keeps the placeholder.
+static void coverFromNowPlaying(NSString *title, int tries, void (^then)(CGImageRef cover)) {
     dispatch_async(dispatch_get_main_queue(), ^{
         NSDictionary *info = MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo;
         MPMediaItemArtwork *artwork = info[MPMediaItemPropertyArtwork];
         UIImage *cover = SGNowPlayingTitlesMatch(info[MPMediaItemPropertyTitle], title)
             && [artwork isKindOfClass:MPMediaItemArtwork.class]
             ? [artwork imageWithSize:CGSizeMake(600, 600)] : nil;
+        if (looksLikePlaceholder(cover.CGImage)) {
+            if (tries < 8) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    coverFromNowPlaying(title, tries + 1, then);
+                });
+                return;
+            }
+            SGLog(@"lock motion: the cover for \"%@\" is still Spotify's placeholder, no clip made", title);
+            dispatch_async(sg_queue, ^{ then(NULL); });
+            return;
+        }
         dispatch_async(sg_queue, ^{ then(cover.CGImage); });
     });
+}
+
+// The track's own picture from Spotify's image server first; the system's now playing artwork after.
+static void withCover(NSString *title, NSString *picture, void (^then)(CGImageRef cover)) {
+    NSURL *url = pictureURL(picture);
+    if (!url) {
+        coverFromNowPlaying(title, 0, then);
+        return;
+    }
+    NSURLRequest *request = [NSURLRequest requestWithURL:url cachePolicy:NSURLRequestReturnCacheDataElseLoad timeoutInterval:5];
+    [[NSURLSession.sharedSession dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        UIImage *cover = data.length ? [UIImage imageWithData:data] : nil;
+        if (!cover.CGImage) {
+            SGLog(@"lock motion: the picture could not be fetched (%@), the now playing artwork is used", error.localizedDescription ?: @"no image");
+            coverFromNowPlaying(title, 0, then);
+            return;
+        }
+        dispatch_async(sg_queue, ^{ then(cover.CGImage); });
+    }] resume];
 }
 
 // The picture the track names, so the songs of an album share a clip; the track itself when it names none.
@@ -165,13 +223,13 @@ API_AVAILABLE(ios(26.0))
 static void showCover(NSString *picture) {
     if (![MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys containsObject:MPNowPlayingInfoProperty3x4AnimatedArtwork]) return;
     CGFloat coverScale = SGLockScreenCoverArtworkScale();
-    NSString *clipID = [NSString stringWithFormat:@"fluid\n%@\ncover %.2f", picture, coverScale];
+    NSString *clipID = [NSString stringWithFormat:@"fluid\nv2\n%@\ncover %.2f", picture, coverScale];
     NSURL *file = SGMotionMadeFile(clipID);
     NSString *title = sg_title;
     CGSize size = SGLyricsClipSize(SGMotionPixels());
     NSString *name = file.lastPathComponent;
     void (^clip)(void (^)(NSURL *)) = ^(void (^done)(NSURL *)) {
-        withCover(title, ^(CGImageRef cover) {
+        withCover(title, picture, ^(CGImageRef cover) {
             CFAbsoluteTime start = CFAbsoluteTimeGetCurrent();
             BOOL ok = [NSFileManager.defaultManager fileExistsAtPath:file.path]
                 || SGFluidClipWrite(file, cover, size, coverScale);
@@ -182,7 +240,7 @@ static void showCover(NSString *picture) {
     };
     MPMediaItemAnimatedArtwork *artwork = [[MPMediaItemAnimatedArtwork alloc] initWithArtworkID:name
         previewImageRequestHandler:^(CGSize wanted, void (^completion)(UIImage *)) {
-            withCover(title, ^(CGImageRef cover) {
+            withCover(title, picture, ^(CGImageRef cover) {
                 CGImageRef frame = SGFluidClipFrame(cover, size, coverScale);
                 completion(frame ? filled([UIImage imageWithCGImage:frame], wanted) : nil);
                 CGImageRelease(frame);
@@ -205,11 +263,11 @@ static void showFill(NSString *picture) {
     if (![MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys containsObject:MPNowPlayingInfoProperty3x4AnimatedArtwork]) return;
     NSString *title = sg_title;
     CGSize size = SGLyricsClipSize(SGMotionPixels());
-    NSURL *file = SGMotionMadeFile([NSString stringWithFormat:@"fill\nv11\n%@\n%.0fx%.0f", picture, size.width, size.height]);
+    NSURL *file = SGMotionMadeFile([NSString stringWithFormat:@"fill\nv12\n%@\n%.0fx%.0f", picture, size.width, size.height]);
     __block UIImage *renderedFrame;
     NSString *name = file.lastPathComponent;
     void (^clip)(void (^)(NSURL *)) = ^(void (^done)(NSURL *)) {
-        withCover(title, ^(CGImageRef cover) {
+        withCover(title, picture, ^(CGImageRef cover) {
             if (!renderedFrame) {
                 CGImageRef frame = SGFillClipFrame(cover, size);
                 if (frame) renderedFrame = [UIImage imageWithCGImage:frame];
@@ -225,7 +283,7 @@ static void showFill(NSString *picture) {
     };
     MPMediaItemAnimatedArtwork *artwork = [[MPMediaItemAnimatedArtwork alloc] initWithArtworkID:name
         previewImageRequestHandler:^(CGSize wanted, void (^completion)(UIImage *)) {
-            withCover(title, ^(CGImageRef cover) {
+            withCover(title, picture, ^(CGImageRef cover) {
                 if (!renderedFrame) {
                     CGImageRef frame = SGFillClipFrame(cover, size);
                     if (frame) renderedFrame = [UIImage imageWithCGImage:frame];
