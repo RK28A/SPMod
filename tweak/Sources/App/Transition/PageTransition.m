@@ -45,17 +45,19 @@ static void away(UIView *veil) {
     void (^done)(BOOL) = ^(BOOL ended) { finish(veil); };
     UIViewAnimationOptions ease = UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction;
     switch (style) {
-        case SGPageTransitionZoom:
+        case SGPageTransitionZoom: {
             [UIView animateWithDuration:kOut delay:0 options:ease animations:^{
                 veil.transform = CGAffineTransformMakeScale(1.18, 1.18);
                 veil.alpha = 0;
             } completion:done];
             break;
-        case SGPageTransitionRise:
+        }
+        case SGPageTransitionRise: {
             [UIView animateWithDuration:kOut delay:0 usingSpringWithDamping:0.92 initialSpringVelocity:0 options:ease animations:^{
                 veil.transform = CGAffineTransformMakeTranslation(0, -bounds.size.height);
             } completion:done];
             break;
+        }
         case SGPageTransitionBlur: {
             UIVisualEffectView *blur = [[UIVisualEffectView alloc] initWithEffect:nil];
             blur.frame = bounds;
@@ -126,8 +128,9 @@ static void away(UIView *veil) {
             } completion:done];
             break;
         }
-        default:
+        default: {
             [UIView animateWithDuration:kOut delay:0 options:ease animations:^{ veil.alpha = 0; } completion:done];
+        }
     }
 }
 
