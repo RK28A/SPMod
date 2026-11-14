@@ -436,6 +436,39 @@ static UIView *blockIn(UIView *layout, UIView *cover, UIView *fullbleed) {
     return block;
 }
 
+// As the header closes, the cover above it gives way to the theme: what shows behind the bar at the top of a
+// scrolled playlist is the theme, the same as behind the tracks. A view of the theme lies over the hero,
+// shown by its layer's opacity (the header lays nothing out on it), from none with the header open to all
+// of it closed.
+static void themeOverHero(UIView *plane, CGFloat height, CGFloat closed) {
+    static char kOverKey;
+    SGRPlaylistHero *hero = plane ? objc_getAssociatedObject(plane, &kHeroKey) : nil;
+    if (!hero.superview || height < 1) return;
+    UIView *over = objc_getAssociatedObject(hero, &kOverKey);
+    if (!over) {
+        over = [UIView new];
+        over.userInteractionEnabled = NO;
+        over.clipsToBounds = YES;
+        over.layer.opacity = 0;
+        objc_setAssociatedObject(hero, &kOverKey, over, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (over.superview != hero) {
+        [hero addSubview:over];
+        SGRAccentWashPlace(over);
+    }
+    if (!CGRectEqualToRect(over.frame, hero.bounds)) {
+        over.frame = hero.bounds;
+        SGRAccentWashPlace(over);
+    }
+    float closing = (float)MIN(1, MAX(0, 1 - (height - closed) / 200));
+    if (fabsf(over.layer.opacity - closing) < 0.01) return;
+    SGLoopNote("hero theme opacity");
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    over.layer.opacity = closing;
+    [CATransaction commit];
+}
+
 static void applyHeaderNow(UIView *layout);
 
 // Spotify's header lays out again whenever something in it changes. A pass of the mod's that sets something
@@ -471,6 +504,7 @@ static void applyHeaderNow(UIView *layout) {
         info.layer.opacity = shown;
         [CATransaction commit];
     }
+    themeOverHero(plane, layout.bounds.size.height, closed);
 
     CGFloat planeHeight = plane.bounds.size.height;
     CGFloat restPlane = [objc_getAssociatedObject(plane, &kRestPlaneKey) doubleValue];

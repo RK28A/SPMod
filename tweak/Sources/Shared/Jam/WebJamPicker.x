@@ -1,6 +1,8 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import "Core/SGCore.h"
+#import "Settings/SGPageStyle.h"
+#import "Shared/Fusion/Fusion.h"
 #import "WebJam.h"
 
 // The device picker's Start a Jam button (Connect_DevicePickerUIImpl.DevicePickerViewController, the recorded
@@ -101,8 +103,20 @@ static void openWebJam(NSString *how) {
     if (tap.state == UIGestureRecognizerStateEnded) openWebJam(@"tap");
 }
 
+// A hold opens the Web Jam's settings page over the picker, in a navigation of its own.
 - (void)pressed:(SGWebJamPress *)press {
-    if (press.state == UIGestureRecognizerStateBegan) openWebJam(@"long press");
+    if (press.state != UIGestureRecognizerStateBegan) return;
+    [[UIImpactFeedbackGenerator new] impactOccurred];
+    UIViewController *top = SGTopController();
+    UIViewController *page = SGWebJamPage();
+    if (!top || !page) return;
+    UINavigationController *navigation = [[UINavigationController alloc] initWithRootViewController:page];
+    navigation.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+    navigation.modalPresentationStyle = UIModalPresentationPageSheet;
+    page.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemClose primaryAction:
+        [UIAction actionWithHandler:^(UIAction *action) { [navigation dismissViewControllerAnimated:YES completion:nil]; }] menu:nil];
+    SGLog(@"web jam: long press on Start a Jam, its settings opened");
+    [top presentViewController:navigation animated:YES completion:nil];
 }
 @end
 
@@ -139,14 +153,14 @@ static void markJam(UIView *host) {
         objc_setAssociatedObject(host, &kRingKey, ring, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (ring.superlayer != host.superview.layer) [host.superview.layer addSublayer:ring];
-    UIColor *accent = host.tintColor ?: UIColor.systemGreenColor;
+    UIColor *accent = (SGFusionAccent ? SGFusionAccent() : nil) ?: SGAccentMark();
     CGRect inHost = [host.superview convertRect:frame fromView:host];
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
     ring.hidden = NO;
     ring.zPosition = 10;
     ring.strokeColor = accent.CGColor;
-    ring.fillColor = [accent colorWithAlphaComponent:0.18].CGColor;
+    ring.fillColor = [accent colorWithAlphaComponent:0.32].CGColor;
     ring.shadowColor = accent.CGColor;
     ring.shadowOpacity = 0.7;
     ring.shadowRadius = 8;
