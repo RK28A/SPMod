@@ -145,7 +145,7 @@ static BOOL looksLikePlaceholder(CGImageRef image) {
     enum { kSide = 12 };
     uint8_t pixels[kSide * kSide * 4] = {0};
     CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreate(pixels, kSide, kSide, 8, kSide * 4, space, kCGImageAlphaPremultipliedLast);
+    CGContextRef context = CGBitmapContextCreate(pixels, kSide, kSide, 8, kSide * 4, space, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
     CGColorSpaceRelease(space);
     if (!context) return NO;
     CGContextDrawImage(context, CGRectMake(0, 0, kSide, kSide), image);
