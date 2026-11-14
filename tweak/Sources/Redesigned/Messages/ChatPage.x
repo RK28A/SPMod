@@ -11,6 +11,11 @@
 #import "Redesigned/Kit/SGRKit.h"
 #import "Redesigned/Navbar/Navbar.h"
 
+@interface _TtC21Campfire_ChatPageImpl22ChatPageViewController : UIViewController
+@end
+@interface _TtC15Campfire_ECMKitP33_C3D6A023C0D70E583A38568698C92DFC16CornerRadiusView : UIView
+@end
+
 static const CGFloat kAboveBars = 6;   // the field's foot (its 16pt padding under the glass) over the bars' top
 static char kInsetBaseKey, kInsetSetKey, kFillKey;
 static __weak UIViewController *sg_chat;

@@ -14,6 +14,13 @@
 #import "Shared/Fusion/Fusion.h"
 #import "WebJam.h"
 
+@interface _TtC21Campfire_ChatPageImpl22ChatPageViewController : UIViewController
+@end
+@interface _TtC36Jam_ListeningActivityIntegrationImpl30MessagingHeaderLiquidGlassView : UIView
+@end
+@interface _TtC12Element_List18CollectionViewCell : UICollectionViewCell
+@end
+
 static NSString *const kKey = @"⟦spjam:";
 static NSString *const kSeenKey = @"spotifyglass.webjam.chatSeen";
 static char kButtonKey, kFillKey, kHiddenKey;
