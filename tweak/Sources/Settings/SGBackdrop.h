@@ -41,3 +41,15 @@ void SGBackdropResetTune(NSInteger style);
 // How often the background is drawn: 0 thirty times a second (the default, the coolest), 1 sixty, 2 as often
 // as the screen allows.
 #define SGKeyBackdropRate @"spotifyglass.animatedbg.rate"
+
+// The Gradient style's own settings (Settings/SGGradientPage.m). Each colour is an RGB number, or -1 for the
+// theme's colour, -2 for the theme's turned a little round the wheel, -3 for none (the third only).
+#define SGKeyGradientColor1 @"spotifyglass.animatedbg.gradient.color1"
+#define SGKeyGradientColor2 @"spotifyglass.animatedbg.gradient.color2"
+#define SGKeyGradientColor3 @"spotifyglass.animatedbg.gradient.color3"
+#define SGKeyGradientKind @"spotifyglass.animatedbg.gradient.kind"       // 0 linear, 1 radial, 2 conic
+#define SGKeyGradientAngle @"spotifyglass.animatedbg.gradient.angle"     // degrees, 0 to 360, 160 unless set
+#define SGKeyGradientMotion @"spotifyglass.animatedbg.gradient.motion"   // 0 still, 1 drift, 2 turn, 3 breathe
+#define SGKeyGradientDepth @"spotifyglass.animatedbg.gradient.depth"     // how far it fades to black, 0.5 unless set
+NSInteger SGBackdropGradientStyle(void);   // its index among the styles
+UIViewController *SGGradientSettingsPage(void);

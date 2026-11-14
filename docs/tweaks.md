@@ -184,6 +184,9 @@ Shared:
   Speed           A background scene is built once per size, a turn after it is asked for (the page draws
                   first), and a page coming back keeps its scene. The accent's sweep of every view runs every two
                   seconds for twenty after a change, then every eight.
+  Gradient        A twelfth background style: up to three colours (the theme's, the theme's turned, or picked),
+                  linear, radial or conic, at an angle, fading to black, still or drifting, turning or
+                  breathing, swelling on a beat (Settings/SGBackdrop.m buildGradient, Settings/SGGradientPage.m).
   Glass more      Clear glass fill (0 bare glass, 1 a step from frosted, 0.5 unless set) is white let into the
                   clear UIGlassEffect's tint; a card is made again when the style or the fill changes
                   (SGRGlassLookNow). Profile menu (Liquid Glass page) puts each drawer row on a card

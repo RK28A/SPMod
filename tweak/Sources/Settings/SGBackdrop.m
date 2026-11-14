@@ -18,6 +18,7 @@ typedef NS_ENUM(NSInteger, SGBackdropStyle) {
     SGBackdropMesh,
     SGBackdropBars,
     SGBackdropBigBang,
+    SGBackdropGradient,
     SGBackdropStyleCount,
 };
 
@@ -25,7 +26,11 @@ static const NSTimeInterval kFade = 1.2, kLongestWait = 2.5;
 static const CGFloat kBarRest = 0.1;
 
 NSArray<NSString *> *SGBackdropStyleNames(void) {
-    return @[@"Wave", @"Aurora", @"Pulse", @"Tide", @"Spotlights", @"Ripples", @"Stars", @"Ribbons", @"Prism", @"Mesh", @"Bars", @"Big Bang"];
+    return @[@"Wave", @"Aurora", @"Pulse", @"Tide", @"Spotlights", @"Ripples", @"Stars", @"Ribbons", @"Prism", @"Mesh", @"Bars", @"Big Bang", @"Gradient"];
+}
+
+NSInteger SGBackdropGradientStyle(void) {
+    return SGBackdropGradient;
 }
 
 static UIColor *fromRGB(NSInteger rgb) {
@@ -184,6 +189,7 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     int _meteors;
     NSMutableArray<CALayer *> *_bars;
     double _speed, _music;
+    CAGradientLayer *_gradient;
     BOOL _rebuildAsked;
 }
 
@@ -246,6 +252,7 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     _began = CACurrentMediaTime();
     _meteors = 0;
     _bars = nil;
+    _gradient = nil;
     for (CALayer *layer in [self.layer.sublayers copy]) [layer removeFromSuperlayer];
     BOOL still = UIAccessibilityIsReduceMotionEnabled();
     _speed = SGBackdropTuneValue(SGBackdropTuneSpeed, _style);
@@ -362,6 +369,16 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
             [ring addAnimation:grow forKey:@"grow"];
             [ring addAnimation:fade forKey:@"fade"];
             [CATransaction commit];
+            break;
+        }
+        case SGBackdropGradient: {
+            CABasicAnimation *swell = [CABasicAnimation animationWithKeyPath:@"opacity"];
+            swell.fromValue = @1;
+            swell.toValue = @(1 - 0.35 * intensity);
+            swell.duration = 0.25;
+            swell.autoreverses = YES;
+            swell.additive = NO;
+            [_gradient addAnimation:swell forKey:@"beat"];
             break;
         }
         case SGBackdropBars: {
@@ -581,6 +598,76 @@ static CALayer *planet(UIColor *color, CGFloat side, int kind) {
         @[@0, @(turn), @(arrive), @(fill + 1), @(period)], period) forKey:@"turn"];
 }
 
+// Gradient: up to three colours of the person's own, laid as a line at an angle, a circle or a turn round the
+// middle, over black, fading to black as far as Depth says. It drifts, turns or breathes, at the style's speed,
+// and swells on a beat.
+static UIColor *gradientColor(NSString *key, NSInteger fallback, UIColor *theme) {
+    NSInteger rgb = SGInt(key, fallback);
+    if (rgb == -1) return theme;
+    if (rgb == -2) {
+        CGFloat h = 0, s = 0, v = 0, a = 1;
+        if (![theme getHue:&h saturation:&s brightness:&v alpha:&a]) return theme;
+        return [UIColor colorWithHue:fmod(h + 0.12, 1) saturation:MIN(1, s * 1.1) brightness:v * 0.7 alpha:1];
+    }
+    if (rgb < 0 || rgb > 0xFFFFFF) return nil;
+    return fromRGB(rgb);
+}
+
+- (void)buildGradient:(CGSize)size still:(BOOL)still {
+    CALayer *root = self.layer;
+    CGRect frame = (CGRect){CGPointZero, size};
+    NSMutableArray *colors = [NSMutableArray array];
+    for (UIColor *each in @[gradientColor(SGKeyGradientColor1, -1, _color) ?: _color, gradientColor(SGKeyGradientColor2, -2, _color) ?: _color,
+                            gradientColor(SGKeyGradientColor3, -3, _color) ?: UIColor.clearColor]) {
+        if (CGColorGetAlpha(each.CGColor) > 0) [colors addObject:cg(each, 0.85)];
+    }
+    NSInteger kind = SGInt(SGKeyGradientKind, 0), motion = SGInt(SGKeyGradientMotion, 1);
+    double angle = SGInt(SGKeyGradientAngle, 160) * M_PI / 180;
+    double depth = [NSUserDefaults.standardUserDefaults objectForKey:SGKeyGradientDepth] ? MIN(1, MAX(0, [NSUserDefaults.standardUserDefaults doubleForKey:SGKeyGradientDepth])) : 0.5;
+    _period = 16;
+    // Larger than the screen, so a turn or a drift never shows its edge.
+    CGFloat side = hypot(size.width, size.height) * 1.2;
+    CAGradientLayer *field = [CAGradientLayer layer];
+    field.bounds = CGRectMake(0, 0, side, side);
+    field.position = CGPointMake(size.width / 2, size.height / 2);
+    field.colors = colors.count > 1 ? colors : @[colors.firstObject ?: cg(_color, 0.85), cg(_color, 0.2)];
+    if (kind == 1) {
+        field.type = kCAGradientLayerRadial;
+        field.startPoint = CGPointMake(0.5, 0.5);
+        field.endPoint = CGPointMake(1, 1);
+    } else if (kind == 2) {
+        field.type = kCAGradientLayerConic;
+        field.startPoint = CGPointMake(0.5, 0.5);
+        field.endPoint = CGPointMake(0.5 + 0.5 * cos(angle), 0.5 + 0.5 * sin(angle));
+    } else {
+        field.startPoint = CGPointMake(0.5 - 0.5 * cos(angle), 0.5 - 0.5 * sin(angle));
+        field.endPoint = CGPointMake(0.5 + 0.5 * cos(angle), 0.5 + 0.5 * sin(angle));
+    }
+    [root addSublayer:field];
+    _gradient = field;
+    if (depth > 0.01) {
+        CAGradientLayer *night = [CAGradientLayer layer];
+        night.frame = frame;
+        night.colors = @[cg(UIColor.blackColor, 0), cg(UIColor.blackColor, 0), cg(UIColor.blackColor, 0.95)];
+        night.locations = @[@0, @(MAX(0.05, 1 - depth)), @1];
+        [root addSublayer:night];
+    }
+    SGDebug(@"background: gradient of %lu colours, kind %ld, motion %ld, angle %.0f", (unsigned long)field.colors.count, (long)kind, (long)motion, angle * 180 / M_PI);
+    if (still || motion == 0) return;
+    if (motion == 2) {
+        CABasicAnimation *turn = loop(@"transform.rotation.z", @0, @(2 * M_PI), 40, NO);
+        [field addAnimation:turn forKey:@"turn"];
+    } else if (motion == 3) {
+        [field addAnimation:loop(@"transform.scale", @1, @1.25, 6, YES) forKey:@"breathe"];
+        [field addAnimation:loop(@"opacity", @1, @0.7, 6, YES) forKey:@"glow"];
+    } else {
+        CGPoint middle = field.position;
+        [field addAnimation:loop(@"position", [NSValue valueWithCGPoint:CGPointMake(middle.x - size.width * 0.18, middle.y - size.height * 0.08)],
+                                 [NSValue valueWithCGPoint:CGPointMake(middle.x + size.width * 0.18, middle.y + size.height * 0.08)], 11, YES) forKey:@"drift"];
+        [field addAnimation:loop(@"transform.rotation.z", @(-0.12), @0.12, 17, YES) forKey:@"sway"];
+    }
+}
+
 - (void)build:(CGSize)size still:(BOOL)still {
     CALayer *root = self.layer;
     UIColor *color = _color;
@@ -758,6 +845,9 @@ static CALayer *planet(UIColor *color, CGFloat side, int kind) {
         }
         case SGBackdropBigBang:
             [self buildBigBang:size still:still];
+            break;
+        case SGBackdropGradient:
+            [self buildGradient:size still:still];
             break;
         default: {
             _period = 14;

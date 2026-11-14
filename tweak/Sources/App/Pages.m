@@ -90,7 +90,11 @@ static UIViewController *backdropTunePage(void) {
         SGBackdropResetTune(style);
         [SGTopController().navigationController popViewControllerAnimated:YES];
     });
-    return [[SGModPage alloc] initWithTitle:names[style] intro:nil sections:@[
+    NSMutableArray<SGModSection *> *sections = [NSMutableArray array];
+    if (style == SGBackdropGradientStyle()) {
+        [sections addObject:SGSection(nil, @[SGWithSymbol(SGPageRow(@"Colours, shape and motion", ^UIViewController *{ return SGGradientSettingsPage(); }), @"paintpalette")])];
+    }
+    [sections addObjectsFromArray:@[
         SGNotedSection(@"Motion", @[
             slider(@"Speed", @"How fast the style runs", SGBackdropTuneSpeed, 0.25, 2.5),
             slider(@"Reaction to music", @"How often and how hard it answers the beat: meteors, rings, bars, flashes", SGBackdropTuneMusic, 0, 2),
@@ -100,7 +104,8 @@ static UIViewController *backdropTunePage(void) {
             slider(@"Colour spread", @"How far its other colours stray from the theme's", SGBackdropTuneSpread, 0, 1),
         ], @"At 0% the whole style is drawn in the theme's one colour. At 100% a red theme also shows orange and purple."),
         SGSection(nil, @[SGWithSymbol(reset, @"arrow.counterclockwise")]),
-    ] footer:@"Each background style keeps its own settings."];
+    ]];
+    return [[SGModPage alloc] initWithTitle:names[style] intro:nil sections:sections footer:@"Each background style keeps its own settings."];
 }
 
 static SGModRow *unavailableRow(void) {
@@ -154,10 +159,13 @@ UIViewController *SGAppearanceSettingsPage(void) {
         row.chosen = ^(NSInteger index) { [NSNotificationCenter.defaultCenter postNotificationName:SGBackdropDidChangeNotification object:nil]; };
     }
     SGModRow *backdropTune = SGPageRow(@"Customise this style", ^UIViewController *{ return backdropTunePage(); });
+    SGModRow *gradient = SGWithSymbol(SGPageRow(@"Customise the gradient", ^UIViewController *{ return SGGradientSettingsPage(); }), @"paintpalette");
+    gradient.visible = ^BOOL { return SGHidden(SGKeyBackdrop) && SGInt(SGKeyBackdropStyle, 0) == SGBackdropGradientStyle(); };
     backdropTune.visible = ^BOOL { return SGHidden(SGKeyBackdrop); };
     [rows addObject:SGWithSymbol(backdrop, @"circle.hexagongrid")];
     [rows addObject:SGWithSymbol(backdropStyle, @"sparkles")];
     [rows addObject:SGWithSymbol(backdropColor, @"eyedropper")];
+    [rows addObject:gradient];
     [rows addObject:SGWithSymbol(backdropTune, @"slider.horizontal.3")];
     [rows addObject:SGWithSymbol(backdropRate, @"speedometer")];
     [rows addObject:sidebarBadgeTextRow()];
