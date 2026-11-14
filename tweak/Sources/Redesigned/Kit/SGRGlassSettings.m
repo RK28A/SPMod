@@ -217,7 +217,7 @@ UIViewController *SGRGlassSettingsPage(void) {
             refresh();
         }, ^NSString *(double value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; });
     SGModRow *drawer = SGWithSymbol(SGOptionRow(@"Profile menu", @"Each row of the side menu on a card of glass", SGRKeyDrawerGlass), @"sidebar.left");
-    SGModRow *home = SGWithSymbol(SGSwitchRow(@"Home shortcuts", @"The pills at the top of Home on glass, in the style below", SGRKeyHomeGlass), @"house");
+    SGModRow *home = SGWithSymbol(SGSwitchRow(@"Home shortcuts", @"The pills at the top of Home on glass, in the style below", SGRKeyHomeGlassTiles), @"house");
     SGModRow *settings = SGWithSymbol(SGOptionRow(@"SPMod settings", @"Every row of these pages on glass", SGRKeySettingsGlass), @"gearshape");
     settings.changed = ^(BOOL on) { SGModCellDecorator = glassSettingsCell; };
     SGModRow *zoom = SGWithSymbol(SGOptionRow(@"Zoom on lists", @"The row in the middle of the screen stands out from the others", SGRKeyGlassZoom), @"plus.magnifyingglass");

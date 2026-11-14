@@ -64,7 +64,7 @@ static UIView *surfaceIn(UIView *tile, UIView *fill) {
     // Real glass under the pill, in the style chosen on the Liquid Glass page; the pill's tint goes over it,
     // lighter the clearer the glass.
     static char kTileGlassKey;
-    BOOL real = SGEnabled(SGRKeyHomeGlass);
+    BOOL real = SGEnabled(SGRKeyHomeGlassTiles);
     SGRGlassCard(tile, &kTileGlassKey, tile.bounds, radius, real);
     CGFloat over = !real ? 1 : SGRGlassStyleNow() == 1 ? 0.12 + 0.45 * SGRGlassClearFill() : SGRGlassStyleNow() == 3 ? 0.3 : 0.4;
     if (fabs(surface.alpha - over) > 0.01) surface.alpha = over;

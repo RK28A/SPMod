@@ -12,7 +12,7 @@
 #define SGRKeyDrawerGlass @"spotifyglass.redesign.drawer.glass"
 // Home's shortcut pills on real glass in the chosen style, their cover's tint laid lightly over it. On unless
 // switched off.
-#define SGRKeyHomeGlass @"spotifyglass.redesign.home.glassTiles"
+#define SGRKeyHomeGlassTiles @"spotifyglass.redesign.home.glassTiles"
 // The rows of SPMod's own settings pages each on a card of glass. Off until switched on.
 #define SGRKeySettingsGlass @"spotifyglass.redesign.settings.glass"
 
