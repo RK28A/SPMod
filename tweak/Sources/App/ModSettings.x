@@ -730,6 +730,21 @@ static void fadeUselessLabel(UILabel *label) {
 
 // A useless row is faded and its place given to the rows under it (adoptLayout). A row reused for something
 // else is brought back.
+// A row still loading: no words yet, grey rounded bars where they will be (the subscription row shows Spotify's
+// logo beside two of them). It is taken out until its words come, then judged by them, so a row that turns
+// out to be wanted comes back.
+static BOOL skeletonRow(UIView *row) {
+    __block NSUInteger bars = 0;
+    SGForEachView(row, ^(UIView *view) {
+        if (view == row || view.subviews.count || [view isKindOfClass:UILabel.class] || [view isKindOfClass:UIImageView.class]) return;
+        CGFloat w = 0, a = 0;
+        CGSize size = view.bounds.size;
+        if ([view.backgroundColor getWhite:&w alpha:&a] && a > 0.3 && w > 0.08 && w < 0.4 && size.width > 40 && size.height >= 8 && size.height <= 60
+            && view.layer.cornerRadius > 2) bars++;
+    });
+    return bars >= 1;
+}
+
 static void trimDrawer(UICollectionView *list) {
     BOOL whole = SGFlag(SGKeyDrawerUseless, NO), changed = NO;
     if (!sg_gone) sg_gone = [NSMutableSet set];
@@ -743,8 +758,10 @@ static void trimDrawer(UICollectionView *list) {
         BOOL out = NO;
         if (!whole) {
             BOOL worded = rowHasText(row), known = path && [sg_gone containsObject:path];
-            out = worded ? uselessRow(row) : known;
-            if (path && worded && out != known) {
+            BOOL loading = !worded && skeletonRow(row);
+            out = worded ? uselessRow(row) : (known || loading);
+            if (loading && !known) SGDebug(@"side menu: a row still loading at %@ taken out until its words come", path);
+            if (path && (worded || loading) && out != known) {
                 if (out) [sg_gone addObject:path];
                 else [sg_gone removeObject:path];
                 changed = YES;
