@@ -41,6 +41,9 @@ BOOL SGRTabBarMinimized(void) {
     return sg_minimized;
 }
 
+NSNotificationName const SGRTabBarDidMoveNotification = @"SGRTabBarDidMoveNotification";
+static CGRect sg_dockRow;   // the minimized row, in window coordinates (applyMinimized)
+
 void SGRSetTabBarMinimized(BOOL minimized, BOOL animated) {
     if (sg_minimized == minimized) return;
     // With nothing playing there is no pill for the row between the buttons: the bar stays whole.
@@ -48,6 +51,19 @@ void SGRSetTabBarMinimized(BOOL minimized, BOOL animated) {
     sg_minimized = minimized;
     UIView *stockBar = sg_stockBar;
     if (stockBar) applyMinimized(stockBar, animated);
+    [NSNotificationCenter.defaultCenter postNotificationName:SGRTabBarDidMoveNotification object:nil];
+}
+
+CGFloat SGRFloatingBarsTop(void) {
+    UIView *stockBar = sg_stockBar;
+    UIView *bar = stockBar ? objc_getAssociatedObject(stockBar, &kBarKey) : nil;
+    UIWindow *window = bar.window;
+    if (!window || stockBar.hidden || stockBar.alpha < 0.01) return NAN;
+    if (sg_minimized && !CGRectIsEmpty(sg_dockRow)) return CGRectGetMinY(sg_dockRow);
+    CGFloat top = [bar convertRect:bar.bounds toView:nil].origin.y;
+    CGRect card = SGRNowPlayingCardFrameIn(window, NULL);
+    if (!CGRectIsNull(card) && !CGRectIsEmpty(card) && CGRectGetMinY(card) < top) top = CGRectGetMinY(card);
+    return top;
 }
 
 #pragma mark - reading Spotify's items
@@ -414,6 +430,7 @@ static void applyMinimized(UIView *stockBar, BOOL animated) {
     BOOL minimized = sg_minimized;
     CGRect circles[2], shapes[2];
     CGRect row = layoutDock(stockBar, host, bar, circles, shapes);
+    sg_dockRow = row;
     // Blocks cannot capture C arrays under ARC; copy the four CGRect values into scalar locals.
     CGRect circle0 = circles[0], circle1 = circles[1];
     CGRect shape0 = shapes[0], shape1 = shapes[1];

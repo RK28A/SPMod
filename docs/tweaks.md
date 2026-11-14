@@ -619,3 +619,10 @@ See [WEB-JAM-LIVE-2026-11-06.md](WEB-JAM-LIVE-2026-11-06.md) for build evidence 
 
 A class Spotify has renamed shows up in the log as `class X not found, its hooks are inactive`;
 declare the classes a feature needs in `Headers/` only when a hook calls into them by type.
+
+**Messages (redesign).** `Redesigned/Messages/ChatPage.x`: the chat takes the theme (SGRAccentWashPlace), the
+other person's bubbles go clear and one's own take the accent, and the field to write in is moved by a transform
+onto the floating bars (`SGRFloatingBarsTop`, `SGRTabBarDidMoveNotification`), the list's inset giving the
+distance back. **Web Jam in Messages** (`Shared/Jam/ChatJam.x`, both looks): the chat's Jam button sends the Web
+Jam address with a key (`⟦spjam:nonce|url⟧`); rows holding the key are sized to nothing and see-through, and one
+from the other person asks once whether to join (same Wi-Fi only).

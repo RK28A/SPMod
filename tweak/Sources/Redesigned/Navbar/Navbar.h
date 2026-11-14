@@ -45,6 +45,10 @@ UIViewController *SGRNavbarEditorPage(void);     // the tab editor alone, for th
 // TabBar.x: whether the glass bar is minimized by a page's scroll, and minimizing it (TabBarMinimize.x).
 BOOL SGRTabBarMinimized(void);
 void SGRSetTabBarMinimized(BOOL minimized, BOOL animated);
+// The top of what floats at the foot of the screen (the now playing card over the glass bar, or the minimized
+// row), in window coordinates; NAN when the bar is not on screen. Posted when it moves with a minimize.
+CGFloat SGRFloatingBarsTop(void);
+extern NSNotificationName const SGRTabBarDidMoveNotification;
 
 // TabBar.x: shows the given custom tab (an SGRTabItemView on the row) as the bar's selected one, and keeps
 // it selected until a stock tab is tapped; Spotify never paints one of the mod's tabs white itself.
