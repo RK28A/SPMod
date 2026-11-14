@@ -51,6 +51,10 @@ static __weak SGRGlyphButton *sg_lyricsGlyph;
 static __weak UIView *sg_footerHost;
 static BOOL sg_playerIsVisible;
 
+BOOL SGRPlayerIsVisible(void) {
+    return sg_playerIsVisible;
+}
+
 static void refreshFooter(void) {
     UIView *host = sg_footerHost;
     if (!sg_playerIsVisible || !host.window) return;
@@ -128,6 +132,7 @@ static CGFloat moveTo(UIView *arranged, UIView *view, CGPoint point, UIView *hos
 
 void SGRPlayerLyricsChanged(void) {
     SGRPlayerMotionLyricsChanged();
+    SGRPlayerLandscapeLyricsChanged();
     SGRPlayerVisualiserUpdate();
     SGRGlyphButton *glyph = sg_lyricsGlyph;
     if (!glyph) return;
@@ -385,6 +390,8 @@ static void lowerRow(UIView *row) {
     %orig;
     sg_playerIsVisible = YES;
     updatePlayerIdleTimer();
+    // A phone already held sideways when the player opens turns it straight away.
+    SGRPlayerLyricsOrientationChanged();
 }
 
 - (void)viewWillDisappear:(BOOL)animated {

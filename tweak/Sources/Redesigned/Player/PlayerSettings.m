@@ -532,6 +532,8 @@ UIViewController *SGRPlayerSettingsPage(NSArray *more) {
                        SGSwitchRow(@"Auto-hide portrait controls", @"Bring them back with a tap after a few seconds",
                                    SGRKeyLyricsAutoHide),
                        keepTitle,
+                       SGSwitchRow(@"Landscape player", @"Turn the player sideways with the phone, lyrics open or not",
+                                   SGRKeyPlayerLandscape),
                        SGSwitchRow(@"Auto-hide landscape controls", @"Bring them back with a tap after a few seconds",
                                    SGRKeyLyricsLandscapeAutoHide),
                        SGOptionRow(@"Lyrics line under the cover", @"One line of the song as it plays", SGRKeyPlayerLyricLine),

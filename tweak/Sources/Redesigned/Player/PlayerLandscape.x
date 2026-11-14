@@ -38,6 +38,7 @@ static BOOL sg_shut;
     UIView *_stage;   // the lines' own view: the karaoke view dims every sibling it has
     SGRKaraokeView *_lyrics;
     NSTimer *_rest;
+    BOOL _withLines;                 // the lyrics column is there; without it the cover and controls share the screen
     UITapGestureRecognizer *_hide;   // only while the controls are up
     UIView *_shield;                 // only while they are not: the touch that brings them back
 }
@@ -153,9 +154,39 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     [_rest invalidate];
 }
 
+- (BOOL)wantsLines {
+    return SGEnabled(SGRKeyLandscapeLyrics) && SGEnabled(SGRKeyLyricsLandscape) && SGRPlayerLyricsAvailable();
+}
+
+// Without lyrics: a large cover on the left, the title, the artist and the controls centred on the right.
+- (void)layoutWithoutLines:(CGRect)safe {
+    CGFloat titleHeight = ceil(_title.font.lineHeight), artistHeight = ceil(_artist.font.lineHeight);
+    CGFloat side = MIN(safe.size.height - 2 * kSide, round(safe.size.width * 0.46));
+    CGFloat left = CGRectGetMinX(safe) + kSide;
+    _cover.frame = CGRectMake(left, CGRectGetMidY(safe) - side / 2, side, side);
+    CGFloat columnLeft = CGRectGetMaxX(_cover.frame) + 2 * kSide;
+    CGFloat width = CGRectGetMaxX(safe) - kSide - columnLeft;
+    CGFloat block = titleHeight + artistHeight + kCoverGap * 2 + kControlSide;
+    CGFloat top = CGRectGetMidY(safe) - block / 2;
+    _title.frame = CGRectMake(columnLeft, top, width - kControlSide, titleHeight);
+    _artist.frame = CGRectMake(columnLeft, CGRectGetMaxY(_title.frame), width - kControlSide, artistHeight);
+    _close.frame = CGRectMake(columnLeft + width - kControlSide + 12, top + (titleHeight + artistHeight - kControlSide) / 2, kControlSide, kControlSide);
+    CGFloat controlsWidth = MIN(width, 260);
+    _controls.frame = CGRectMake(columnLeft + (width - controlsWidth) / 2, CGRectGetMaxY(_artist.frame) + 2 * kCoverGap, controlsWidth, kControlSide);
+    _stage.frame = CGRectZero;
+}
+
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     CGRect safe = UIEdgeInsetsInsetRect(self.view.bounds, self.view.safeAreaInsets);
+    BOOL withLines = [self wantsLines];
+    if (withLines != _withLines) SGDebug(@"redesign player: landscape %@", withLines ? @"with lyrics" : @"without lyrics");
+    _withLines = withLines;
+    _stage.hidden = !withLines;
+    if (!withLines) {
+        [self layoutWithoutLines:safe];
+        return;
+    }
     CGFloat column = round(safe.size.width * kColumnShare);
     CGFloat left = CGRectGetMinX(safe) + kSide;
     CGFloat titleHeight = ceil(_title.font.lineHeight), artistHeight = ceil(_artist.font.lineHeight);
@@ -204,6 +235,10 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     if (!state) return;
     _title.text = state.track.trackTitle;
     _artist.text = state.track.artistName;
+    if ([self wantsLines] != _withLines) {
+        [self.view setNeedsLayout];
+        [UIView animateWithDuration:0.3 animations:^{ [self.view layoutIfNeeded]; }];
+    }
     [_play setImage:[UIImage systemImageNamed:state.isPaused ? @"play.fill" : @"pause.fill" withConfiguration:
         [UIImageSymbolConfiguration configurationWithPointSize:30 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
     _play.accessibilityLabel = state.isPaused ? @"Play" : @"Pause";
@@ -279,7 +314,7 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
 - (void)restartRest {
     [_rest invalidate];
     _rest = nil;
-    if (!SGEnabled(SGRKeyLyricsLandscapeAutoHide) || SGPlayerState().isPaused || UIAccessibilityIsVoiceOverRunning()) return;
+    if (!_withLines || !SGEnabled(SGRKeyLyricsLandscapeAutoHide) || SGPlayerState().isPaused || UIAccessibilityIsVoiceOverRunning()) return;
     __weak SGRLandscapeLyricsController *weakSelf = self;
     _rest = [NSTimer scheduledTimerWithTimeInterval:kLandscapeRest repeats:NO block:^(NSTimer *timer) {
         // A sheet over the lines (a line's meanings) keeps them up, and the clock runs again behind it.
@@ -372,11 +407,21 @@ void SGRPlayerShowLandscape(BOOL show) {
 static void orientationChanged(void) {
     UIDeviceOrientation orientation = UIDevice.currentDevice.orientation;
     if (UIDeviceOrientationIsLandscape(orientation)) {
-        if (!sg_shut && SGEnabled(SGRKeyLyricsLandscape) && SGRPlayerLyricsOpen()) SGRPlayerShowLandscape(YES);
+        BOOL lyrics = SGRPlayerLyricsOpen() && SGEnabled(SGRKeyLyricsLandscape) && SGEnabled(SGRKeyLandscapeLyrics);
+        BOOL player = SGRPlayerIsVisible() && SGEnabled(SGRKeyPlayerLandscape);
+        SGDebug(@"redesign player: sideways (lyrics %d, player %d, shut %d)", lyrics, player, sg_shut);
+        if (!sg_shut && (lyrics || player)) SGRPlayerShowLandscape(YES);
     } else if (orientation == UIDeviceOrientationPortrait) {
         sg_shut = NO;
         SGRPlayerShowLandscape(NO);
     }
+}
+
+void SGRPlayerLandscapeLyricsChanged(void) {
+    UIView *view = sg_window.rootViewController.viewIfLoaded;
+    if (!view) return;
+    [view setNeedsLayout];
+    [UIView animateWithDuration:0.3 animations:^{ [view layoutIfNeeded]; }];
 }
 
 void SGRPlayerLyricsOrientationChanged(void) {

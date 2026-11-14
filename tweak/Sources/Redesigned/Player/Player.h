@@ -110,6 +110,12 @@ void SGRPlayerPaintCover(UIView *stack);
 // Landscape lyrics take over the player when enabled.
 #define SGRKeyLyricsLandscape @"spotifyglass.redesign.lyrics.landscape"
 void SGRPlayerShowLandscape(BOOL show);
+// The whole player turns sideways with the phone, lyrics open or not (on unless switched off).
+#define SGRKeyPlayerLandscape @"spotifyglass.redesign.player.landscape"
+// Whether the full player is on screen (PlayerFooter.x).
+BOOL SGRPlayerIsVisible(void);
+// The landscape screen gains or loses its lyrics column as the lines come and go.
+void SGRPlayerLandscapeLyricsChanged(void);
 
 void SGRPlayerMotionLyricsChanged(void);
 BOOL SGRPlayerMotionLyricsBlurEnabled(void);
