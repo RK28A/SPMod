@@ -174,6 +174,30 @@ void SGRGlassZoomList(UIScrollView *list) {
 
 @end
 
+// SPMod's own pages on glass: each row's card colour cleared and a card of glass the shape of the section's
+// rounded block put behind it, top corners on the first row, bottom ones on the last.
+static void glassSettingsCell(UITableViewCell *cell, BOOL first, BOOL last) {
+    static char kSettingsCardKey;
+    BOOL on = SGFlag(SGRKeySettingsGlass, NO);
+    BOOL clear = CGColorGetAlpha(cell.backgroundColor.CGColor) < 0.01;
+    if (on && !clear) cell.backgroundColor = UIColor.clearColor;
+    else if (!on && clear) cell.backgroundColor = SGCardBackground();
+    CGRect frame = cell.bounds;
+    SGRGlassCard(cell, &kSettingsCardKey, frame, 0, on);
+    UIView *card = objc_getAssociatedObject(cell, &kSettingsCardKey);
+    if (!on || !card) return;
+    CACornerMask corners = (first ? kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner : 0) | (last ? kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner : 0);
+    card.layer.cornerRadius = corners ? 26 : 0;
+    card.layer.maskedCorners = corners;
+    card.layer.cornerCurve = kCACornerCurveContinuous;
+    card.clipsToBounds = YES;
+    card.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+}
+
+__attribute__((constructor)) static void installSettingsGlass(void) {
+    if (SGRedesignedUI()) SGModCellDecorator = glassSettingsCell;
+}
+
 UIViewController *SGRGlassSettingsPage(void) {
     SGRGlassPreview *preview = [SGRGlassPreview new];
     __weak SGRGlassPreview *weakPreview = preview;
@@ -193,6 +217,9 @@ UIViewController *SGRGlassSettingsPage(void) {
             refresh();
         }, ^NSString *(double value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; });
     SGModRow *drawer = SGWithSymbol(SGOptionRow(@"Profile menu", @"Each row of the side menu on a card of glass", SGRKeyDrawerGlass), @"sidebar.left");
+    SGModRow *home = SGWithSymbol(SGSwitchRow(@"Home shortcuts", @"The pills at the top of Home on glass, in the style below", SGRKeyHomeGlass), @"house");
+    SGModRow *settings = SGWithSymbol(SGOptionRow(@"SPMod settings", @"Every row of these pages on glass", SGRKeySettingsGlass), @"gearshape");
+    settings.changed = ^(BOOL on) { SGModCellDecorator = glassSettingsCell; };
     SGModRow *zoom = SGWithSymbol(SGOptionRow(@"Zoom on lists", @"The row in the middle of the screen stands out from the others", SGRKeyGlassZoom), @"plus.magnifyingglass");
     zoom.changed = ^(BOOL on) { refresh(); };
     SGModRow *amount = SGSliderRow(@"Zoom strength", nil, 0.02, 0.2, 0.01, ^double { return zoomAmount(); },
@@ -201,7 +228,7 @@ UIViewController *SGRGlassSettingsPage(void) {
             refresh();
         }, ^NSString *(double value) { return [NSString stringWithFormat:@"%.0f%%", value * 100]; });
     SGRGlassPage *page = [[SGRGlassPage alloc] initWithTitle:@"Liquid Glass" intro:nil sections:@[
-        SGNotedSection(@"Surfaces", @[library, playlist, drawer], @"What is drawn on glass. Changes show at once."),
+        SGNotedSection(@"Surfaces", @[library, playlist, drawer, home, settings], @"What is drawn on glass. Changes show at once."),
         SGNotedSection(@"Glass", @[style, clear], @"The fill only applies to the Clear style."),
         SGNotedSection(@"Zoom", @[zoom, amount], @"In the library and in playlists, the rows away from the middle of the screen are drawn a little smaller."),
     ] footer:nil];

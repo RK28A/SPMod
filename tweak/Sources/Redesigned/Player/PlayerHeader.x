@@ -183,7 +183,11 @@ static void pillBehindContext(UIViewController *unit) {
     if (box.superview != parent) [parent insertSubview:box belowSubview:label];
     else if ([parent.subviews indexOfObject:box] > [parent.subviews indexOfObject:label]) [parent insertSubview:box belowSubview:label];
 
-    CGSize text = [label.text sizeWithAttributes:@{NSFontAttributeName: label.font ?: [UIFont systemFontOfSize:14]}];
+    // The words as the label draws them: its attributed text when it has one (a bolder face than its font),
+    // so a long context ("Mettre en file d'attente") no longer runs out of the pill.
+    CGSize text = label.attributedText.length ? label.attributedText.size
+                                              : [label.text sizeWithAttributes:@{NSFontAttributeName: label.font ?: [UIFont systemFontOfSize:14]}];
+    text.width = MAX(text.width, [label sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)].width);
     CGFloat width = MIN(ceil(text.width) + 2 * kPillPadX, MAX(parent.bounds.size.width - 8, 0));
     CGFloat height = MAX(kPillMinHeight, ceil(text.height) + 14);
     box.bounds = CGRectMake(0, 0, width, height);

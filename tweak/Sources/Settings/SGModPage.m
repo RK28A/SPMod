@@ -139,6 +139,12 @@ SGModRow *SGPageRow(NSString *title, UIViewController *(^page)(void)) {
     return CGFLOAT_MIN;
 }
 
+- (void)tableView:(UITableView *)table willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)path {
+    if (!SGModCellDecorator) return;
+    NSInteger count = [self tableView:table numberOfRowsInSection:path.section];
+    SGModCellDecorator(cell, path.row == 0, path.row == count - 1);
+}
+
 - (UITableViewCell *)tableView:(UITableView *)table cellForRowAtIndexPath:(NSIndexPath *)path {
     UITableViewCell *cell = SGDequeueCell(table, @"choice");
     NSUInteger index = (NSUInteger)path.row;
@@ -455,6 +461,8 @@ static void showProgress(UITableViewCell *cell, SGModRow *row, BOOL animated) {
 }
 
 #pragma mark - the page
+
+void (*SGModCellDecorator)(UITableViewCell *cell, BOOL first, BOOL last);
 
 @implementation SGModPage {
     NSArray<SGModSection *> *_sections;

@@ -65,6 +65,33 @@ static SGRArtworkField *fieldIn(UIView *page) {
 }
 %end
 
+// The theme behind the sections under the header, risen out of the photo over the same distance as a
+// playlist's (SGRThemedPane), in place of a hard edge where the photo stopped. The header is the cell at the top;
+// the pane starts at the first cell below half the screen, the lowest such top seen.
+static void themeUnderHeader(UIView *view) {
+    static char kArtistTopKey;
+    UIScrollView *list = [view isKindOfClass:UIScrollView.class] ? (UIScrollView *)view : nil;
+    if (!list) {
+        for (UIView *sub in view.subviews) if ([sub isKindOfClass:UICollectionView.class]) list = (UIScrollView *)sub;
+    }
+    if (!list || !list.window) return;
+    CGFloat half = list.bounds.size.height * 0.35, top = CGFLOAT_MAX;
+    for (UIView *cell in list.subviews) {
+        if (![cell isKindOfClass:UICollectionViewCell.class] || cell.hidden) continue;
+        CGFloat y = CGRectGetMinY(cell.frame);
+        if (y > half && y < top) top = y;
+    }
+    NSNumber *seen = objc_getAssociatedObject(list, &kArtistTopKey);
+    if (top == CGFLOAT_MAX && !seen) return;
+    if (seen && seen.doubleValue <= top) {
+        SGRThemedPaneFollow(list);
+        return;
+    }
+    objc_setAssociatedObject(list, &kArtistTopKey, @(top), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    SGDebug(@"redesign artist: theme under the header from %.0f", top);
+    SGRThemedPane(list, top);
+}
+
 %hook _TtC32CreativeWorkPlatform_TemplateKit28CreativeWorkTemplateListView
 - (void)layoutSubviews {
     SGDebugOnce(@"hook Redesigned/Artist/ArtistField.x: -[CreativeWorkTemplateListView layoutSubviews] first call");
@@ -75,6 +102,7 @@ static SGRArtworkField *fieldIn(UIView *page) {
     for (UIView *sub in list.subviews) {
         if (sub.backgroundColor && SGIsBaseSurface(sub.backgroundColor.CGColor)) sub.backgroundColor = UIColor.clearColor;
     }
+    themeUnderHeader(list);
 }
 %end
 

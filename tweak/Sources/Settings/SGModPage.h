@@ -53,6 +53,9 @@
 
 // The intro of every page whose switches the hooks read at launch.
 extern NSString *const SGRestartNote;
+// Set from a higher layer (the redesign's Liquid Glass page): called on each row of the mod's pages as it is
+// shown, with whether it is the first and the last of its section, so it can draw the rows on glass.
+extern void (*SGModCellDecorator)(UITableViewCell *cell, BOOL first, BOOL last);
 
 SGModRow *SGSwitchRow(NSString *title, NSString *subtitle, NSString *key);   // on until switched off
 SGModRow *SGHideRow(NSString *title, NSString *subtitle, NSString *key);     // off until switched on

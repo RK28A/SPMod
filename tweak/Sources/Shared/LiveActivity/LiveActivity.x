@@ -60,16 +60,60 @@ static void startTimer(NSTimeInterval every) API_AVAILABLE(ios(17.0)) {
     [NSRunLoop.mainRunLoop addTimer:sg_timer forMode:NSRunLoopCommonModes];
 }
 
+// iOS keeps a budget of updates for a card the app updates itself, and one sent four times a second on a busy
+// line used it up: iOS then stopped taking them, and the card stayed on one line. Updates go at most once
+// every kEvery seconds; one asked for sooner waits, and only the latest of those is sent.
+static const NSTimeInterval kEvery = 1.2;
+static CFAbsoluteTime sg_sentAt;
+static NSString *sg_waiting;
+static void (^sg_waitingShow)(void);
+static NSUInteger sg_sends;
+
+static void sendNow(NSString *shown, void (^show)(void)) {
+    sg_shown = shown;
+    sg_sentAt = CFAbsoluteTimeGetCurrent();
+    if (++sg_sends % 25 == 1) {
+        SGLog(@"live activity: update %lu (%@)", (unsigned long)sg_sends,
+              UIApplication.sharedApplication.applicationState == UIApplicationStateActive ? @"in front" : @"in the background");
+    }
+    show();
+}
+
 static void send(NSString *shown, void (^show)(void)) API_AVAILABLE(ios(17.0)) {
     if (SGLiveActivityBridge.isShowing) {
         if ([shown isEqualToString:sg_shown]) return;
     } else {
-        if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
+        if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) {
+            static CFAbsoluteTime told;
+            if (CFAbsoluteTimeGetCurrent() - told > 30) {
+                told = CFAbsoluteTimeGetCurrent();
+                SGLog(@"live activity: no card showing and the app is not in front, nothing can be started");
+            }
+            return;
+        }
         if (sg_lastStart && -sg_lastStart.timeIntervalSinceNow < kStartRetry) return;
         sg_lastStart = [NSDate date];
+        sendNow(shown, show);
+        return;
     }
-    sg_shown = shown;
-    show();
+    NSTimeInterval since = CFAbsoluteTimeGetCurrent() - sg_sentAt;
+    if (since >= kEvery) {
+        sg_waiting = nil;
+        sg_waitingShow = nil;
+        sendNow(shown, show);
+        return;
+    }
+    BOOL scheduled = sg_waiting != nil;
+    sg_waiting = shown;
+    sg_waitingShow = show;
+    if (scheduled) return;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((kEvery - since) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NSString *latest = sg_waiting;
+        void (^latestShow)(void) = sg_waitingShow;
+        sg_waiting = nil;
+        sg_waitingShow = nil;
+        if (latest && latestShow && ![latest isEqualToString:sg_shown]) sendNow(latest, latestShow);
+    });
 }
 
 // A track's URI as a string; the player hands out NSURL or NSString.

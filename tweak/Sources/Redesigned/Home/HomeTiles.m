@@ -1,5 +1,6 @@
 #import "Core/SGCore.h"
 #import "Redesigned/Kit/SGRKit.h"
+#import "Redesigned/Kit/SGRGlassSettings.h"
 #import "Home.h"
 
 // How far the cover sits in from the tile's top, bottom and leading edges, and its corners there.
@@ -60,6 +61,13 @@ static UIView *surfaceIn(UIView *tile, UIView *fill) {
     if (!SGRHomeGlassStyle()) return surface;
     CALayer *layer = surface.layer;
     CGFloat radius = MIN(kPillRadius, tile.bounds.size.height / 2);
+    // Real glass under the pill, in the style chosen on the Liquid Glass page; the pill's tint goes over it,
+    // lighter the clearer the glass.
+    static char kTileGlassKey;
+    BOOL real = SGEnabled(SGRKeyHomeGlass);
+    SGRGlassCard(tile, &kTileGlassKey, tile.bounds, radius, real);
+    CGFloat over = !real ? 1 : SGRGlassStyleNow() == 1 ? 0.12 + 0.45 * SGRGlassClearFill() : SGRGlassStyleNow() == 3 ? 0.3 : 0.4;
+    if (fabs(surface.alpha - over) > 0.01) surface.alpha = over;
     if (layer.cornerRadius != radius) layer.cornerRadius = radius;
     if (layer.cornerCurve != kCACornerCurveContinuous) layer.cornerCurve = kCACornerCurveContinuous;
     layer.masksToBounds = YES;

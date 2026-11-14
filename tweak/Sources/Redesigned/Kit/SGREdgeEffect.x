@@ -54,8 +54,12 @@ static BOOL wholePage(UIScrollView *list) {
     // The pages the redesign draws its own way (a playlist's, an album's, an artist's field of the cover's
     // colour, Search's tinted categories) keep it.
     NSString *name = NSStringFromClass(owner.class);
-    for (NSString *own in @[@"NowPlaying", @"Lyrics", @"SideDrawer", @"Playlist", @"FTP", @"Album", @"Artist", @"Search", @"Podcast", @"Show"]) {
+    for (NSString *own in @[@"NowPlaying", @"Lyrics", @"SideDrawer", @"Playlist", @"FTP", @"Album", @"Artist", @"Search", @"Podcast", @"Show", @"CreativeWork"]) {
         if ([name containsString:own]) return NO;
+    }
+    // An artist's page is hosted by a controller with no such name: it is told by its page's identifier.
+    for (UIView *up = list; up; up = up.superview) {
+        if ([up.accessibilityIdentifier isEqualToString:@"creator-page"]) return NO;
     }
     return YES;
 }
