@@ -240,6 +240,36 @@ static NSArray<UIControl *> *modRowsIn(UIView *slot) {
 
 static NSString *controllersIn(UIViewController *presented);
 
+// A row Spotify gives no glyph gets one from its words, so every line of the menu has its icon.
+static NSString *rowSymbol(NSString *text) {
+    NSString *t = text.lowercaseString;
+    NSArray<NSArray<NSString *> *> *table = @[
+        @[@"vidéo", @"play.rectangle"], @[@"video", @"play.rectangle"],
+        @[@"exclure", @"person.crop.circle.badge.xmark"], @[@"exclude", @"person.crop.circle.badge.xmark"],
+        @[@"publique", @"globe"], @[@"public", @"globe"], @[@"privée", @"lock"], @[@"private", @"lock"],
+        @[@"supprimer", @"trash"], @[@"delete", @"trash"], @[@"remove", @"minus.circle"], @[@"retirer", @"minus.circle"],
+        @[@"file d'attente", @"text.line.first.and.arrowtriangle.forward"], @[@"queue", @"text.line.first.and.arrowtriangle.forward"],
+        @[@"dossier", @"folder"], @[@"folder", @"folder"], @[@"collabor", @"person.2"],
+        @[@"désépingler", @"pin.slash"], @[@"unpin", @"pin.slash"], @[@"épingler", @"pin"], @[@"pin", @"pin"],
+        @[@"partager", @"square.and.arrow.up"], @[@"share", @"square.and.arrow.up"],
+        @[@"télécharger", @"arrow.down.circle"], @[@"download", @"arrow.down.circle"],
+        @[@"radio", @"dot.radiowaves.left.and.right"], @[@"modifier", @"pencil"], @[@"edit", @"pencil"],
+        @[@"artiste", @"person"], @[@"artist", @"person"], @[@"album", @"square.stack"],
+        @[@"j'aime", @"heart"], @[@"like", @"heart"], @[@"manger", @"fork.knife"],
+        @[@"autre playlist", @"plus.circle"], @[@"another playlist", @"plus.circle"], @[@"pochette", @"photo"], @[@"cover", @"photo"],
+        @[@"nom et", @"info.circle"], @[@"details", @"info.circle"], @[@"trier", @"arrow.up.arrow.down"], @[@"sort", @"arrow.up.arrow.down"],
+        @[@"ajouter", @"plus"], @[@"add", @"plus"], @[@"fusion", @"arrow.triangle.merge"], @[@"playlist", @"music.note.list"], @[@"profil", @"person.crop.circle"],
+    ];
+    for (NSArray<NSString *> *pair in table) {
+        if ([t containsString:pair[0]]) return pair[1];
+    }
+    return @"ellipsis.circle";
+}
+
+static UIImage *rowImage(UIImage *given, NSString *title) {
+    return given ?: [UIImage systemImageNamed:rowSymbol(title)];
+}
+
 static UIMenu *inlineGroup(NSArray<UIMenuElement *> *children) {
     return [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:children];
 }
@@ -666,7 +696,8 @@ static void raiseHost(UIWindow *window) {
         for (SGRSheetRow *row in group) {
             if (!row.quick) [actions addObject:[self actionFor:row]];
         }
-        if (actions.count) [groups addObject:inlineGroup(actions)];
+        // One list, no line between Spotify's groups or before the mod's rows under them.
+        [groups addObjectsFromArray:actions];
     }
     return groups;
 }
@@ -697,7 +728,7 @@ static NSString *storedKey(NSString *kind) {
             if (![title isKindOfClass:NSString.class]) continue;
             NSData *glyph = row[@"image"];
             UIImage *image = [glyph isKindOfClass:NSData.class] ? [NSKeyedUnarchiver unarchivedObjectOfClass:UIImage.class fromData:glyph error:nil] : nil;
-            UIAction *action = [UIAction actionWithTitle:title image:image identifier:nil handler:^(UIAction *picked) {
+            UIAction *action = [UIAction actionWithTitle:title image:rowImage(image, title) identifier:nil handler:^(UIAction *picked) {
                 weakSelf.pick = ^{ [weakSelf fireTitle:title]; };
             }];
             NSString *subtitle = row[@"subtitle"];
@@ -705,7 +736,7 @@ static NSString *storedKey(NSString *kind) {
             if ([row[@"enabled"] isEqual:@NO]) action.attributes = UIMenuElementAttributesDisabled;
             [actions addObject:action];
         }
-        if (actions.count) [elements addObject:inlineGroup(actions)];
+        [elements addObjectsFromArray:actions];
     }
     return elements;
 }
@@ -742,7 +773,7 @@ static NSString *storedKey(NSString *kind) {
 
 - (UIAction *)actionFor:(SGRSheetRow *)row {
     __weak SGRMenuSession *weakSelf = self;
-    UIAction *action = [UIAction actionWithTitle:row.title image:row.image identifier:nil handler:^(UIAction *picked) {
+    UIAction *action = [UIAction actionWithTitle:row.title image:rowImage(row.image, row.title) identifier:nil handler:^(UIAction *picked) {
         weakSelf.pick = ^{ [weakSelf fire:row]; };
     }];
     action.subtitle = row.subtitle;
