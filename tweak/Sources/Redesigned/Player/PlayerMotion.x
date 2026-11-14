@@ -566,7 +566,13 @@ static void setCoverShown(BOOL shown, BOOL animated) {
         });
         return;
     }
-    if (covers == sg_maskedCovers || (mask && !ours)) return;
+    if (mask && !ours) {
+        SGDebugOnce(@"redesign player: the cover list already has a mask of %@ (%@), the cover stays over the clip",
+                    NSStringFromClass(mask.class), mask.name ?: @"unnamed");
+        return;
+    }
+    if (covers == sg_maskedCovers) return;
+    SGDebug(@"redesign player: cover hidden under the clip (%@)", animated ? @"faded" : @"at once");
     if (!mask) {
         mask = [CALayer layer];
         mask.backgroundColor = UIColor.blackColor.CGColor;
@@ -585,6 +591,7 @@ static BOOL coverShouldBeShown(void) {
 }
 
 static void updateCoverVisibility(BOOL animated) {
+    if (!SGRPlayerCoverList()) SGDebugOnce(@"redesign player: no cover list found to hide or show");
     setCoverShown(coverShouldBeShown(), animated);
 }
 
