@@ -471,6 +471,7 @@ static BOOL isSettingsRoot(UIViewController *list) {
 
 %hook _TtC21Settings_PlatformImpl26SettingsListViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook App/ModSettings.x: -[SettingsListViewController viewDidLayoutSubviews] first call");
     %orig;
     BOOL root = isSettingsRoot((UIViewController *)self);
     for (UIView *sub in ((UIViewController *)self).view.subviews) {
@@ -562,6 +563,7 @@ static void fadeUselessLabel(UILabel *label);
 
 %hook UILabel
 - (void)setText:(NSString *)text {
+    SGDebugOnce(@"hook App/ModSettings.x: -[UILabel setText:] first call");
     %orig;
     fadeUselessLabel(self);
     if (![text isEqualToString:@"Spotify Free"] && ![text isEqualToString:@"Taurine"] &&
@@ -860,11 +862,13 @@ static void relightDrawer(UIViewController *drawer) {
 
 %hook _TtC23SideDrawer_ListPageImpl18ListViewController
 - (void)viewWillAppear:(BOOL)animated {
+    SGDebugOnce(@"hook App/ModSettings.x: -[ListViewController viewWillAppear:] first call");
     %orig;
     relightDrawer((UIViewController *)self);
 }
 
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook App/ModSettings.x: -[ListViewController viewDidAppear:] first call");
     %orig;
     relightDrawer((UIViewController *)self);
     __weak UIViewController *weakSelf = (UIViewController *)self;
@@ -872,6 +876,7 @@ static void relightDrawer(UIViewController *drawer) {
 }
 
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook App/ModSettings.x: -[ListViewController viewDidLayoutSubviews] first call");
     %orig;
     sg_drawerRoot = ((UIViewController *)self).view;
     // The redesign's light behind the drawer, as behind Home and the library.
@@ -949,6 +954,7 @@ static void glassDrawer(UICollectionView *list) {
 
 %hook UICollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook App/ModSettings.x: -[UICollectionView layoutSubviews] first call");
     %orig;
     // Every list of the app lays out through here, each frame of a scroll: what it is is told once.
     static char kKindKey;
@@ -975,6 +981,7 @@ static void glassDrawer(UICollectionView *list) {
 %end
 
 %ctor {
+    SGDebug(@"module App/ModSettings.x on");
     %init;
     [NSNotificationCenter.defaultCenter addObserverForName:SGSidebarBadgeTextDidChangeNotification object:nil queue:NSOperationQueue.mainQueue
                                                 usingBlock:^(NSNotification *note) {

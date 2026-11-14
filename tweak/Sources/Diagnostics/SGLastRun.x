@@ -64,6 +64,7 @@ static void setState(NSString *state) {
 }
 
 %ctor {
+    SGDebug(@"module Diagnostics/SGLastRun.x on");
     NSURL *crash = fileNamed(@"last-crash.txt");
     NSString *recorded = [NSString stringWithContentsOfURL:crash encoding:NSUTF8StringEncoding error:nil];
     NSString *state = [NSString stringWithContentsOfURL:fileNamed(@"run-state") encoding:NSUTF8StringEncoding error:nil];

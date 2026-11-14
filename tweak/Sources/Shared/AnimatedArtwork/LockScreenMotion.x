@@ -261,6 +261,7 @@ void SGLockMotionShowPlain(BOOL plain) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/AnimatedArtwork/LockScreenMotion.x on");
     if (@available(iOS 26.0, *)) {
         sg_choice = SGLockScreenArtwork();
         sg_configuredChoice = sg_choice;

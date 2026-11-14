@@ -12,6 +12,7 @@ static void tintConnect(UIView *bar) {
 
 %hook _TtC18NowPlaying_BarImpl27NowPlayingBarViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/BarAccent.x: -[NowPlayingBarViewController viewDidLayoutSubviews] first call");
     %orig;
     tintConnect(((UIViewController *)self).view);
 }
@@ -19,6 +20,7 @@ static void tintConnect(UIView *bar) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/NowPlayingBar/BarAccent.x on");
     %init;
     SGRequireClasses(@[@"_TtC18NowPlaying_BarImpl27NowPlayingBarViewController"]);
     [NSNotificationCenter.defaultCenter addObserverForName:SGRAccentDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {

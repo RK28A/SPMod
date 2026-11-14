@@ -252,6 +252,7 @@ static void watchHold(UIView *tilt) {
 
 %hook _TtC35CreativeWorkCommons_CoverArtTiltKit16CoverArtTiltView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerArtwork.x: -[CoverArtTiltView layoutSubviews] first call");
     UIView *tilt = (UIView *)self;
     BOOL player = inCoverCell(tilt);
     %orig;
@@ -295,6 +296,7 @@ static const void *kPreviewKey;
 
 %hook _TtC22Lyrics_NPVContainerKit19LyricsContainerView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerArtwork.x: -[LyricsContainerView layoutSubviews] first call");
     %orig;
     UIView *host = (UIView *)self;
     if (!SGFlag(SGRKeyPlayerLyricLine, NO)) {
@@ -330,20 +332,24 @@ static UIView *coverOfImage(UIView *image) {
 
 %hook _TtC22NowPlaying_ElementsKitP33_1D6A1393FEB35D7207F503DA17E7748E14ImageViewProxy
 - (void)setFrame:(CGRect)frame {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerArtwork.x: -[ImageViewProxy setFrame:] first call");
     UIView *box = coverOfImage((UIView *)self);
     %orig(box ? box.bounds : frame);
 }
 - (void)setBounds:(CGRect)bounds {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerArtwork.x: -[ImageViewProxy setBounds:] first call");
     UIView *box = coverOfImage((UIView *)self);
     %orig(box ? (CGRect){bounds.origin, box.bounds.size} : bounds);
 }
 - (void)setCenter:(CGPoint)center {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerArtwork.x: -[ImageViewProxy setCenter:] first call");
     UIView *box = coverOfImage((UIView *)self);
     %orig(box ? CGPointMake(CGRectGetMidX(box.bounds), CGRectGetMidY(box.bounds)) : center);
 }
 // What it holds keeps its own 317 unless it is laid out to this view's size again: the Encore image view here,
 // and the image and placeholder in that (below).
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerArtwork.x: -[ImageViewProxy layoutSubviews] first call");
     %orig;
     UIView *proxy = (UIView *)self;
     if (!coverOfImage(proxy)) return;
@@ -355,6 +361,7 @@ static UIView *coverOfImage(UIView *image) {
 
 %hook _TtCE15Encore_MediaKitO16EncoreFoundation6Encore9ImageView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerArtwork.x: -[ImageView layoutSubviews] first call");
     %orig;
     UIView *view = (UIView *)self;
     static Class proxyClass;
@@ -395,6 +402,7 @@ static SGRPlayerArtworkWatcher *sg_artworkWatcher;
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerArtwork.x on");
     %init;
     sg_tilts = [NSHashTable weakObjectsHashTable];
     sg_covers = [NSMapTable weakToWeakObjectsMapTable];

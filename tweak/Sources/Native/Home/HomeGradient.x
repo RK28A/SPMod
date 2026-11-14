@@ -110,6 +110,7 @@ static UIScrollView *pageList(UIView *view) {
 
 %hook _TtC16Home_EvoPageImpl33EvoLoadableResourceViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Home/HomeGradient.x: -[EvoLoadableResourceViewController viewDidLayoutSubviews] first call");
     %orig;
     UIScrollView *list = pageList(((UIViewController *)self).viewIfLoaded);
     if (list) layoutGradient(list);
@@ -118,6 +119,7 @@ static UIScrollView *pageList(UIView *view) {
 
 %hook _TtC16Home_CarouselKit29TouchCancellingCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Home/HomeGradient.x: -[TouchCancellingCollectionView layoutSubviews] first call");
     %orig;
     if ((UIView *)self == sg_homeRoot) layoutGradient((UIScrollView *)self);
 }
@@ -125,6 +127,7 @@ static UIScrollView *pageList(UIView *view) {
 
 %hook _TtC19Home_FunkisPageImpl20FunkisViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Home/HomeGradient.x: -[FunkisViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *page = ((UIViewController *)self).viewIfLoaded;
     if (!page || !sg_homeRoot || ![sg_homeRoot isDescendantOfView:page]) return;
@@ -137,6 +140,7 @@ static UIScrollView *pageList(UIView *view) {
 %end
 
 %ctor {
+    SGDebug(@"module Native/Home/HomeGradient.x on");
     if (!SGNativeUI() || !SGFlag(SGKeyHomeGradient, NO)) return;
     %init;
     SGRequireClasses(@[

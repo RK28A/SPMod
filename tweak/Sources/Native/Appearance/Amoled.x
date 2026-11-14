@@ -18,6 +18,7 @@ static CGColorRef copyBlack(CGColorRef color) {
 
 %hook CALayer
 - (void)setBackgroundColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Native/Appearance/Amoled.x: -[CALayer setBackgroundColor:] first call");
     if (!isBaseGrey(color)) {
         %orig;
         return;
@@ -30,6 +31,7 @@ static CGColorRef copyBlack(CGColorRef color) {
 
 %hook CAGradientLayer
 - (void)setColors:(NSArray *)colors {
+    SGDebugOnce(@"hook Native/Appearance/Amoled.x: -[CAGradientLayer setColors:] first call");
     NSMutableArray *mapped = [[NSMutableArray alloc] initWithCapacity:colors.count];
     for (id entry in colors) {
         CGColorRef color = (__bridge CGColorRef)entry;
@@ -47,6 +49,7 @@ static CGColorRef copyBlack(CGColorRef color) {
 
 %hook _TtC21Settings_PlatformImpl26SettingsListViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Appearance/Amoled.x: -[SettingsListViewController viewDidLayoutSubviews] first call");
     %orig;
     for (UIView *sub in ((UIViewController *)self).view.subviews) {
         if ([sub isKindOfClass:UICollectionView.class]) sub.backgroundColor = UIColor.blackColor;
@@ -55,6 +58,7 @@ static CGColorRef copyBlack(CGColorRef color) {
 %end
 
 %ctor {
+    SGDebug(@"module Native/Appearance/Amoled.x on");
     if (SGNativeUI() && SGFlag(SGKeyAmoled, NO)) {
         %init;
     }

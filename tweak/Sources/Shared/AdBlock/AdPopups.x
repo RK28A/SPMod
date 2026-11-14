@@ -34,6 +34,7 @@ static id readKey(id object, NSString *key) {
 
 %hook SPTEncorePopUpDialogModel
 - (id)initWithTitle:(NSString *)title description:(NSString *)description image:(id)image primaryButtonTitle:(NSString *)primary secondaryButtonTitle:(NSString *)secondary {
+    SGDebugOnce(@"hook Shared/AdBlock/AdPopups.x: -[SPTEncorePopUpDialogModel initWithTitle:description:image:primaryButtonTitle:secondaryButtonTitle:] first call");
     id model = %orig;
     if (model && (sells(title) || sells(description) || sells(primary) || sells(secondary))) mark(model);
     return model;
@@ -42,6 +43,7 @@ static id readKey(id object, NSString *key) {
 
 %hook SPTEncorePopUpDialog
 - (void)update:(id)model {
+    SGDebugOnce(@"hook Shared/AdBlock/AdPopups.x: -[SPTEncorePopUpDialog update:] first call");
     if (marked(model)) mark(self);
     %orig;
 }
@@ -49,6 +51,7 @@ static id readKey(id object, NSString *key) {
 
 %hook SPTEncorePopUpPresenter
 - (void)presentPopUp:(id)popUp {
+    SGDebugOnce(@"hook Shared/AdBlock/AdPopups.x: -[SPTEncorePopUpPresenter presentPopUp:] first call");
     SGAdBlockSawOne(@"Popups");
     id model = readKey(popUp, @"model") ?: popUp;
     NSString *title = readKey(model, @"title") ?: readKey(model, @"dialogTitle");
@@ -63,6 +66,7 @@ static id readKey(id object, NSString *key) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/AdBlock/AdPopups.x on");
     if (!SGFlag(SGKeyHideUpsells, YES)) return;
     %init;
     SGRequireClasses(@[@"SPTEncorePopUpDialogModel", @"SPTEncorePopUpDialog", @"SPTEncorePopUpPresenter"]);

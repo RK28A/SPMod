@@ -299,6 +299,7 @@ API_AVAILABLE(ios(18.0))
 @end
 
 %ctor {
+    SGDebug(@"module Shared/Haptics/SystemMusicHaptics.x on");
     // MusicHaptics.x's constructor moves it too, but may run after this one.
     SGMigrateMusicHaptics();
     sg_isrcs = [NSCache new];

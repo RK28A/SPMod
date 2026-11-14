@@ -63,39 +63,51 @@ static NSArray<NSDictionary *> *cleanItems(NSArray<NSDictionary *> *items) {
 
 %hook _UIConcretePasteboard
 - (void)setString:(NSString *)string {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setString:] first call");
     %orig(cleaning() ? SGCleanLinksInText(string) : string);
 }
 - (void)setStrings:(NSArray<NSString *> *)strings {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setStrings:] first call");
     %orig(cleaning() ? cleanAll(strings) : strings);
 }
 - (void)setURL:(NSURL *)url {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setURL:] first call");
     %orig(cleaning() ? SGCleanLinkURL(url) : url);
 }
 - (void)setURLs:(NSArray<NSURL *> *)urls {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setURLs:] first call");
     %orig(cleaning() ? cleanAll(urls) : urls);
 }
 - (void)setObjects:(NSArray *)objects {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setObjects:] first call");
     %orig(cleaning() ? cleanAll(objects) : objects);
 }
 - (void)setObjects:(NSArray *)objects localOnly:(BOOL)localOnly expirationDate:(NSDate *)date {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setObjects:localOnly:expirationDate:] first call");
     %orig(cleaning() ? cleanAll(objects) : objects, localOnly, date);
 }
 - (void)setObjects:(NSArray *)objects options:(NSDictionary *)options {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setObjects:options:] first call");
     %orig(cleaning() ? cleanAll(objects) : objects, options);
 }
 - (void)setItems:(NSArray<NSDictionary *> *)items {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setItems:] first call");
     %orig(cleaning() ? cleanItems(items) : items);
 }
 - (void)setItems:(NSArray<NSDictionary *> *)items options:(NSDictionary *)options {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setItems:options:] first call");
     %orig(cleaning() ? cleanItems(items) : items, options);
 }
 - (void)addItems:(NSArray<NSDictionary *> *)items {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard addItems:] first call");
     %orig(cleaning() ? cleanItems(items) : items);
 }
 - (void)setValue:(id)value forPasteboardType:(NSString *)type {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setValue:forPasteboardType:] first call");
     %orig(cleaning() ? cleanValue(value, type) : value, type);
 }
 - (void)setData:(NSData *)data forPasteboardType:(NSString *)type {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[_UIConcretePasteboard setData:forPasteboardType:] first call");
     %orig(cleaning() ? cleanValue(data, type) : data, type);
 }
 %end
@@ -151,6 +163,7 @@ static void cleanSource(id item) {
 
 %hook UIActivityViewController
 - (instancetype)initWithActivityItems:(NSArray *)items applicationActivities:(NSArray<UIActivity *> *)activities {
+    SGDebugOnce(@"hook Shared/Privacy/CleanLinks.x: -[UIActivityViewController initWithActivityItems:applicationActivities:] first call");
     if (!cleaning() || ![items isKindOfClass:NSArray.class]) return %orig;
     NSMutableArray *cleaned = [NSMutableArray arrayWithCapacity:items.count];
     for (id item in items) {
@@ -166,6 +179,7 @@ static void cleanSource(id item) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Privacy/CleanLinks.x on");
     %init;
     SGRequireClasses(@[@"_UIConcretePasteboard"]);
 }

@@ -127,6 +127,7 @@ static NSData *queryAddress(NSData *data) {
 static SGConnectBrowser *sg_browser;
 
 %ctor {
+    SGDebug(@"module Shared/Connect/Connect.x on");
     // recvfrom first: without it the receivers' answers would reach Spotify from loopback, so nothing
     // is relayed at all.
     if (!SGRebindImport("recvfrom", SGConnectRecvfrom, (void **)&SGConnectRealRecvfrom) || !SGConnectRealRecvfrom) {

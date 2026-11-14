@@ -24,6 +24,7 @@ static UIView *switchIn(UIView *root, int depth) {
 
 %hook _TtC20NowPlaying_ModesImpl20FloatingElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Shared/Player/VideoSwitch.x: -[FloatingElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     UIView *videoSwitch = switchIn(((UIViewController *)self).viewIfLoaded, 0);
     if (!videoSwitch) return;
@@ -39,6 +40,7 @@ static UIView *switchIn(UIView *root, int depth) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Player/VideoSwitch.x on");
     if (!SGHidden(SGKeyHideVideoSwitch)) return;
     %init;
     SGRequireClasses(@[@"_TtC20NowPlaying_ModesImpl20FloatingElementsUnit"]);

@@ -18,6 +18,7 @@ static void retintButton(UIView *owner) {
 
 %hook UIButton
 - (void)setHighlighted:(BOOL)highlighted {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/DevicePickerTheme.x: -[UIButton setHighlighted:] first call");
     %orig;
     UIView *owner = ((UIView *)self).superview;
     static Class connect;
@@ -64,6 +65,7 @@ static void turnGreen(UIView *host) {
 
 %hook _TtC26Connect_DevicePickerUIImpl26DevicePickerViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/DevicePickerTheme.x: -[DevicePickerViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *page = ((UIViewController *)self).viewIfLoaded;
     if (!page) return;
@@ -76,5 +78,6 @@ static void turnGreen(UIView *host) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/NowPlayingBar/DevicePickerTheme.x on");
     %init;
 }

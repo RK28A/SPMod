@@ -126,6 +126,7 @@ NSURL *SGSpotifyURIFromText(NSString *text) {
 
 %hook SPTLinkDispatcherImplementation
 - (void)setMainUILoaded:(BOOL)loaded {
+    SGDebugOnce(@"hook Shared/Navigation/Links.x: -[SPTLinkDispatcherImplementation setMainUILoaded:] first call");
     %orig;
     sg_linkDispatcher = (SPTLinkDispatcherImplementation *)self;
     logDispatcherMethods(self);
@@ -133,6 +134,7 @@ NSURL *SGSpotifyURIFromText(NSString *text) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Navigation/Links.x on");
     %init;
     SGRequireClasses(@[@"SPTLinkDispatcherImplementation"]);
 }

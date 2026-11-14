@@ -186,6 +186,7 @@ static BOOL artistLyricsOn(void) {
 
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
+    SGDebugOnce(@"hook Shared/LockScreenLyrics/LockScreenLyrics.x: -[MPNowPlayingInfoCenter setNowPlayingInfo:] first call");
     if (sg_resending) {
         %orig;
         return;
@@ -226,6 +227,7 @@ static BOOL artistLyricsOn(void) {
 }
 
 - (NSDictionary *)nowPlayingInfo {
+    SGDebugOnce(@"hook Shared/LockScreenLyrics/LockScreenLyrics.x: -[MPNowPlayingInfoCenter nowPlayingInfo] first call");
     NSDictionary *info;
     @synchronized (sg_lock) {
         info = sg_spotifyInfo;
@@ -235,6 +237,7 @@ static BOOL artistLyricsOn(void) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/LockScreenLyrics/LockScreenLyrics.x on");
     sg_lock = [NSObject new];
     %init;
     [NSNotificationCenter.defaultCenter addObserverForName:NSUserDefaultsDidChangeNotification object:nil queue:nil

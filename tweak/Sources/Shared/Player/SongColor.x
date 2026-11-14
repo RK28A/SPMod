@@ -82,6 +82,7 @@ static void look(NSUInteger turn, int left) {
 @end
 
 %ctor {
+    SGDebug(@"module Shared/Player/SongColor.x on");
     dispatch_async(dispatch_get_main_queue(), ^{
         sg_watcher = [SGSongColorWatcher new];
         SGAddPlayerStateObserver(sg_watcher);

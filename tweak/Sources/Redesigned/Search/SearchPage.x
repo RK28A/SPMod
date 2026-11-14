@@ -163,6 +163,7 @@ static void layoutHeader(UIStackView *row) {
 
 %hook _TtC21Browse_BrowsePageImpl24BrowsePageViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Search/SearchPage.x: -[BrowsePageViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *view = ((UIViewController *)self).viewIfLoaded;
     if (!view || !findParts(view)) return;
@@ -171,6 +172,7 @@ static void layoutHeader(UIStackView *row) {
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previous {
+    SGDebugOnce(@"hook Redesigned/Search/SearchPage.x: -[BrowsePageViewController traitCollectionDidChange:] first call");
     %orig;
     [((UIViewController *)self).viewIfLoaded setNeedsLayout];
 }
@@ -178,6 +180,7 @@ static void layoutHeader(UIStackView *row) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Search/SearchPage.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC21Browse_BrowsePageImpl24BrowsePageViewController",

@@ -136,11 +136,13 @@ static NSURLSessionConfiguration *carryingProtocol(NSURLSessionConfiguration *co
 %hook NSURLSessionConfiguration
 
 + (NSURLSessionConfiguration *)defaultSessionConfiguration {
+    SGDebugOnce(@"hook Shared/Privacy/Privacy.x: +[NSURLSessionConfiguration defaultSessionConfiguration] first call");
     NSURLSessionConfiguration *configuration = %orig;
     return carryingProtocol(configuration);
 }
 
 + (NSURLSessionConfiguration *)ephemeralSessionConfiguration {
+    SGDebugOnce(@"hook Shared/Privacy/Privacy.x: +[NSURLSessionConfiguration ephemeralSessionConfiguration] first call");
     NSURLSessionConfiguration *configuration = %orig;
     return carryingProtocol(configuration);
 }
@@ -148,6 +150,7 @@ static NSURLSessionConfiguration *carryingProtocol(NSURLSessionConfiguration *co
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Privacy/Privacy.x on");
     if (SGEnabled(SGKeyBlockTelemetry)) {
         [NSURLProtocol registerClass:SGBlockProtocol.class];
         %init;

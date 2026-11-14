@@ -82,6 +82,7 @@ UIViewController *SGNightModeSettingsPage(void) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/NightMode/NightMode.x on");
     dispatch_async(dispatch_get_main_queue(), ^{
         gTimer = [NSTimer scheduledTimerWithTimeInterval:60 repeats:YES block:^(NSTimer *timer) {
             refreshNightMode();

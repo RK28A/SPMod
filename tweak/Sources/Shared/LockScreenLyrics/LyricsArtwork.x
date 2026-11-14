@@ -504,6 +504,7 @@ static void setTicking(BOOL on) {
 @end
 
 %ctor {
+    SGDebug(@"module Shared/LockScreenLyrics/LyricsArtwork.x on");
     if (@available(iOS 26.0, *)) {
         sg_lock = [NSObject new];
         for (NSNotificationName lifecycle in @[UIApplicationDidBecomeActiveNotification, UIApplicationDidEnterBackgroundNotification]) {

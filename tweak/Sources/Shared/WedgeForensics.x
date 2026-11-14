@@ -1,3 +1,4 @@
+#import "Core/SGLog.h"
 // The parked poster. In normal lifetime -[NSOperation waitUntilFinished]'s only CoreFoundation caller
 // is the notification-delivery rendezvous in _CFXNotificationPost: _CFXRegistrationPost enqueued a
 // delivery op for a queue-pinned observer (normally to the main queue) and the poster blocks here
@@ -52,6 +53,7 @@ static void *sgCoreFoundationBase(void) {
 
 %hook NSNotificationCenter
 - (void)postNotificationName:(NSString *)name object:(id)object userInfo:(NSDictionary *)userInfo {
+    SGDebugOnce(@"hook Shared/WedgeForensics.x: -[NSNotificationCenter postNotificationName:object:userInfo:] first call");
   wedgeRemember(name);
   %orig;
 }
@@ -59,6 +61,7 @@ static void *sgCoreFoundationBase(void) {
 
 %hook NSOperation
 - (void)waitUntilFinished {
+    SGDebugOnce(@"hook Shared/WedgeForensics.x: -[NSOperation waitUntilFinished] first call");
   void *caller = __builtin_return_address(0);
   Dl_info info;
   if (dladdr(caller, &info) && info.dli_fbase == sgCoreFoundationBase()) {

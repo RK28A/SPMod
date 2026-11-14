@@ -37,17 +37,20 @@ static void scrubEnded(void) {
 // Shared/Haptics/ControlHaptics.x hooks the same begin and end for the scrub's taps; both call through.
 %hook _TtCO17NowPlaying_ECMKit11ProgressBar6Slider
 - (BOOL)beginTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Native/Player/PlayerScrub.x: -[Slider beginTrackingWithTouch:withEvent:] first call");
     BOOL tracking = %orig;
     if (tracking) scrubBegan((UIView *)self);
     return tracking;
 }
 
 - (void)endTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Native/Player/PlayerScrub.x: -[Slider endTrackingWithTouch:withEvent:] first call");
     %orig;
     scrubEnded();
 }
 
 - (void)cancelTrackingWithEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Native/Player/PlayerScrub.x: -[Slider cancelTrackingWithEvent:] first call");
     %orig;
     scrubEnded();
 }
@@ -55,6 +58,7 @@ static void scrubEnded(void) {
 // A lock, a call or the player closing some other way can take the slider off screen mid-scrub, and then
 // neither of the two above may come.
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Native/Player/PlayerScrub.x: -[Slider didMoveToWindow] first call");
     %orig;
     if (!((UIView *)self).window) scrubEnded();
 }
@@ -62,6 +66,7 @@ static void scrubEnded(void) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Player/PlayerScrub.x on");
     %init;
     SGRequireClasses(@[@"_TtCO17NowPlaying_ECMKit11ProgressBar6Slider"]);
 }

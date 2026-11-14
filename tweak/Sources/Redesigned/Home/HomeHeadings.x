@@ -140,6 +140,7 @@ static void restyleWhenReady(UIView *button) {
 
 %hook _TtCOOOE11Home_ECMKitO19LegacyUI_ECMCoreKit10Components18SectionHeadingHome2UI7Private28NoIntrinsicContentSizeButton
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomeHeadings.x: -[NoIntrinsicContentSizeButton layoutSubviews] first call");
     %orig;
     CFTimeInterval began = SGRHomeProbeBegin();
     restyle((UIView *)self);
@@ -150,6 +151,7 @@ static void restyleWhenReady(UIView *button) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Home/HomeHeadings.x on");
     %init;
     SGRequireClasses(@[@"_TtCOOOE11Home_ECMKitO19LegacyUI_ECMCoreKit10Components18SectionHeadingHome2UI7Private28NoIntrinsicContentSizeButton"]);
 }

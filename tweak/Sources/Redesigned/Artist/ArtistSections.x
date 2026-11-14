@@ -143,6 +143,7 @@ static void logOnce(NSString *what) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistSections.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     UICollectionView *list = listOf(cell);
     // Only the page's own list: a card inside a carousel is a cell of the same class, and its row decides.
@@ -176,6 +177,7 @@ static void logOnce(NSString *what) {
 
 // The cell's own passes size the content to the cell again.
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistSections.x: -[CollectionViewCell layoutSubviews] first call");
     %orig;
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     NSNumber *settled = objc_getAssociatedObject(self, &kSettledKey);
@@ -192,6 +194,7 @@ static void logOnce(NSString *what) {
 }
 
 - (void)prepareForReuse {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistSections.x: -[CollectionViewCell prepareForReuse] first call");
     %orig;
     if (objc_getAssociatedObject(self, &kSettledKey)) unsettle((UICollectionViewCell *)self);
 }
@@ -199,6 +202,7 @@ static void logOnce(NSString *what) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Artist/ArtistSections.x on");
     %init;
     SGRequireClasses(@[@"_TtC12Element_List18CollectionViewCell"]);
 }

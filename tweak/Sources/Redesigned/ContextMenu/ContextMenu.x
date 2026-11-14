@@ -1255,6 +1255,7 @@ static void openWhenUp(SGRMenuSession *session, UIViewController *sheet, int tri
 // its slide, so the sheet is shown on that page rather than on the card it covers, and the sheet is shown.
 %hook UINavigationController
 - (void)pushViewController:(UIViewController *)page animated:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/ContextMenu/ContextMenu.x: -[UINavigationController pushViewController:animated:] first call");
     SGRMenuSession *session = sg_firing;
     UIView *container = session.container;
     if (!session || session.revealed || !container || ![self.viewIfLoaded isDescendantOfView:container]) {
@@ -1270,6 +1271,7 @@ static void openWhenUp(SGRMenuSession *session, UIViewController *sheet, int tri
 
 %hook UIViewController
 - (void)presentViewController:(UIViewController *)presented animated:(BOOL)animated completion:(void (^)(void))completion {
+    SGDebugOnce(@"hook Redesigned/ContextMenu/ContextMenu.x: -[UIViewController presentViewController:animated:completion:] first call");
     if (sg_redirecting) {
         %orig;
         return;
@@ -1322,6 +1324,7 @@ static void openWhenUp(SGRMenuSession *session, UIViewController *sheet, int tri
 // viewWillAppear:, the first moment the container does exist, before it has drawn a frame; its dimming too, so
 // the screen does not darken under the menu.
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/ContextMenu/ContextMenu.x: -[ContextMenuViewController viewDidLayoutSubviews] first call");
     %orig;
     UIViewController *sheet = (UIViewController *)self;
     SGRMenuSession *session = sessionFor(sheet, NO);
@@ -1338,6 +1341,7 @@ static void openWhenUp(SGRMenuSession *session, UIViewController *sheet, int tri
 }
 
 - (void)viewWillAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/ContextMenu/ContextMenu.x: -[ContextMenuViewController viewWillAppear:] first call");
     %orig;
     SGRMenuSession *session = sessionFor((UIViewController *)self, YES);
     if (!session) session = takeOver((UIViewController *)self, @"as it appears");
@@ -1346,6 +1350,7 @@ static void openWhenUp(SGRMenuSession *session, UIViewController *sheet, int tri
 }
 
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/ContextMenu/ContextMenu.x: -[ContextMenuViewController viewDidAppear:] first call");
     %orig;
     SGRMenuSession *session = sessionFor((UIViewController *)self, NO);
     if (session && !session.opened) [session open];
@@ -1354,6 +1359,7 @@ static void openWhenUp(SGRMenuSession *session, UIViewController *sheet, int tri
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/ContextMenu/ContextMenu.x on");
     %init;
     SGRequireClasses(@[kSheetClass]);
 }

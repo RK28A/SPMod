@@ -226,6 +226,7 @@ void SGRPlayerSetCoverAccent(UIColor *cover) {
 // A button in the player's stack laid out: Spotify hands it a new state's icon or animation this way.
 %hook UIButton
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerCoverAccent.x: -[UIButton layoutSubviews] first call");
     %orig;
     UIView *stack = sg_stack;
     if (stack && (sg_cover >= 0 || objc_getAssociatedObject(self, &kTintedKey)) && [(UIView *)self isDescendantOfView:stack]) {
@@ -234,6 +235,7 @@ void SGRPlayerSetCoverAccent(UIColor *cover) {
 }
 
 - (void)setImage:(UIImage *)image forState:(UIControlState)state {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerCoverAccent.x: -[UIButton setImage:forState:] first call");
     %orig;
     UIView *stack = sg_stack;
     if (stack && [(UIView *)self isDescendantOfView:stack]) SGRPlayerPaintCover((UIView *)self);
@@ -241,6 +243,7 @@ void SGRPlayerSetCoverAccent(UIColor *cover) {
 %end
 
 %ctor {
+    SGDebug(@"module Redesigned/Player/PlayerCoverAccent.x on");
     if (!SGRedesignedUI() || !SGRPlayerFollowsCover()) return;
     %init;
 }

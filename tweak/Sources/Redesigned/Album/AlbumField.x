@@ -59,6 +59,7 @@ static SGRArtworkField *fieldIn(UIView *page) {
 
 %hook _TtC28CreativeWorkPlatform_PageKit24CreativeWorkTemplateView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumField.x: -[CreativeWorkTemplateView layoutSubviews] first call");
     %orig;
     UIView *page = (UIView *)self;
     if (page.bounds.size.height < 200) return;
@@ -73,6 +74,7 @@ static SGRArtworkField *fieldIn(UIView *page) {
 
 %hook _TtC32CreativeWorkPlatform_TemplateKit28CreativeWorkTemplateListView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumField.x: -[CreativeWorkTemplateListView layoutSubviews] first call");
     %orig;
     UIView *list = (UIView *)self;
     if (!SGRAlbumPageOf(list)) return;
@@ -85,6 +87,7 @@ static SGRArtworkField *fieldIn(UIView *page) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumField.x: -[CollectionViewCell layoutSubviews] first call");
     %orig;
     UIView *cell = (UIView *)self;
     if (isPageCell(cell)) SGRClearCellPaint(cell);
@@ -92,6 +95,7 @@ static SGRArtworkField *fieldIn(UIView *page) {
 %end
 
 %ctor {
+    SGDebug(@"module Redesigned/Album/AlbumField.x on");
     // Registered whatever the switch says: the flag rows elsewhere lock to these while it is on.
     SGRedesignForceFlags(@"album", @{
         @"ios-album-albumfeatureproperties-impl.context_menu_in_navigation_bar_enabled": @YES,

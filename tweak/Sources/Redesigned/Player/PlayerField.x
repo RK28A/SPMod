@@ -262,6 +262,7 @@ static SGRArtworkField *fieldIn(UIView *plane) {
 
 %hook _TtC21NowPlaying_ScrollImpl27NPVBackgroundViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerField.x: -[NPVBackgroundViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *plane = ((UIViewController *)self).viewIfLoaded;
     if (!plane || plane.bounds.size.height < 200) return;
@@ -276,6 +277,7 @@ static SGRArtworkField *fieldIn(UIView *plane) {
 }
 
 - (void)backgroundViewModel:(id)model didChangeColor:(id)color playerState:(id)state {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerField.x: -[NPVBackgroundViewController backgroundViewModel:didChangeColor:playerState:] first call");
     %orig;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ SGLog(@"redesign player: Spotify's color %@ (%@), state %@", color, [color class], [state class]); });
@@ -321,6 +323,7 @@ static void publishCover(void) {
 
 %hook _TtC35NowPlaying_ContentLayerPlatformImpl24AccessibleCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerField.x: -[AccessibleCollectionView layoutSubviews] first call");
     %orig;
     sg_coverList = (UIScrollView *)self;
     publishCover();
@@ -355,6 +358,7 @@ static void publishCover(void) {
 static SGRPlayerCoverWatcher *sg_coverWatcher;
 
 %ctor {
+    SGDebug(@"module Redesigned/Player/PlayerField.x on");
     // Registered whatever the switch says: the flag rows elsewhere lock to these while it is on.
     NSMutableDictionary<NSString *, id> *flags = [@{
         // The artwork is the picture; Canvas video would cover the field and the corners.

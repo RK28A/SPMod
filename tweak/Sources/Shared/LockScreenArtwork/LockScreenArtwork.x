@@ -264,6 +264,7 @@ static SGArtworkWatcher *sg_watcher;
 
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
+    SGDebugOnce(@"hook Shared/LockScreenArtwork/LockScreenArtwork.x: -[MPNowPlayingInfoCenter setNowPlayingInfo:] first call");
     id artwork;
     NSString *key;
     @synchronized (sg_lock) {
@@ -278,6 +279,7 @@ static SGArtworkWatcher *sg_watcher;
 %end
 
 %ctor {
+    SGDebug(@"module Shared/LockScreenArtwork/LockScreenArtwork.x on");
     if (SGAnimatedArtworkAvailable()) {
         SGLog(@"lock artwork: handled by full-screen artwork settings");
         return;

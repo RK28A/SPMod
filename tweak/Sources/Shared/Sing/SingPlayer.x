@@ -11,6 +11,7 @@ double SGSingSourcePosition(SPTPlayerState *state) {
 }
 %hook SPTPlayerState
 - (double)position {
+    SGDebugOnce(@"hook Shared/Sing/SingPlayer.x: -[SPTPlayerState position] first call");
     double position;
     return SGSingPosition(self, &position) ? position : %orig;
 }
@@ -18,24 +19,28 @@ double SGSingSourcePosition(SPTPlayerState *state) {
 
 %hook SPTEsperantoPlayer
 - (id)seekTo:(double)seconds {
+    SGDebugOnce(@"hook Shared/Sing/SingPlayer.x: -[SPTEsperantoPlayer seekTo:] first call");
     SGSingPlaybackWillChange();
     id result = %orig;
     SGSingPlaybackDidSeek(seconds);
     return result;
 }
 - (id)skipToNextTrackWithOptions:(id)options {
+    SGDebugOnce(@"hook Shared/Sing/SingPlayer.x: -[SPTEsperantoPlayer skipToNextTrackWithOptions:] first call");
     SGSingPlaybackWillChange();
     id result = %orig;
     SGSingPlaybackDidChange();
     return result;
 }
 - (id)skipToPreviousTrackWithOptions:(id)options {
+    SGDebugOnce(@"hook Shared/Sing/SingPlayer.x: -[SPTEsperantoPlayer skipToPreviousTrackWithOptions:] first call");
     SGSingPlaybackWillChange();
     id result = %orig;
     SGSingPlaybackDidChange();
     return result;
 }
 - (id)skipToNextTrackWithOptions:(id)options track:(id)track {
+    SGDebugOnce(@"hook Shared/Sing/SingPlayer.x: -[SPTEsperantoPlayer skipToNextTrackWithOptions:track:] first call");
     SGSingPlaybackWillChange();
     id result = %orig;
     SGSingPlaybackDidChange();
@@ -45,6 +50,7 @@ double SGSingSourcePosition(SPTPlayerState *state) {
 
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
+    SGDebugOnce(@"hook Shared/Sing/SingPlayer.x: -[MPNowPlayingInfoCenter setNowPlayingInfo:] first call");
     SPTPlayerState *state = NSThread.isMainThread ? SGPlayerState() : nil;
     double position;
     if (info[MPNowPlayingInfoPropertyElapsedPlaybackTime] &&
@@ -58,6 +64,7 @@ double SGSingSourcePosition(SPTPlayerState *state) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Sing/SingPlayer.x on");
     sourcePosition = (void *)class_getMethodImplementation(objc_getClass("SPTPlayerState"), @selector(position));
     %init;
     SGRequireClasses(@[@"SPTPlayerState", @"SPTEsperantoPlayer"]);

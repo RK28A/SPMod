@@ -41,6 +41,7 @@ static NSString *hiddenKeyFor(UICollectionViewCell *cell) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Native/Player/PlayerDeclutter.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     NSString *key = hiddenKeyFor((UICollectionViewCell *)self);
     if (!key) return result;
@@ -68,6 +69,7 @@ static void finish(UIViewController *unit, BOOL changed) {
 
 %hook _TtC20NowPlaying_ModesImpl28PlaybackControlsElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Player/PlayerDeclutter.x: -[PlaybackControlsElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     NSArray<UIView *> *items = SGRowIn(((UIViewController *)self).viewIfLoaded).arrangedSubviews;
     if (items.count != 5 || !SGHasClass(items[2], @"PlayButton")) return;
@@ -80,6 +82,7 @@ static void finish(UIViewController *unit, BOOL changed) {
 
 %hook _TtC20NowPlaying_ModesImpl18FooterElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Player/PlayerDeclutter.x: -[FooterElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     BOOL changed = NO;
     for (UIView *item in SGRowIn(((UIViewController *)self).viewIfLoaded).arrangedSubviews) {
@@ -98,6 +101,7 @@ static void finish(UIViewController *unit, BOOL changed) {
 
 %hook _TtC20NowPlaying_ModesImpl23InformationElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Player/PlayerDeclutter.x: -[InformationElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     if (!SGHidden(SGHideAddTo)) return;
     BOOL changed = NO;
@@ -110,9 +114,11 @@ static void finish(UIViewController *unit, BOOL changed) {
 
 %hook _TtC22Lyrics_NPVContainerKit19LyricsContainerView
 - (void)setHidden:(BOOL)hidden {
+    SGDebugOnce(@"hook Native/Player/PlayerDeclutter.x: -[LyricsContainerView setHidden:] first call");
     %orig(SGHidden(SGHideLyricsInline) ? YES : hidden);
 }
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Native/Player/PlayerDeclutter.x: -[LyricsContainerView didMoveToWindow] first call");
     %orig;
     if (SGHidden(SGHideLyricsInline)) ((UIView *)self).hidden = YES;
 }
@@ -127,6 +133,7 @@ void SGSetPlayerLyricsOnly(BOOL on) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Player/PlayerDeclutter.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC12Element_List18CollectionViewCell",

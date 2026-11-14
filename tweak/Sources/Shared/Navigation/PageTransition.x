@@ -18,6 +18,7 @@ static BOOL wantsNoBar(UIViewController *page) {
 %hook SPNavigationController
 
 - (void)navigationController:(UINavigationController *)controller willShowViewController:(UIViewController *)page animated:(BOOL)animated {
+    SGDebugOnce(@"hook Shared/Navigation/PageTransition.x: -[SPNavigationController navigationController:willShowViewController:animated:] first call");
     %orig;
     UINavigationController *nav = (UINavigationController *)self;
     if (nav.navigationBarHidden || !wantsNoBar(page)) return;
@@ -28,6 +29,7 @@ static BOOL wantsNoBar(UIViewController *page) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Navigation/PageTransition.x on");
     %init;
     SGRequireClasses(@[@"SPNavigationController"]);
 }

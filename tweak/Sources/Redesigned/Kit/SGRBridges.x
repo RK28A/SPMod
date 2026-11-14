@@ -267,6 +267,7 @@ static SGRBarArtworkWatcher *sg_barWatcher;
 %group SGRBarArtworkHooks
 %hook _TtC18NowPlaying_BarImpl27NowPlayingBarViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRBridges.x: -[NowPlayingBarViewController viewDidLayoutSubviews] first call");
     %orig;
     sg_barView = ((UIViewController *)self).viewIfLoaded;
     publishBarArtwork(nil);
@@ -321,6 +322,7 @@ void SGRObservePlayerTransition(id owner, void (^began)(id owner), void (^ended)
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Kit/SGRBridges.x on");
     // By pointer: two images of one picture are still two reads.
     sg_published = [[NSMapTable alloc] initWithKeyOptions:NSPointerFunctionsWeakMemory | NSPointerFunctionsObjectPointerPersonality
                                              valueOptions:NSPointerFunctionsStrongMemory capacity:16];

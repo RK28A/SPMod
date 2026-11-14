@@ -82,6 +82,7 @@ static BOOL nativePlayerCoverImage(UIImageView *view) {
 
 %hook UIImageView
 - (void)setImage:(UIImage *)image {
+    SGDebugOnce(@"hook Native/LocalFiles/LocalCover.x: -[UIImageView setImage:] first call");
     UIImageView *view = (UIImageView *)self;
     UIImage *custom = nativePlayerCoverImage(view) ? nativeCurrentCustomCover() : nil;
     if (!custom && image) objc_setAssociatedObject(view, &kOfficialImageKey, image, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -89,6 +90,7 @@ static BOOL nativePlayerCoverImage(UIImageView *view) {
 }
 
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/LocalFiles/LocalCover.x: -[UIImageView layoutSubviews] first call");
     %orig;
     UIImageView *view = (UIImageView *)self;
     UIImage *custom = nativePlayerCoverImage(view) ? nativeCurrentCustomCover() : nil;
@@ -118,6 +120,7 @@ static BOOL nativePlayerCoverImage(UIImageView *view) {
 
 %hook _TtC35NowPlaying_ContentLayerPlatformImpl24AccessibleCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/LocalFiles/LocalCover.x: -[AccessibleCollectionView layoutSubviews] first call");
     %orig;
     fillFront((UIScrollView *)self);
 }
@@ -125,6 +128,7 @@ static BOOL nativePlayerCoverImage(UIImageView *view) {
 
 %hook _TtC35CreativeWorkCommons_CoverArtTiltKit16CoverArtTiltView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/LocalFiles/LocalCover.x: -[CoverArtTiltView layoutSubviews] first call");
     %orig;
     UIView *tilt = (UIView *)self;
     if (tilt.bounds.size.width < kCoverMinWidth) return;
@@ -141,6 +145,7 @@ static BOOL nativePlayerCoverImage(UIImageView *view) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/LocalFiles/LocalCover.x on");
     %init;
     static SGLocalCoverWatcher *watcher;
     watcher = [SGLocalCoverWatcher new];

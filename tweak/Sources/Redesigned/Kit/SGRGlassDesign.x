@@ -3,11 +3,13 @@
 
 %hook SPTHubViewController
 - (BOOL)prefersLiquidGlassNavigationBar {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRGlassDesign.x: -[SPTHubViewController prefersLiquidGlassNavigationBar] first call");
     return YES;
 }
 %end
 
 %ctor {
+    SGDebug(@"module Redesigned/Kit/SGRGlassDesign.x on");
     SGRedesignForceFlags(@"glass design", @{
         @"ios-reprise-liquid-glass-properties.context_menu_in_navigation_bar_enabled": @YES,
         @"ios-feature-encoreexperiments.new_npv_slider_enabled": @YES,

@@ -44,11 +44,13 @@ static id currentProvider(void) {
 
 %hook SPTCollectionPlatformImplementation
 - (id)initWithCosmosDataLoader:(id)loader isGatedEntityRelationsEnabled:(BOOL)gated {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[SPTCollectionPlatformImplementation initWithCosmosDataLoader:isGatedEntityRelationsEnabled:] first call");
     id platform = %orig;
     sg_platform = platform;
     return platform;
 }
 - (id)stateProvider {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[SPTCollectionPlatformImplementation stateProvider] first call");
     id provider = %orig;
     keepProvider(provider);
     return provider;
@@ -57,6 +59,7 @@ static id currentProvider(void) {
 
 %hook _TtC23Collection_PlatformImpl22CollectionPlatformImpl
 - (id)stateProvider {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[CollectionPlatformImpl stateProvider] first call");
     id provider = %orig;
     keepProvider(provider);
     return provider;
@@ -65,6 +68,7 @@ static id currentProvider(void) {
 
 %hook _TtC23Collection_PlatformImpl27CollectionPlatformMigration
 - (id)stateProvider {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[CollectionPlatformMigration stateProvider] first call");
     id provider = %orig;
     keepProvider(provider);
     return provider;
@@ -73,6 +77,7 @@ static id currentProvider(void) {
 
 %hook _TtC26AlignedCuration_CommonImpl21ACUCollectionPlatform
 - (id)stateProvider {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[ACUCollectionPlatform stateProvider] first call");
     id provider = %orig;
     keepProvider(provider);
     return provider;
@@ -81,18 +86,22 @@ static id currentProvider(void) {
 
 %hook _TtC23Collection_PlatformImpl35CollectionPlatformStateProviderImpl
 - (id)subscribeCollectionStateForURL:(id)url completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[CollectionPlatformStateProviderImpl subscribeCollectionStateForURL:completion:] first call");
     keepProvider(self);
     return %orig;
 }
 - (id)subscribeCollectionStateForURLs:(id)urls completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[CollectionPlatformStateProviderImpl subscribeCollectionStateForURLs:completion:] first call");
     keepProvider(self);
     return %orig;
 }
 - (id)subscribeCollectionStateForURL:(id)url inContextURL:(id)context completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[CollectionPlatformStateProviderImpl subscribeCollectionStateForURL:inContextURL:completion:] first call");
     keepProvider(self);
     return %orig;
 }
 - (id)subscribeCollectionStateForURLs:(id)urls inContextURL:(id)context completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[CollectionPlatformStateProviderImpl subscribeCollectionStateForURLs:inContextURL:completion:] first call");
     keepProvider(self);
     return %orig;
 }
@@ -100,18 +109,22 @@ static id currentProvider(void) {
 
 %hook _TtC26AlignedCuration_CommonImpl25ACUEsperantoStateProvider
 - (id)subscribeCollectionStateForURL:(id)url completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[ACUEsperantoStateProvider subscribeCollectionStateForURL:completion:] first call");
     keepProvider(self);
     return %orig;
 }
 - (id)subscribeCollectionStateForURLs:(id)urls completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[ACUEsperantoStateProvider subscribeCollectionStateForURLs:completion:] first call");
     keepProvider(self);
     return %orig;
 }
 - (id)subscribeCollectionStateForURL:(id)url inContextURL:(id)context completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[ACUEsperantoStateProvider subscribeCollectionStateForURL:inContextURL:completion:] first call");
     keepProvider(self);
     return %orig;
 }
 - (id)subscribeCollectionStateForURLs:(id)urls inContextURL:(id)context completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[ACUEsperantoStateProvider subscribeCollectionStateForURLs:inContextURL:completion:] first call");
     keepProvider(self);
     return %orig;
 }
@@ -120,6 +133,7 @@ static id currentProvider(void) {
 // The Follow element asks Curation's provider, which wraps the collection one.
 %hook _TtC21Curation_PlatformImpl30CUPStateProviderImplementation
 - (id)subscribeCollectionStateForURL:(id)url inContext:(id)context completion:(id)completion {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistFollow.x: -[CUPStateProviderImplementation subscribeCollectionStateForURL:inContext:completion:] first call");
     Ivar ivar = class_getInstanceVariable(object_getClass(self), "collectionPlatformStateProvider");
     if (ivar) keepProvider(object_getIvar(self, ivar));
     return %orig;
@@ -212,6 +226,7 @@ BOOL SGRArtistFollowing(UIView *page, NSString *moreIdentifier, BOOL *following,
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Artist/ArtistFollow.x on");
     %init;
     SGRequireClasses(@[@"SPTCollectionPlatformState", @"_TtC23Collection_PlatformImpl35CollectionPlatformStateProviderImpl"]);
 }

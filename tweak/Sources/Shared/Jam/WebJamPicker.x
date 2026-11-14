@@ -116,6 +116,7 @@ static void markJam(UIView *host) {
 
 %hook _TtC26Connect_DevicePickerUIImpl26DevicePickerViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Shared/Jam/WebJamPicker.x: -[DevicePickerViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *page = ((UIViewController *)self).viewIfLoaded;
     for (UIView *sub in page.subviews) {
@@ -124,6 +125,7 @@ static void markJam(UIView *host) {
 }
 
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Shared/Jam/WebJamPicker.x: -[DevicePickerViewController viewDidAppear:] first call");
     %orig;
     // SwiftUI lays out the buttons after the first pass: once more when they are there.
     UIView *page = ((UIViewController *)self).viewIfLoaded;
@@ -136,5 +138,6 @@ static void markJam(UIView *host) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Jam/WebJamPicker.x on");
     %init;
 }

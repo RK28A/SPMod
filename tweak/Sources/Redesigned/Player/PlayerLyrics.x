@@ -766,6 +766,7 @@ static void replace(void) {
 
 %hook _TtC19NowPlaying_ViewImpl24NowPlayingViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerLyrics.x: -[NowPlayingViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *host = ((UIViewController *)self).viewIfLoaded;
     if (!host || host.bounds.size.height < kLivingHeight) return;
@@ -783,6 +784,7 @@ static void replace(void) {
 
 // The bar morphs back out of a full size cover as the player closes, so the thumbnail is put away first.
 - (void)viewWillDisappear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerLyrics.x: -[NowPlayingViewController viewWillDisappear:] first call");
     if (sg_open) setOpen(NO, NO);
     %orig;
 }
@@ -790,6 +792,7 @@ static void replace(void) {
 
 %hook _TtC20NowPlaying_ModesImpl23InformationElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerLyrics.x: -[InformationElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     UIViewController *unit = (UIViewController *)self;
     sg_info = unit;
@@ -811,6 +814,7 @@ static void replace(void) {
 
 %hook _TtC20NowPlaying_ModesImpl19DurationElementUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerLyrics.x: -[DurationElementUnit viewDidLayoutSubviews] first call");
     %orig;
     sg_duration = (UIViewController *)self;
     replace();
@@ -822,6 +826,7 @@ static void replace(void) {
 // bottom stack stays where it was, which is the whole point of lifting only the title out of it.
 %hook _TtC20NowPlaying_ModesImpl20FloatingElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerLyrics.x: -[FloatingElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     sg_floating = (UIViewController *)self;
     if (SGHidden(SGRKeyPlayerHideVideoSwitch)) {
@@ -911,6 +916,7 @@ static SGRPlayerLyricsWatcher *sg_watcher;
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerLyrics.x on");
     %init;
     sg_watcher = [SGRPlayerLyricsWatcher new];
     SGAddPlayerStateObserver(sg_watcher);

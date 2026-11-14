@@ -106,6 +106,16 @@ static void appendLog(NSString *message) {
     }
 }
 
+BOOL SGDebugOn(void) {
+    static BOOL on;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        id stored = [NSUserDefaults.standardUserDefaults objectForKey:SGKeyDebugLogs];
+        on = stored ? [stored boolValue] : YES;
+    });
+    return on;
+}
+
 void SGLogMessage(NSString *message) {
     NSString *text = message ?: @"(empty log message)";
     os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_DEFAULT, "[spotifyglass] %{public}s", text.UTF8String);

@@ -226,6 +226,7 @@ static void layoutFolder(UIView *page) {
 
 %hook _TtC28YourLibrary_YourLibraryXImpl15YourLibraryView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Library/LibraryHeader.x: -[YourLibraryView layoutSubviews] first call");
     %orig;
     layoutRoot((UIView *)self);
     SGRAccentWashPlace((UIView *)self);
@@ -234,6 +235,7 @@ static void layoutFolder(UIView *page) {
 
 %hook _TtC22YourLibrary_FolderImpl10FolderView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Library/LibraryHeader.x: -[FolderView layoutSubviews] first call");
     %orig;
     layoutFolder((UIView *)self);
 }
@@ -241,6 +243,7 @@ static void layoutFolder(UIView *page) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Library/LibraryHeader.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC28YourLibrary_YourLibraryXImpl15YourLibraryView",

@@ -428,10 +428,12 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
 
 %hook UIColor
 - (UIColor *)initWithRed:(CGFloat)r green:(CGFloat)g blue:(CGFloat)b alpha:(CGFloat)a {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[UIColor initWithRed:green:blue:alpha:] first call");
     swap(&r, &g, &b);
     return %orig(r, g, b, a);
 }
 + (UIColor *)colorWithRed:(CGFloat)r green:(CGFloat)g blue:(CGFloat)b alpha:(CGFloat)a {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: +[UIColor colorWithRed:green:blue:alpha:] first call");
     swap(&r, &g, &b);
     return %orig(r, g, b, a);
 }
@@ -508,6 +510,7 @@ BOOL SGRAccentPictureIsStale(UIImage *image) {
 
 %hook UIView
 - (void)setTintColor:(UIColor *)color {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[UIView setTintColor:] first call");
     UIColor *now = swappedColor(color);
     if (now != color && SGRAccentKeepsAsking(self, @"tint")) now = color;
     %orig(now);
@@ -543,12 +546,14 @@ static NSAttributedString *renewedText(NSAttributedString *text) {
 
 %hook UILabel
 - (void)setAttributedText:(NSAttributedString *)text {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[UILabel setAttributedText:] first call");
     NSAttributedString *now = atomic_load(&sg_swapsOff) ? text : renewedText(text);
     if (now != text && SGRAccentKeepsAsking(self, @"text")) now = text;
     %orig(now);
 }
 
 - (void)setTextColor:(UIColor *)color {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[UILabel setTextColor:] first call");
     UIColor *now = swappedColor(color);
     if (now != color && SGRAccentKeepsAsking(self, @"text colour")) now = color;
     %orig(now);
@@ -561,6 +566,7 @@ static NSAttributedString *renewedText(NSAttributedString *text) {
 // lays out again when its picture changes never stopped: the playlist page, frozen behind its curtain.
 %hook UIImageView
 - (void)setImage:(UIImage *)image {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[UIImageView setImage:] first call");
     if (atomic_load(&sg_swapsOff)) {
         %orig;
         return;
@@ -589,12 +595,14 @@ static id swappedValue(id value) {
 
 %hook CAShapeLayer
 - (void)setFillColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[CAShapeLayer setFillColor:] first call");
     CGColorRef swapped = swappedCopy(color);
     CGColorRef used = swapped ?: color;
     %orig(used);
     if (swapped) CGColorRelease(swapped);
 }
 - (void)setStrokeColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[CAShapeLayer setStrokeColor:] first call");
     CGColorRef swapped = swappedCopy(color);
     CGColorRef used = swapped ?: color;
     %orig(used);
@@ -604,6 +612,7 @@ static id swappedValue(id value) {
 
 %hook CALayer
 - (void)setBackgroundColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[CALayer setBackgroundColor:] first call");
     CGColorRef swapped = swappedCopy(color);
     CGColorRef used = swapped ?: color;
     %orig(used);
@@ -613,10 +622,12 @@ static id swappedValue(id value) {
 
 %hook CABasicAnimation
 - (void)setFromValue:(id)value {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[CABasicAnimation setFromValue:] first call");
     id used = swappedValue(value);
     %orig(used);
 }
 - (void)setToValue:(id)value {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[CABasicAnimation setToValue:] first call");
     id used = swappedValue(value);
     %orig(used);
 }
@@ -624,6 +635,7 @@ static id swappedValue(id value) {
 
 %hook CAKeyframeAnimation
 - (void)setValues:(NSArray *)values {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAccent.x: -[CAKeyframeAnimation setValues:] first call");
     NSMutableArray *mapped = nil;
     for (NSUInteger i = 0; i < values.count; i++) {
         id swapped = swappedValue(values[i]);
@@ -638,6 +650,7 @@ static id swappedValue(id value) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Kit/SGRAccent.x on");
     SGHangOnStall(swapsOff);
     // Automatic starts from the colour it last had, not from the stored accent until a cover comes in.
     if (SGHidden(SGRKeyAccentAuto)) {

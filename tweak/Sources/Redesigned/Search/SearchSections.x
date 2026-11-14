@@ -157,6 +157,7 @@ static void measureSoon(void) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Search/SearchSections.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     UIView *content = cell.contentView;
     if (!isBrowseCell(content)) return %orig;
@@ -183,6 +184,7 @@ static void measureSoon(void) {
 }
 
 - (void)applyLayoutAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Search/SearchSections.x: -[CollectionViewCell applyLayoutAttributes:] first call");
     %orig;
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     if (isBrowseCell(cell.contentView)) shift(cell);
@@ -190,6 +192,7 @@ static void measureSoon(void) {
 
 // The cell's own passes may size the content to the cell again, and a cell laid out before the gap was known takes it here.
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Search/SearchSections.x: -[CollectionViewCell layoutSubviews] first call");
     %orig;
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     NSNumber *natural = objc_getAssociatedObject(cell, &kCollapsedKey);
@@ -198,6 +201,7 @@ static void measureSoon(void) {
 }
 
 - (void)prepareForReuse {
+    SGDebugOnce(@"hook Redesigned/Search/SearchSections.x: -[CollectionViewCell prepareForReuse] first call");
     %orig;
     if (objc_getAssociatedObject(self, &kCollapsedKey)) expand((UICollectionViewCell *)self);
 }
@@ -205,6 +209,7 @@ static void measureSoon(void) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Search/SearchSections.x on");
     %init;
     SGRequireClasses(@[@"_TtC12Element_List18CollectionViewCell"]);
 }

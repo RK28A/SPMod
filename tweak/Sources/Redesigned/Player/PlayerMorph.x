@@ -262,6 +262,7 @@ static SGRPlayerMorph *morphFor(SPTBarOverlayPresentationTransition *transition,
 
 %hook SPTBarOverlayPresentationTransition
 - (void)setProgress:(double)progress {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMorph.x: -[SPTBarOverlayPresentationTransition setProgress:] first call");
     %orig;
     SGRPlayerMorph *morph = morphFor(self, YES);
     [morph apply:[self progress]];
@@ -269,6 +270,7 @@ static SGRPlayerMorph *morphFor(SPTBarOverlayPresentationTransition *transition,
 }
 
 - (void)destroyTransitioningContext {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMorph.x: -[SPTBarOverlayPresentationTransition destroyTransitioningContext] first call");
     SGRPlayerMorph *morph = morphFor(self, NO);
     if (morph) {
         [morph tearDown];
@@ -396,10 +398,12 @@ static void followTransition(id transition, id<UIViewControllerContextTransition
 
 %hook _TtC19MainUI_TabBarUIImpl24CompactOverlayTransition
 - (void)animateTransition:(id<UIViewControllerContextTransitioning>)context {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMorph.x: -[CompactOverlayTransition animateTransition:] first call");
     %orig;
     followTransition(self, context);
 }
 - (void)startInteractiveTransition:(id<UIViewControllerContextTransitioning>)context {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMorph.x: -[CompactOverlayTransition startInteractiveTransition:] first call");
     %orig;
     followTransition(self, context);
 }
@@ -407,6 +411,7 @@ static void followTransition(id transition, id<UIViewControllerContextTransition
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerMorph.x on");
     %init;
     SGRequireClasses(@[@"SPTBarOverlayPresentationTransition"]);
 }

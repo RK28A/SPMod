@@ -38,6 +38,7 @@ static NSString *keyFor(UIView *action) {
 // The buttons arrive after the page has laid out, and a row that keeps its size lays nothing else out.
 %hook UIStackView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Album/Album.x: -[UIStackView layoutSubviews] first call");
     %orig;
     BOOL row = NO;
     for (UIView *action in self.subviews) {
@@ -79,6 +80,7 @@ static void applyBackdrop(UIView *page) {
 
 %hook _TtC28CreativeWorkPlatform_PageKit24CreativeWorkTemplateView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Album/Album.x: -[CreativeWorkTemplateView layoutSubviews] first call");
     %orig;
     applyBackdrop((UIView *)self);
 }
@@ -86,6 +88,7 @@ static void applyBackdrop(UIView *page) {
 
 %hook UIImageView
 - (void)setImage:(UIImage *)image {
+    SGDebugOnce(@"hook Native/Album/Album.x: -[UIImageView setImage:] first call");
     %orig;
     if (!image || self.bounds.size.width < 200 || !SGFlag(SGKeyAlbumBackdrop, NO)) return;
     UIView *page = albumPageOf(self);
@@ -168,6 +171,7 @@ static BOOL collapsed(UICollectionViewCell *cell, NSIndexPath *path) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Native/Album/Album.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     if (!collapsed((UICollectionViewCell *)self, attributes.indexPath)) return result;
     result.size = CGSizeMake(result.size.width, 0);
@@ -178,6 +182,7 @@ static BOOL collapsed(UICollectionViewCell *cell, NSIndexPath *path) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Album/Album.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC28CreativeWorkPlatform_PageKit24CreativeWorkTemplateView",

@@ -19,6 +19,7 @@ static BOOL isPlayerCard(UIView *content) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerCards.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     UIView *cell = (UIView *)self;
     UIView *content = cell.subviews.firstObject;
@@ -40,6 +41,7 @@ static BOOL isPlayerCard(UIView *content) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerCards.x on");
     %init;
     SGRequireClasses(@[@"_TtC12Element_List18CollectionViewCell"]);
 }

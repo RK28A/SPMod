@@ -17,6 +17,7 @@ static CGColorRef copyBlack(CGColorRef color) {
 
 %hook CALayer
 - (void)setBackgroundColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAmoled.x: -[CALayer setBackgroundColor:] first call");
     if (!isBaseGrey(color)) {
         %orig;
         return;
@@ -29,6 +30,7 @@ static CGColorRef copyBlack(CGColorRef color) {
 
 %hook CAGradientLayer
 - (void)setColors:(NSArray *)colors {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAmoled.x: -[CAGradientLayer setColors:] first call");
     NSMutableArray *mapped = [[NSMutableArray alloc] initWithCapacity:colors.count];
     for (id entry in colors) {
         CGColorRef color = (__bridge CGColorRef)entry;
@@ -46,6 +48,7 @@ static CGColorRef copyBlack(CGColorRef color) {
 
 %hook _TtC21Settings_PlatformImpl26SettingsListViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRAmoled.x: -[SettingsListViewController viewDidLayoutSubviews] first call");
     %orig;
     for (UIView *sub in ((UIViewController *)self).view.subviews) {
         if ([sub isKindOfClass:UICollectionView.class]) sub.backgroundColor = UIColor.blackColor;
@@ -55,5 +58,6 @@ static CGColorRef copyBlack(CGColorRef color) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Kit/SGRAmoled.x on");
     %init;
 }

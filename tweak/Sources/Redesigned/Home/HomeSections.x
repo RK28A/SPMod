@@ -149,6 +149,7 @@ static void expand(UICollectionViewCell *cell) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Home/HomeSections.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     UIView *content = cell.contentView;
     if (!isSection(content)) return %orig;
@@ -176,12 +177,14 @@ static void expand(UICollectionViewCell *cell) {
 
 // The cell's own passes may size the content to the cell again.
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomeSections.x: -[CollectionViewCell layoutSubviews] first call");
     %orig;
     NSNumber *natural = objc_getAssociatedObject(self, &kCollapsedKey);
     if (natural) collapse((UICollectionViewCell *)self, natural.doubleValue);
 }
 
 - (void)prepareForReuse {
+    SGDebugOnce(@"hook Redesigned/Home/HomeSections.x: -[CollectionViewCell prepareForReuse] first call");
     %orig;
     if (objc_getAssociatedObject(self, &kCollapsedKey)) expand((UICollectionViewCell *)self);
 }
@@ -192,6 +195,7 @@ BOOL SGRHomeSectionCollapsed(UIView *cell) {
 }
 
 %ctor {
+    SGDebug(@"module Redesigned/Home/HomeSections.x on");
     // Registered whatever the switch says: the flag rows elsewhere lock to these while it is on.
     SGRedesignForceFlags(@"home", @{
         // The badge on the DJ card.

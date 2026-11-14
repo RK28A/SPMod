@@ -19,12 +19,14 @@ static void hideConnectButton(UIView *bar) {
 
 %hook _TtC18NowPlaying_BarImpl27NowPlayingBarViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/BarConnect.x: -[NowPlayingBarViewController viewDidLayoutSubviews] first call");
     %orig;
     hideConnectButton(((UIViewController *)self).view);
 }
 %end
 
 %ctor {
+    SGDebug(@"module Redesigned/NowPlayingBar/BarConnect.x on");
     if (!SGRedesignedUI() || !SGHidden(SGRHideBarConnect)) return;
     %init;
     SGRequireClasses(@[@"_TtC18NowPlaying_BarImpl27NowPlayingBarViewController"]);

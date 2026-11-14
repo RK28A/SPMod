@@ -90,6 +90,7 @@ static SGPlayerObserver *sg_ownObserver;
 
 %hook _TtC23NowPlaying_PlatformImpl28StatefulPlayerImplementation
 - (void)player:(id)player stateDidChange:(id)state {
+    SGDebugOnce(@"hook Shared/Player/PlayerState.x: -[StatefulPlayerImplementation player:stateDidChange:] first call");
     %orig;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
@@ -101,6 +102,7 @@ static SGPlayerObserver *sg_ownObserver;
 
 %hook SPTEsperantoPlayer
 - (void)addPlayerObserver:(id)observer {
+    SGDebugOnce(@"hook Shared/Player/PlayerState.x: -[SPTEsperantoPlayer addPlayerObserver:] first call");
     %orig;
     id player = self;
     static dispatch_once_t once;
@@ -116,6 +118,7 @@ static SGPlayerObserver *sg_ownObserver;
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Player/PlayerState.x on");
     %init;
     SGRequireClasses(@[@"_TtC23NowPlaying_PlatformImpl28StatefulPlayerImplementation", @"SPTEsperantoPlayer", @"SPTPlayerState"]);
 }

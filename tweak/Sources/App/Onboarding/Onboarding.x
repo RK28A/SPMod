@@ -3,6 +3,7 @@
 
 %hook _TtC19Home_FunkisPageImpl20FunkisViewController
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook App/Onboarding/Onboarding.x: -[FunkisViewController viewDidAppear:] first call");
     %orig;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
@@ -14,6 +15,7 @@
 %end
 
 %ctor {
+    SGDebug(@"module App/Onboarding/Onboarding.x on");
     if (SGFlag(SGKeyOnboardingSeen, NO)) return;
     %init;
     SGRequireClasses(@[@"_TtC19Home_FunkisPageImpl20FunkisViewController"]);

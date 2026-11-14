@@ -157,6 +157,7 @@ static void applyPhotoFade(UIView *header) {
 
 %hook _TtC35CreativeWorkPlatform_ImageHeaderKit15ImageHeaderView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Artist/Artist.x: -[ImageHeaderView layoutSubviews] first call");
     %orig;
     applyHeader((UIView *)self);
     closeUpTitle((UIView *)self);
@@ -166,6 +167,7 @@ static void applyPhotoFade(UIView *header) {
 
 %hook UIStackView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Artist/Artist.x: -[UIStackView layoutSubviews] first call");
     %orig;
     UIView *header = self.superview;
     if (![NSStringFromClass(header.class) containsString:@"ImageHeaderKit"]) return;
@@ -188,6 +190,7 @@ static void hideTabBar(UIView *strip) {
 
 %hook _TtCOOOE16PodcastUI_ECMKitO19LegacyUI_ECMCoreKit10Components18TabsSectionHeading2UI7Private9TabButton
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Artist/Artist.x: -[TabButton layoutSubviews] first call");
     %orig;
     if (!SGHidden(SGHideArtistTabBar)) return;
     for (UIView *v = ((UIView *)self).superview; v; v = v.superview) {
@@ -288,6 +291,7 @@ static BOOL collapsed(UICollectionViewCell *cell, NSIndexPath *path) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Native/Artist/Artist.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     if (!collapsed((UICollectionViewCell *)self, attributes.indexPath)) return result;
     result.size = CGSizeMake(result.size.width, 0);
@@ -300,6 +304,7 @@ static BOOL collapsed(UICollectionViewCell *cell, NSIndexPath *path) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Artist/Artist.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC35CreativeWorkPlatform_ImageHeaderKit15ImageHeaderView",

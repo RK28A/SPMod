@@ -37,6 +37,7 @@ static void runShortcut(NSString *action) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/LiveActivity/Shortcuts.x on");
     if (@available(iOS 17.0, *)) {
         [NSNotificationCenter.defaultCenter addObserverForName:@"SGShortcutAction" object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
             if ([note.object isKindOfClass:NSString.class]) runShortcut(note.object);

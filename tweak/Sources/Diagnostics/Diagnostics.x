@@ -136,6 +136,7 @@ static void startTreeServer(void) {
 
 %hook _TtC21NowPlaying_ScrollImpl23NPVScrollViewController
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Diagnostics/Diagnostics.x: -[NPVScrollViewController viewDidAppear:] first call");
     %orig;
     if (!SGIsDebugBuild()) return;
     static dispatch_once_t once;
@@ -148,6 +149,7 @@ static void startTreeServer(void) {
 %end
 
 %ctor {
+    SGDebug(@"module Diagnostics/Diagnostics.x on");
     %init;
     SGRequireClasses(@[@"_TtC21NowPlaying_ScrollImpl23NPVScrollViewController"]);
     SGLog(@"loaded, UIGlassEffect %@", NSClassFromString(@"UIGlassEffect") ? @"available" : @"missing");

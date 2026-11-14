@@ -247,6 +247,7 @@ static void placeRow(UIStackView *stack) {
 
 %hook UIStackView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Navbar/Navbar.x: -[UIStackView layoutSubviews] first call");
     %orig;
     if ((UIStackView *)self == sg_row) placeRow((UIStackView *)self);
 }
@@ -263,11 +264,13 @@ static CGFloat slotCentreX(UIView *view) {
 
 %hook SPTEncoreIconView
 - (void)setFrame:(CGRect)frame {
+    SGDebugOnce(@"hook Redesigned/Navbar/Navbar.x: -[SPTEncoreIconView setFrame:] first call");
     CGFloat centre = slotCentreX((UIView *)self);
     if (!isnan(centre)) frame.origin.x = centre - frame.size.width / 2;
     %orig(frame);
 }
 - (void)setCenter:(CGPoint)center {
+    SGDebugOnce(@"hook Redesigned/Navbar/Navbar.x: -[SPTEncoreIconView setCenter:] first call");
     CGFloat centre = slotCentreX((UIView *)self);
     if (!isnan(centre)) center.x = centre;
     %orig(center);
@@ -276,11 +279,13 @@ static CGFloat slotCentreX(UIView *view) {
 
 %hook SPTEncoreLabel
 - (void)setFrame:(CGRect)frame {
+    SGDebugOnce(@"hook Redesigned/Navbar/Navbar.x: -[SPTEncoreLabel setFrame:] first call");
     CGFloat centre = slotCentreX((UIView *)self);
     if (!isnan(centre)) frame.origin.x = centre - frame.size.width / 2;
     %orig(frame);
 }
 - (void)setCenter:(CGPoint)center {
+    SGDebugOnce(@"hook Redesigned/Navbar/Navbar.x: -[SPTEncoreLabel setCenter:] first call");
     CGFloat centre = slotCentreX((UIView *)self);
     if (!isnan(centre)) center.x = centre;
     %orig(center);
@@ -331,6 +336,7 @@ void SGRLogTabBarRow(UIView *tabBar) {
 
 %hook _TtC28NavigationUI_TabBarItemsImpl29TabBarItemsNavigationListImpl
 - (NSArray *)items {
+    SGDebugOnce(@"hook Redesigned/Navbar/Navbar.x: -[TabBarItemsNavigationListImpl items] first call");
     NSArray *items = %orig;
     NSMutableString *out = [NSMutableString stringWithFormat:@"list read, %lu items", (unsigned long)items.count];
     for (id item in items) [out appendFormat:@"\n  %@ · %@", [item valueForKey:@"title"], [item valueForKey:@"viewURI"]];
@@ -345,6 +351,7 @@ void SGRLogTabBarRow(UIView *tabBar) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Navbar/Navbar.x on");
     %init;
     SGRequireClasses(@[
         @"SPTEncoreIcon",

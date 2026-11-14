@@ -513,6 +513,7 @@ static UIView *layoutIn(UIView *root) {
 
 %hook _TtC28EncoreConsumerMobile_BaseKit19HeaderContentLayout
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistHeader.x: -[HeaderContentLayout layoutSubviews] first call");
     %orig;
     if (SGRPlaylistHeaderOf((UIView *)self)) applyHeader((UIView *)self);
 }
@@ -520,6 +521,7 @@ static UIView *layoutIn(UIView *root) {
 
 %hook _TtC28EncoreConsumerMobile_BaseKit14PlayButtonView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistHeader.x: -[PlayButtonView layoutSubviews] first call");
     %orig;
     UIView *button = (UIView *)self;
     if (button.layer.hidden || ![button.accessibilityIdentifier isEqualToString:@"header-play-button"]) return;
@@ -529,12 +531,14 @@ static UIView *layoutIn(UIView *root) {
 
 %hook SPTFreeTierPlaylistEncoreHeaderViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistHeader.x: -[SPTFreeTierPlaylistEncoreHeaderViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *layout = layoutIn(((UIViewController *)self).viewIfLoaded);
     if (layout) applyHeader(layout);
 }
 
 - (void)update {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistHeader.x: -[SPTFreeTierPlaylistEncoreHeaderViewController update] first call");
     %orig;
     UIView *layout = layoutIn(((UIViewController *)self).viewIfLoaded);
     if (layout) applyHeader(layout);
@@ -544,6 +548,7 @@ static UIView *layoutIn(UIView *root) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Playlist/PlaylistHeader.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC28EncoreConsumerMobile_BaseKit19HeaderContentLayout",

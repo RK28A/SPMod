@@ -701,11 +701,13 @@ static void install(UIViewController *menu) {
 
 %hook _TtC24ContextMenu_InternalImpl25ContextMenuViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Shared/Player/SpeedPitchMenu.x: -[ContextMenuViewController viewDidLayoutSubviews] first call");
     %orig;
     install((UIViewController *)self);
 }
 
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Shared/Player/SpeedPitchMenu.x: -[ContextMenuViewController viewDidAppear:] first call");
     %orig;
     SGSpeedPitchView *block = objc_getAssociatedObject(self, &kBlockKey);
     [block refresh];
@@ -714,6 +716,7 @@ static void install(UIViewController *menu) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Player/SpeedPitchMenu.x on");
     %init;
     SGRequireClasses(@[@"_TtC24ContextMenu_InternalImpl25ContextMenuViewController"]);
 }

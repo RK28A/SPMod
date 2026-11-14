@@ -9,6 +9,7 @@ __weak UIView *sg_npvBackdropRoot = nil;
 
 %hook CALayer
 - (void)setBackgroundColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Native/Appearance/Repaint.x: -[CALayer setBackgroundColor:] first call");
     if (color && (sg_lyricsCardRoot || sg_lyricsPageRoot || sg_homeRoot || sg_npvBackdropRoot)) {
         UIView *view = (UIView *)self.delegate;
         if ([view isKindOfClass:UIView.class] && view.layer == self && !SGKeepsColor(view)) {
@@ -28,5 +29,6 @@ __weak UIView *sg_npvBackdropRoot = nil;
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Appearance/Repaint.x on");
     %init;
 }

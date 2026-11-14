@@ -267,6 +267,7 @@ UIViewController *SGDeveloperPage(void) {
     SGModSection *logs = SGSection(@"Logs & diagnostics", @[
         SGWithSymbol(SGPageRow(@"Device logs", ^UIViewController *{ return SGDeviceLogsPage(); }), @"doc.text.magnifyingglass"),
         SGWithSymbol(SGActionRow(@"Copy diagnostics", @"App and device versions", ^{ copyDiagnostics(); }), @"info.circle"),
+        SGWithSymbol(SGSwitchRow(@"Debug logs", @"Each module says when it starts and what it first does", SGKeyDebugLogs), @"ladybug"),
     ]);
 
     return [[SGModPage alloc] initWithTitle:@"Developer" intro:nil sections:@[trees, logs] footer:nil];

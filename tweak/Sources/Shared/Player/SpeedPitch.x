@@ -544,6 +544,7 @@ static SGSpeedPitchSongWatcher *sg_songWatcher;
 
 %hook _TtC28EncoreConsumerMobile_BaseKit14PlayButtonView
 - (void)uiButtonTapped {
+    SGDebugOnce(@"hook Shared/Player/SpeedPitch.x: -[PlayButtonView uiButtonTapped] first call");
     if (SGPlayerFadeOnPause() && !sg_pauseBypass) {
         if (sg_pauseFading) {
             cancelPendingPauseFade();
@@ -566,6 +567,7 @@ static SGSpeedPitchSongWatcher *sg_songWatcher;
 
 %hook SPTNowPlayingPlaybackControllerImplementation
 - (void)setPaused:(BOOL)paused {
+    SGDebugOnce(@"hook Shared/Player/SpeedPitch.x: -[SPTNowPlayingPlaybackControllerImplementation setPaused:] first call");
     if (!paused) {
         cancelPendingPauseFade();
         if (SGPlayerFadeOnPause()) startEnvelopeRamp(0.0f, 1.0f, kResumeFadeSeconds);
@@ -580,11 +582,13 @@ static SGSpeedPitchSongWatcher *sg_songWatcher;
 
 %hook SPTEsperantoPlayer
 - (id)pause:(id)options {
+    SGDebugOnce(@"hook Shared/Player/SpeedPitch.x: -[SPTEsperantoPlayer pause:] first call");
     __weak id<SPTPlayer> weakSelf = (id<SPTPlayer>)self;
     if (schedulePauseWithFade(^{ [weakSelf pause:options]; })) return nil;
     return %orig;
 }
 - (id)resume:(id)options {
+    SGDebugOnce(@"hook Shared/Player/SpeedPitch.x: -[SPTEsperantoPlayer resume:] first call");
     cancelPendingPauseFade();
     if (SGPlayerFadeOnPause()) startEnvelopeRamp(0.0f, 1.0f, kResumeFadeSeconds);
     return %orig;
@@ -595,6 +599,7 @@ static SGSpeedPitchSongWatcher *sg_songWatcher;
 
 %hook SPTPlayerState
 - (double)playbackSpeed {
+    SGDebugOnce(@"hook Shared/Player/SpeedPitch.x: -[SPTPlayerState playbackSpeed] first call");
     double speed = %orig;
     float ours = loadFloat(&sg_speedBits);
     return ours > 0 && ours != 1 ? speed * ours : speed;
@@ -602,6 +607,7 @@ static SGSpeedPitchSongWatcher *sg_songWatcher;
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Player/SpeedPitch.x on");
     storeFloat(&sg_speedBits, 1);
     storeFloat(&sg_gainBits, 1);
     storeFloat(&sg_envCurrentBits, 1);

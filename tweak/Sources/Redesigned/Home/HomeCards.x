@@ -119,6 +119,7 @@ static void style(UIView *button) {
 
 %hook _TtC19LegacyUI_ECMCoreKit31InteractableLayoutBackingButton
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomeCards.x: -[InteractableLayoutBackingButton layoutSubviews] first call");
     %orig;
     CFTimeInterval began = SGRHomeProbeBegin();
     style((UIView *)self);
@@ -128,6 +129,7 @@ static void style(UIView *button) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Home/HomeCards.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC19LegacyUI_ECMCoreKit31InteractableLayoutBackingButton",

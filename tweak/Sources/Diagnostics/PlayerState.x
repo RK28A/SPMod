@@ -80,6 +80,7 @@ static void report(SPTPlayerState *state) {
 
 %hook SPTEsperantoPlayer
 - (id)state {
+    SGDebugOnce(@"hook Diagnostics/PlayerState.x: -[SPTEsperantoPlayer state] first call");
     id state = %orig;
     if (SGIsDebugBuild() && [state isKindOfClass:NSClassFromString(@"SPTPlayerState")]) report(state);
     return state;
@@ -88,6 +89,7 @@ static void report(SPTPlayerState *state) {
 
 %hook _TtC28EncoreConsumerMobile_BaseKit14PlayButtonView
 - (void)setEnabled:(BOOL)enabled {
+    SGDebugOnce(@"hook Diagnostics/PlayerState.x: -[PlayButtonView setEnabled:] first call");
     %orig;
     if (!SGIsDebugBuild() || enabled) return;
     static NSUInteger logged;
@@ -97,6 +99,7 @@ static void report(SPTPlayerState *state) {
 %end
 
 %ctor {
+    SGDebug(@"module Diagnostics/PlayerState.x on");
     if (!SGIsDebugBuild()) return;
     %init;
     SGRequireClasses(@[@"SPTEsperantoPlayer", @"_TtC28EncoreConsumerMobile_BaseKit14PlayButtonView"]);

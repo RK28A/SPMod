@@ -625,6 +625,7 @@ static void styleNowPlayingBar(UIViewController *container) {
 
 %hook _TtC18NowPlaying_BarImpl36NowPlayingBarContainerViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/NowPlayingBar.x: -[NowPlayingBarContainerViewController viewDidLayoutSubviews] first call");
     %orig;
     styleNowPlayingBar((UIViewController *)self);
 }
@@ -632,6 +633,7 @@ static void styleNowPlayingBar(UIViewController *container) {
 
 %hook _TtC18NowPlaying_BarImpl27NowPlayingBarViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/NowPlayingBar.x: -[NowPlayingBarViewController viewDidLayoutSubviews] first call");
     %orig;
     UIViewController *parent = ((UIViewController *)self).parentViewController;
     if ([NSStringFromClass(parent.class) containsString:@"NowPlayingBarContainer"]) styleNowPlayingBar(parent);
@@ -640,6 +642,7 @@ static void styleNowPlayingBar(UIViewController *container) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/NowPlayingBar/NowPlayingBar.x on");
     %init;
     [NSNotificationCenter.defaultCenter addObserverForName:SGPlayerTransitionNotification
                                                        object:nil

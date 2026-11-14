@@ -377,6 +377,7 @@ static void applyHeader(UIView *header) {
 
 %hook _TtC35CreativeWorkPlatform_ImageHeaderKit15ImageHeaderView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistHeader.x: -[ImageHeaderView layoutSubviews] first call");
     %orig;
     applyHeader((UIView *)self);
 }
@@ -384,6 +385,7 @@ static void applyHeader(UIView *header) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Artist/ArtistHeader.x on");
     %init;
     SGRequireClasses(@[@"_TtC35CreativeWorkPlatform_ImageHeaderKit15ImageHeaderView"]);
 }

@@ -5,6 +5,7 @@ static char kKaraokeKey;
 
 %hook _TtC32Lyrics_FullscreenElementPageImpl10LyricsView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Lyrics/KaraokePage.x: -[LyricsView layoutSubviews] first call");
     %orig;
     UIView *host = (UIView *)self;
     SGRKaraokeView *view = objc_getAssociatedObject(host, &kKaraokeKey);
@@ -22,6 +23,7 @@ static char kKaraokeKey;
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Lyrics/KaraokePage.x on");
     %init;
     SGRequireClasses(@[@"_TtC32Lyrics_FullscreenElementPageImpl10LyricsView"]);
 }

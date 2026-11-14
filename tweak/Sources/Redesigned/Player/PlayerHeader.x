@@ -195,6 +195,7 @@ static void pillBehindContext(UIViewController *unit) {
 
 %hook _TtC20NowPlaying_ModesImpl18HeaderElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerHeader.x: -[HeaderElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     static const void *keys[] = {&kCloseKey, &kMoreKey};
     glassInside((UIViewController *)self, @[@"now-playing-minimize-button", @"Context menu"], keys);
@@ -204,6 +205,7 @@ static void pillBehindContext(UIViewController *unit) {
 
 %hook _TtC20NowPlaying_ModesImpl23InformationElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerHeader.x: -[InformationElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     if (!SGRPlayerMusicTopOn()) return;
     UIView *host = ((UIViewController *)self).viewIfLoaded;
@@ -230,6 +232,7 @@ static void pillBehindContext(UIViewController *unit) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerHeader.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC20NowPlaying_ModesImpl18HeaderElementsUnit",

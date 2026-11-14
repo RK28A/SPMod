@@ -18,6 +18,7 @@ static UIView *cellAround(UIView *view) {
 
 %hook _TtC22Lyrics_CardElementImpl8CardView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Player/LyricsCard.x: -[CardView layoutSubviews] first call");
     %orig;
     if (!SGFlag(SGKeyLyricsCard, NO)) return;
     UIView *cell = cellAround((UIView *)self);
@@ -35,6 +36,7 @@ static UIView *cellAround(UIView *view) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Player/LyricsCard.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC22Lyrics_CardElementImpl8CardView",

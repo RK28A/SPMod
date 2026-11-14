@@ -22,6 +22,7 @@ static void capsule(UIView *shape) {
 
 %hook _TtC28YourLibrary_YourLibraryXImpl21YourLibrarySearchView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Library/LibrarySearch.x: -[YourLibrarySearchView layoutSubviews] first call");
     %orig;
     UIView *header = childNamed((UIView *)self, @"YourLibrarySearchHeaderView");
     if (!header) return;
@@ -43,6 +44,7 @@ static void capsule(UIView *shape) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Library/LibrarySearch.x on");
     %init;
     SGRequireClasses(@[@"_TtC28YourLibrary_YourLibraryXImpl21YourLibrarySearchView"]);
 }

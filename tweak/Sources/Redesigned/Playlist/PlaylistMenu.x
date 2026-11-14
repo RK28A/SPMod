@@ -308,6 +308,7 @@ static void install(UIViewController *menu) {
 
 %hook _TtC24ContextMenu_InternalImpl25ContextMenuViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistMenu.x: -[ContextMenuViewController viewDidLayoutSubviews] first call");
     %orig;
     install((UIViewController *)self);
 }
@@ -315,6 +316,7 @@ static void install(UIViewController *menu) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Playlist/PlaylistMenu.x on");
     %init;
     SGRequireClasses(@[@"_TtC24ContextMenu_InternalImpl25ContextMenuViewController"]);
 }

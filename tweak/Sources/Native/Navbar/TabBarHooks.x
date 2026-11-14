@@ -29,6 +29,7 @@ static UIView *tabBarOf(UIView *item) {
 
 %hook _TtC23NavigationUI_TabBarImpl10TabBarView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Navbar/TabBarHooks.x: -[TabBarView layoutSubviews] first call");
     %orig;
     SGComposeTabBar((UIView *)self);
     holdHome((UIView *)self);
@@ -47,6 +48,7 @@ static void itemDidLayOut(UIView *item) {
 
 %hook _TtC23NavigationUI_TabBarImpl21TabBarItemElementView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Navbar/TabBarHooks.x: -[TabBarItemElementView layoutSubviews] first call");
     %orig;
     itemDidLayOut((UIView *)self);
 }
@@ -54,6 +56,7 @@ static void itemDidLayOut(UIView *item) {
 
 %hook _TtC25CreateMenu_TabBarItemImpl24CreateMenuTabBarItemView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Navbar/TabBarHooks.x: -[CreateMenuTabBarItemView layoutSubviews] first call");
     %orig;
     itemDidLayOut((UIView *)self);
 }
@@ -61,6 +64,7 @@ static void itemDidLayOut(UIView *item) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Navbar/TabBarHooks.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC23NavigationUI_TabBarImpl10TabBarView",

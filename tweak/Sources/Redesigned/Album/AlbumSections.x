@@ -78,6 +78,7 @@ static void logOnce(NSString *what) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumSections.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     UIView *content = cell.contentView.subviews.firstObject;
     // Cells are reused across kinds, and one settled before can hold a track row now.
@@ -113,12 +114,14 @@ static void logOnce(NSString *what) {
 
 // The cell's own passes size the content to the cell again.
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumSections.x: -[CollectionViewCell layoutSubviews] first call");
     %orig;
     NSArray<NSNumber *> *settled = objc_getAssociatedObject(self, &kSettledKey);
     if (settled) settle((UICollectionViewCell *)self, settled[0].doubleValue, settled[1].doubleValue);
 }
 
 - (void)prepareForReuse {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumSections.x: -[CollectionViewCell prepareForReuse] first call");
     %orig;
     if (objc_getAssociatedObject(self, &kSettledKey)) unsettle((UICollectionViewCell *)self);
 }
@@ -126,6 +129,7 @@ static void logOnce(NSString *what) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Album/AlbumSections.x on");
     %init;
     SGRequireClasses(@[@"_TtC12Element_List18CollectionViewCell"]);
 }

@@ -701,6 +701,7 @@ static SGKaraokeTrackWatcher *sg_trackWatcher;
 
 %hook SPTEsperantoPlayer
 - (id)state {
+    SGDebugOnce(@"hook Shared/Lyrics/KaraokeSource.x: -[SPTEsperantoPlayer state] first call");
     if (!sg_player) sg_player = self;
     SPTPlayerState *state = %orig;
     seen(state);
@@ -710,10 +711,12 @@ static SGKaraokeTrackWatcher *sg_trackWatcher;
 
 %hook SPTDataLoaderService
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/Lyrics/KaraokeSource.x: -[SPTDataLoaderService URLSession:dataTask:didReceiveData:] first call");
     received(session, task, data);
     %orig;
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SGDebugOnce(@"hook Shared/Lyrics/KaraokeSource.x: -[SPTDataLoaderService URLSession:task:didCompleteWithError:] first call");
     completed(task, error);
     %orig;
 }
@@ -721,10 +724,12 @@ static SGKaraokeTrackWatcher *sg_trackWatcher;
 
 %hook _TtC26Connectivity_HttpClientKit20HttpClientURLSession
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/Lyrics/KaraokeSource.x: -[HttpClientURLSession URLSession:dataTask:didReceiveData:] first call");
     received(session, task, data);
     %orig;
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SGDebugOnce(@"hook Shared/Lyrics/KaraokeSource.x: -[HttpClientURLSession URLSession:task:didCompleteWithError:] first call");
     completed(task, error);
     %orig;
 }
@@ -735,6 +740,7 @@ static SGKaraokeTrackWatcher *sg_trackWatcher;
 %group SGSpclientHeadersOnly
 %hook SPTDataLoaderService
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/Lyrics/KaraokeSource.x: -[SPTDataLoaderService URLSession:dataTask:didReceiveData:] first call");
     rememberHeaders(session, SGURLSessionTaskRequest(task, NO));
     %orig;
 }
@@ -742,6 +748,7 @@ static SGKaraokeTrackWatcher *sg_trackWatcher;
 
 %hook _TtC26Connectivity_HttpClientKit20HttpClientURLSession
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/Lyrics/KaraokeSource.x: -[HttpClientURLSession URLSession:dataTask:didReceiveData:] first call");
     rememberHeaders(session, SGURLSessionTaskRequest(task, NO));
     %orig;
 }
@@ -749,6 +756,7 @@ static SGKaraokeTrackWatcher *sg_trackWatcher;
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Lyrics/KaraokeSource.x on");
     // The sources that search by name learn the name from the player, so the player is caught
     // whenever one is on, not only for the redesign's lyrics and the lock screen.
     if (!SGRedesignedUI() && !SGFlag(SGKeyLockScreenLyrics, NO) && !SGLyricsEnabled()

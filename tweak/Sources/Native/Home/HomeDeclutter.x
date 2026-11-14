@@ -34,6 +34,7 @@ static NSString *hiddenKeyFor(UICollectionViewCell *cell) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Native/Home/HomeDeclutter.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     NSString *key = hiddenKeyFor((UICollectionViewCell *)self);
     if (!key) return result;
@@ -47,6 +48,7 @@ static NSString *hiddenKeyFor(UICollectionViewCell *cell) {
 
 %hook _TtC14Home_PillUIKit14PillScrollView
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Native/Home/HomeDeclutter.x: -[PillScrollView didMoveToWindow] first call");
     %orig;
     if (SGHidden(SGHideHomePills)) ((UIView *)self).hidden = YES;
 }
@@ -54,6 +56,7 @@ static NSString *hiddenKeyFor(UICollectionViewCell *cell) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Home/HomeDeclutter.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC12Element_List18CollectionViewCell",

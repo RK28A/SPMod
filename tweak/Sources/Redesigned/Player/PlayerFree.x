@@ -23,6 +23,7 @@
 
 %hook _TtC32ReinventFree_ReinventFreeNpvImpl26NowPlayingReinventFreeMode
 - (BOOL)isActiveFor:(id)playerState productState:(id)productState {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFree.x: -[NowPlayingReinventFreeMode isActiveFor:productState:] first call");
     BOOL active = %orig;
     static dispatch_once_t once;
     if (active) dispatch_once(&once, ^{ SGLog(@"redesign player: Reinvented Free player declined, Spotify's Free player takes the track"); });
@@ -32,6 +33,7 @@
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerFree.x on");
     %init;
     SGRequireClasses(@[@"_TtC32ReinventFree_ReinventFreeNpvImpl26NowPlayingReinventFreeMode"]);
 }

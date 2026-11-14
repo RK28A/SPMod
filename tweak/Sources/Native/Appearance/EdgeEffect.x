@@ -17,11 +17,13 @@ static void soften(UIScrollView *scrollView) {
 
 %hook UIScrollView
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Native/Appearance/EdgeEffect.x: -[UIScrollView didMoveToWindow] first call");
     %orig;
     if (self.window) soften(self);
 }
 
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Appearance/EdgeEffect.x: -[UIScrollView layoutSubviews] first call");
     %orig;
     if (self.window) soften(self);
 }
@@ -29,5 +31,6 @@ static void soften(UIScrollView *scrollView) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Appearance/EdgeEffect.x on");
     %init;
 }

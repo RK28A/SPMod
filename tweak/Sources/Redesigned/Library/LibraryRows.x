@@ -127,6 +127,7 @@ static Class sg_rowClass;
 
 %hook UIView
 - (void)setBackgroundColor:(UIColor *)color {
+    SGDebugOnce(@"hook Redesigned/Library/LibraryRows.x: -[UIView setBackgroundColor:] first call");
     if (!sg_rowClass || !color) {
         %orig;
         return;
@@ -148,6 +149,7 @@ static Class sg_rowClass;
 
 %hook _TtC21YourLibrary_CommonKit47YourLibrarySwipeableCollectionViewCellContainer
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Library/LibraryRows.x: -[YourLibrarySwipeableCollectionViewCellContainer layoutSubviews] first call");
     %orig;
     if (!sg_rowClass) sg_rowClass = object_getClass(self);
     style((UIView *)self);
@@ -160,6 +162,7 @@ static NSHashTable<UIView *> *sg_lists;
 
 %hook _TtC21YourLibrary_CommonKit25YourLibraryCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Library/LibraryRows.x: -[YourLibraryCollectionView layoutSubviews] first call");
     %orig;
     if (!sg_lists) sg_lists = [NSHashTable weakObjectsHashTable];
     [sg_lists addObject:(UIView *)self];
@@ -171,6 +174,7 @@ static NSHashTable<UIView *> *sg_lists;
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Library/LibraryRows.x on");
     %init;
     SGRequireClasses(@[@"_TtC21YourLibrary_CommonKit47YourLibrarySwipeableCollectionViewCellContainer"]);
     [NSNotificationCenter.defaultCenter addObserverForName:NSUserDefaultsDidChangeNotification object:nil queue:NSOperationQueue.mainQueue

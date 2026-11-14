@@ -70,6 +70,7 @@ static void trackMayHaveChanged(void) {
 
 %hook SPTEsperantoPlayer
 - (id)state {
+    SGDebugOnce(@"hook Shared/ArtistBlock/ArtistSkip.x: -[SPTEsperantoPlayer state] first call");
     if (!sg_player) {
         sg_player = self;
         SGLog(@"artist block: player found");
@@ -80,6 +81,7 @@ static void trackMayHaveChanged(void) {
 
 %hook SPTNowPlayingPlaybackControllerImplementation
 - (id)initWithPlayer:(id)player testManager:(id)manager inStreamClient:(id)client {
+    SGDebugOnce(@"hook Shared/ArtistBlock/ArtistSkip.x: -[SPTNowPlayingPlaybackControllerImplementation initWithPlayer:testManager:inStreamClient:] first call");
     id controller = %orig;
     sg_controller = controller;
     return controller;
@@ -88,6 +90,7 @@ static void trackMayHaveChanged(void) {
 
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
+    SGDebugOnce(@"hook Shared/ArtistBlock/ArtistSkip.x: -[MPNowPlayingInfoCenter setNowPlayingInfo:] first call");
     %orig;
     if (!SGFlag(SGKeyArtistBlock, NO)) return;
     dispatch_async(dispatch_get_main_queue(), ^{ trackMayHaveChanged(); });
@@ -95,6 +98,7 @@ static void trackMayHaveChanged(void) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/ArtistBlock/ArtistSkip.x on");
     %init;
     SGRequireClasses(@[@"SPTEsperantoPlayer", @"SPTNowPlayingPlaybackControllerImplementation", @"MPNowPlayingInfoCenter"]);
 }

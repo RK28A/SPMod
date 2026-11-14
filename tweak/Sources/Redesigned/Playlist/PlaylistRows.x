@@ -177,6 +177,7 @@ static void fadeUnderBar(UIScrollView *list) {
 
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl32FTPTouchCancellingCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistRows.x: -[FTPTouchCancellingCollectionView layoutSubviews] first call");
     %orig;
     if (!SGLoopGuard("playlist list")) fadeUnderBar((UIScrollView *)self);
 }
@@ -184,6 +185,7 @@ static void fadeUnderBar(UIScrollView *list) {
 
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl25ElementCollectionViewCell
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistRows.x: -[ElementCollectionViewCell layoutSubviews] first call");
     %orig;
     UIView *cell = (UIView *)self;
     if (!SGRPlaylistHeaderOf(cell)) return;
@@ -193,6 +195,7 @@ static void fadeUnderBar(UIScrollView *list) {
 }
 
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Playlist/PlaylistRows.x: -[ElementCollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     if (!SGRFindByIdentifier((UIView *)self, SGRPlaylistCurationIdentifier, &kToolbarKey)) return result;
     result.size = CGSizeMake(result.size.width, 0);
@@ -205,6 +208,7 @@ static void fadeUnderBar(UIScrollView *list) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Playlist/PlaylistRows.x on");
     %init;
     SGRequireClasses(@[@"_TtC35ListUXPlatform_FreeTierPlaylistImpl25ElementCollectionViewCell"]);
 }

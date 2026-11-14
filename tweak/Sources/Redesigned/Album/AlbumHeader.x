@@ -465,6 +465,7 @@ static void applyPage(UIView *page) {
 
 %hook _TtC28CreativeWorkPlatform_PageKit24CreativeWorkTemplateView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumHeader.x: -[CreativeWorkTemplateView layoutSubviews] first call");
     %orig;
     applyPage((UIView *)self);
 }
@@ -472,6 +473,7 @@ static void applyPage(UIView *page) {
 
 %hook _TtC28EncoreConsumerMobile_BaseKit14PlayButtonView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumHeader.x: -[PlayButtonView layoutSubviews] first call");
     %orig;
     UIView *button = (UIView *)self;
     if (button.layer.hidden || ![button.accessibilityIdentifier isEqualToString:@"header-play-button"]) return;
@@ -484,6 +486,7 @@ static void applyPage(UIView *page) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Album/AlbumHeader.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC28CreativeWorkPlatform_PageKit24CreativeWorkTemplateView",

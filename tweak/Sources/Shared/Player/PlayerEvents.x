@@ -28,16 +28,19 @@ static void announceTransition(UIViewController *unit, BOOL animated, NSString *
 
 %hook _TtC21NowPlaying_ScrollImpl27NPVBackgroundViewController
 - (void)viewWillAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Shared/Player/PlayerEvents.x: -[NPVBackgroundViewController viewWillAppear:] first call");
     %orig;
     announceTransition((UIViewController *)self, animated, @"opens");
 }
 - (void)viewWillDisappear:(BOOL)animated {
+    SGDebugOnce(@"hook Shared/Player/PlayerEvents.x: -[NPVBackgroundViewController viewWillDisappear:] first call");
     %orig;
     announceTransition((UIViewController *)self, animated, @"closes");
 }
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Player/PlayerEvents.x on");
     %init;
     SGRequireClasses(@[@"_TtC21NowPlaying_ScrollImpl27NPVBackgroundViewController"]);
 }

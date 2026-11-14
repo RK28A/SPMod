@@ -97,6 +97,7 @@ static BOOL isMusic(NSString *uri) {
 @end
 
 %ctor {
+    SGDebug(@"module Shared/ListeningStats/ListeningStats.x on");
     static SGPlayRecorder *recorder;
     recorder = [SGPlayRecorder new];
     SGAddPlayerStateObserver(recorder);

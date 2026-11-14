@@ -230,12 +230,14 @@ static void install(UIViewController *menu) {
 
 %hook _TtC24ContextMenu_InternalImpl25ContextMenuViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Shared/Lossless/LosslessDownload.x: -[ContextMenuViewController viewDidLayoutSubviews] first call");
     %orig;
     install((UIViewController *)self);
 }
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Lossless/LosslessDownload.x on");
     if (!SGHidden(SGKeyLossless)) return;   // the Lossless files switch in Mod Settings, off unless set
     %init;
     SGRequireClasses(@[@"_TtC24ContextMenu_InternalImpl25ContextMenuViewController"]);

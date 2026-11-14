@@ -482,6 +482,7 @@ static ssize_t bridgeRecvMsg(int fd, struct msghdr *message, int flags) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/ConnectDiscovery/ConnectDiscovery.x on");
     sg_discoveryLock = [NSObject new];
     sg_bonjourTargets = [NSMutableArray array];
     sg_injectedPackets = [NSMutableArray array];

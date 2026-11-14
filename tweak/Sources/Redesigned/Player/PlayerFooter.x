@@ -287,6 +287,7 @@ static void lowerRow(UIView *row) {
 
 %hook _TtC20NowPlaying_ModesImpl18FooterElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[FooterElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     UIView *host = ((UIViewController *)self).viewIfLoaded;
     if (!host) return;
@@ -373,18 +374,21 @@ static void lowerRow(UIView *row) {
 
 %hook _TtC21NowPlaying_ScrollImpl27NPVBackgroundViewController
 - (void)viewWillAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[NPVBackgroundViewController viewWillAppear:] first call");
     %orig;
     sg_playerIsVisible = YES;
     updatePlayerIdleTimer();
 }
 
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[NPVBackgroundViewController viewDidAppear:] first call");
     %orig;
     sg_playerIsVisible = YES;
     updatePlayerIdleTimer();
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[NPVBackgroundViewController viewWillDisappear:] first call");
     %orig;
     sg_playerIsVisible = NO;
     updatePlayerIdleTimer();
@@ -420,10 +424,12 @@ static void applyGlassSheet(UIViewController *controller) {
 
 %hook _TtC14Queue_ViewImpl19QueueViewController
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[QueueViewController viewDidAppear:] first call");
     %orig;
     applyGlassSheet((UIViewController *)self);
 }
 - (void)viewWillLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[QueueViewController viewWillLayoutSubviews] first call");
     %orig;
     applyGlassSheet((UIViewController *)self);
 }
@@ -431,10 +437,12 @@ static void applyGlassSheet(UIViewController *controller) {
 
 %hook _TtC26Connect_DevicePickerUIImpl26DevicePickerViewController
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[DevicePickerViewController viewDidAppear:] first call");
     %orig;
     applyGlassSheet((UIViewController *)self);
 }
 - (void)viewWillLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerFooter.x: -[DevicePickerViewController viewWillLayoutSubviews] first call");
     %orig;
     applyGlassSheet((UIViewController *)self);
 }
@@ -442,6 +450,7 @@ static void applyGlassSheet(UIViewController *controller) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerFooter.x on");
     %init;
     SGRequireClasses(@[@"_TtC20NowPlaying_ModesImpl18FooterElementsUnit",
                        @"_TtC21NowPlaying_ScrollImpl27NPVBackgroundViewController"]);

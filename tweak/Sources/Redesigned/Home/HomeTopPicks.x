@@ -75,6 +75,7 @@ static UICollectionViewCompositionalLayout *boxed(UICollectionViewCompositionalL
     return boxed(%orig(wrapped(provider, box), configuration), box);
 }
 - (instancetype)initWithSectionProvider:(UICollectionViewCompositionalLayoutSectionProvider)provider {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: -[UICollectionViewCompositionalLayout initWithSectionProvider:] first call");
     if (!provider || !SGFlag(SGRKeyHomeTopPicks, NO)) return %orig;
     SGRLayoutBox *box = [SGRLayoutBox new];
     return boxed(%orig(wrapped(provider, box)), box);
@@ -88,6 +89,7 @@ static CGFloat growth(CGFloat width) {
 
 %hook NSCollectionLayoutSize
 + (instancetype)sizeWithWidthDimension:(NSCollectionLayoutDimension *)width heightDimension:(NSCollectionLayoutDimension *)height {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: +[NSCollectionLayoutSize sizeWithWidthDimension:heightDimension:] first call");
     if (!sg_enlarging || !width.isAbsolute || width.dimension < kSmallest) return %orig;
     // The cards come first, then the row that holds them all (1634 by 195 on the phone): the row is as many cards
     // wide, so it widens by kScale too, but grows in height only as much as a card does.
@@ -167,6 +169,7 @@ static NSDictionary<NSIndexPath *, NSValue *> *swappedFrames(UICollectionViewLay
 
 %hook UICollectionViewCompositionalLayout
 - (NSArray<UICollectionViewLayoutAttributes *> *)layoutAttributesForElementsInRect:(CGRect)rect {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: -[UICollectionViewCompositionalLayout layoutAttributesForElementsInRect:] first call");
     if (sg_reordering || !SGFlag(SGRKeyHomeTopPicks, NO) || sg_pageLayout != (UICollectionViewLayout *)self) return %orig;
     NSDictionary *frames = swappedFrames((UICollectionViewLayout *)self);
     if (!frames) return %orig;
@@ -208,6 +211,7 @@ static NSDictionary<NSIndexPath *, NSValue *> *swappedFrames(UICollectionViewLay
 }
 
 - (UICollectionViewLayoutAttributes *)layoutAttributesForItemAtIndexPath:(NSIndexPath *)path {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: -[UICollectionViewCompositionalLayout layoutAttributesForItemAtIndexPath:] first call");
     UICollectionViewLayoutAttributes *a = %orig;
     if (sg_reordering || !SGFlag(SGRKeyHomeTopPicks, NO) || sg_pageLayout != (UICollectionViewLayout *)self || !a) return a;
     NSValue *moved = swappedFrames((UICollectionViewLayout *)self)[path];
@@ -221,6 +225,7 @@ static NSDictionary<NSIndexPath *, NSValue *> *swappedFrames(UICollectionViewLay
 
 %hook _TtC12Element_List18CollectionViewCell
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: -[CollectionViewCell layoutSubviews] first call");
     %orig;
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     UICollectionView *page = sg_pageLayout.collectionView;
@@ -228,6 +233,7 @@ static NSDictionary<NSIndexPath *, NSValue *> *swappedFrames(UICollectionViewLay
 }
 
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     static Class shelf;
     if (!shelf) shelf = NSClassFromString(@"_TtC16Home_CarouselKit29TouchCancellingCollectionView");
@@ -564,12 +570,14 @@ static void followAlbum(UICollectionView *shelf) {
 // The large shelf's cards sized themselves after its cell was measured and no longer fit: measure the cell again.
 %hook _TtC16Home_CarouselKit29TouchCancellingCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: -[TouchCancellingCollectionView layoutSubviews] first call");
     %orig;
     if (SGRHomeGlassStyle() || objc_getAssociatedObject(((UICollectionView *)self).collectionViewLayout, &kLargeKey))
         followAlbum((UICollectionView *)self);
 }
 
 - (void)setContentSize:(CGSize)size {
+    SGDebugOnce(@"hook Redesigned/Home/HomeTopPicks.x: -[TouchCancellingCollectionView setContentSize:] first call");
     %orig;
     UICollectionView *shelf = (UICollectionView *)self;
     UICollectionViewLayout *layout = shelf.collectionViewLayout;
@@ -584,6 +592,7 @@ static void followAlbum(UICollectionView *shelf) {
 %end
 
 %ctor {
+    SGDebug(@"module Redesigned/Home/HomeTopPicks.x on");
     SGMigrateKey(@"spotifyglass.redesign.home.toppicks", SGRKeyHomeTopPicks);
     if (!SGRedesignedUI() || (!SGRHomeGlassStyle() && !SGFlag(SGRKeyHomeTopPicks, NO))) return;
     [NSNotificationCenter.defaultCenter addObserverForName:SGRNowPlayingArtworkDidChangeNotification object:nil

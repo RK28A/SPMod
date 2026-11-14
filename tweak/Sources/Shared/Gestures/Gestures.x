@@ -141,6 +141,7 @@ void SGGestureAttach(UIView *host) {
 
 %hook SPTNowPlayingPlaybackControllerImplementation
 - (id)initWithPlayer:(id)player testManager:(id)manager inStreamClient:(id)client {
+    SGDebugOnce(@"hook Shared/Gestures/Gestures.x: -[SPTNowPlayingPlaybackControllerImplementation initWithPlayer:testManager:inStreamClient:] first call");
     id controller = %orig;
     sg_player = controller;
     return controller;
@@ -149,6 +150,7 @@ void SGGestureAttach(UIView *host) {
 
 %hook SPTNowPlayingAuxiliaryActionsModel
 - (id)initWithCollectionPlatform:(id)collectionPlatform testManager:(id)testManager statefulPlayer:(id)statefulPlayer yourEpisodesSaveManager:(id)saveManager curationPlatform:(id)curationPlatform smartShuffleHandler:(id)shuffleHandler playingTrackProvider:(id)provider {
+    SGDebugOnce(@"hook Shared/Gestures/Gestures.x: -[SPTNowPlayingAuxiliaryActionsModel initWithCollectionPlatform:testManager:statefulPlayer:yourEpisodesSaveManager:curationPlatform:smartShuffleHandler:playingTrackProvider:] first call");
     id model = %orig;
     sg_auxModel = model;
     return model;
@@ -156,6 +158,7 @@ void SGGestureAttach(UIView *host) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Gestures/Gestures.x on");
     %init;
     SGRequireClasses(@[@"SPTNowPlayingPlaybackControllerImplementation"]);
 }

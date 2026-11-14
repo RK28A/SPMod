@@ -511,14 +511,17 @@ static void completed(id delegate, NSURLSession *session, NSURLSessionTask *task
 
 %hook SPTDataLoaderService
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveResponse:(NSURLResponse *)response completionHandler:(SGDisposition)handler {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[SPTDataLoaderService URLSession:dataTask:didReceiveResponse:completionHandler:] first call");
     receivedResponse(self, session, task, response, handler, ^(NSURLResponse *given, SGDisposition then) {
         %orig(session, task, given, then);
     });
 }
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[SPTDataLoaderService URLSession:dataTask:didReceiveData:] first call");
     if (forwardsData(task, data)) %orig;
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[SPTDataLoaderService URLSession:task:didCompleteWithError:] first call");
     completed(self, session, task, error, ^(NSError *given) {
         %orig(session, task, given);
     });
@@ -527,14 +530,17 @@ static void completed(id delegate, NSURLSession *session, NSURLSessionTask *task
 
 %hook _TtC26Connectivity_HttpClientKit20HttpClientURLSession
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveResponse:(NSURLResponse *)response completionHandler:(SGDisposition)handler {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[HttpClientURLSession URLSession:dataTask:didReceiveResponse:completionHandler:] first call");
     receivedResponse(self, session, task, response, handler, ^(NSURLResponse *given, SGDisposition then) {
         %orig(session, task, given, then);
     });
 }
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[HttpClientURLSession URLSession:dataTask:didReceiveData:] first call");
     if (forwardsData(task, data)) %orig;
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[HttpClientURLSession URLSession:task:didCompleteWithError:] first call");
     completed(self, session, task, error, ^(NSError *given) {
         %orig(session, task, given);
     });
@@ -547,6 +553,7 @@ static void completed(id delegate, NSURLSession *session, NSURLSessionTask *task
 
 %hook SPTPlayerTrack
 - (NSDictionary *)metadata {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[SPTPlayerTrack metadata] first call");
     NSDictionary *metadata = %orig;
     NSString *track = trackOf(self);
     if (!track) return metadata;
@@ -564,6 +571,7 @@ static void completed(id delegate, NSURLSession *session, NSURLSessionTask *task
 
 %hook NSURLSession
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[NSURLSession dataTaskWithRequest:] first call");
     return %orig(donorRequestFor(request) ?: request);
 }
 %end
@@ -574,6 +582,7 @@ static void completed(id delegate, NSURLSession *session, NSURLSessionTask *task
 
 %hook __NSURLSessionLocal
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
+    SGDebugOnce(@"hook Shared/LyricsSources/LyricsHook.x: -[__NSURLSessionLocal dataTaskWithRequest:] first call");
     return %orig(donorRequestFor(request) ?: request);
 }
 %end
@@ -581,6 +590,7 @@ static void completed(id delegate, NSURLSession *session, NSURLSessionTask *task
 %end
 
 %ctor {
+    SGDebug(@"module Shared/LyricsSources/LyricsHook.x on");
     SGLyricsMigrateLegacyKeys();
     if (!SGLyricsEnabled()) return;
     %init(SGLyricsReplies);

@@ -55,11 +55,13 @@ static void arm(void) {
 
 %hook MPRemoteCommand
 - (void)setEnabled:(BOOL)enabled {
+    SGDebugOnce(@"hook Shared/AnimatedArtwork/LockScreenStar.x: -[MPRemoteCommand setEnabled:] first call");
     if (!enabled && sg_like && self == sg_like) enabled = YES;
     %orig(enabled);
 }
 
 - (void)removeTarget:(id)target {
+    SGDebugOnce(@"hook Shared/AnimatedArtwork/LockScreenStar.x: -[MPRemoteCommand removeTarget:] first call");
     if (sg_like && self == sg_like && target != sg_target && !target) sg_like = nil;
     %orig;
 }
@@ -75,6 +77,7 @@ static void arm(void) {
 @end
 
 %ctor {
+    SGDebug(@"module Shared/AnimatedArtwork/LockScreenStar.x on");
     if (@available(iOS 26.0, *)) {
         BOOL atLaunch = starOn();
         SGRegisterFlagForcer(YES, ^id(NSString *key) {

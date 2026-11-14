@@ -211,32 +211,38 @@ static void complete(id<NSURLSessionDataDelegate> delegate, NSURLSession *sessio
 
 %hook SPTDataLoaderService
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))handler {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[SPTDataLoaderService URLSession:dataTask:didReceiveResponse:completionHandler:] first call");
     SGJamObserveResponse(task, response);
     NSHTTPURLResponse *replay = replayFor(task, response);
     %orig(session, task, replay ?: response, handler);
     if (replay) deliver((id)self, session, task, cached());
 }
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[SPTDataLoaderService URLSession:dataTask:didReceiveData:] first call");
     SGJamObserveData(task, data);
     if (!holds(task, data)) %orig;
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[SPTDataLoaderService URLSession:task:didCompleteWithError:] first call");
     complete((id)self, session, task, error, ^(NSError *passed) { %orig(session, task, passed); });
 }
 %end
 
 %hook _TtC26Connectivity_HttpClientKit20HttpClientURLSession
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))handler {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[HttpClientURLSession URLSession:dataTask:didReceiveResponse:completionHandler:] first call");
     SGJamObserveResponse(task, response);
     NSHTTPURLResponse *replay = replayFor(task, response);
     %orig(session, task, replay ?: response, handler);
     if (replay) deliver((id)self, session, task, cached());
 }
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[HttpClientURLSession URLSession:dataTask:didReceiveData:] first call");
     SGJamObserveData(task, data);
     if (!holds(task, data)) %orig;
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[HttpClientURLSession URLSession:task:didCompleteWithError:] first call");
     complete((id)self, session, task, error, ^(NSError *passed) { %orig(session, task, passed); });
 }
 %end
@@ -246,6 +252,7 @@ static void complete(id<NSURLSessionDataDelegate> delegate, NSURLSession *sessio
 // body. Spoof Premium's rules stay off this path, and a failed request keeps its error.
 %hook SPTCoreURLSessionDataDelegate
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))handler {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[SPTCoreURLSessionDataDelegate URLSession:dataTask:didReceiveResponse:completionHandler:] first call");
     SGJamObserveResponse(task, response);
     NSURL *url = SGURLSessionTaskURL(task);
     if (ads && isAd(url, url.path.lowercaseString ?: @"")) {
@@ -255,10 +262,12 @@ static void complete(id<NSURLSessionDataDelegate> delegate, NSURLSession *sessio
     %orig(session, task, response, handler);
 }
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[SPTCoreURLSessionDataDelegate URLSession:dataTask:didReceiveData:] first call");
     SGJamObserveData(task, data);
     if (!objc_getAssociatedObject(task, &kCoreAdKey) || objc_getAssociatedObject(task, &kPassKey)) %orig;
 }
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[SPTCoreURLSessionDataDelegate URLSession:task:didCompleteWithError:] first call");
     if (!error && objc_getAssociatedObject(task, &kCoreAdKey)) {
         SGAdBlockSawOne(@"Requests");
         SGAdBlockCountOne(@"Requests");
@@ -278,6 +287,7 @@ static void complete(id<NSURLSessionDataDelegate> delegate, NSURLSession *sessio
 %group Premium
 %hook NSURLSessionTask
 - (void)resume {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[NSURLSessionTask resume] first call");
     NSURL *url = SGURLSessionTaskURL(self);
     NSString *host = url.host.lowercaseString ?: @"", *path = url.path.lowercaseString ?: @"";
     BOOL spotify = has(host, @"spotify") || has(host, @"spclient");
@@ -313,6 +323,7 @@ static NSURLRequest *unconditional(NSURLRequest *request) {
 %group PremiumRequests
 %hook NSURLSession
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[NSURLSession dataTaskWithRequest:] first call");
     return %orig(unconditional(request) ?: request);
 }
 %end
@@ -323,12 +334,14 @@ static NSURLRequest *unconditional(NSURLRequest *request) {
 %group PremiumLocalRequests
 %hook __NSURLSessionLocal
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
+    SGDebugOnce(@"hook Shared/AdBlock/AdNetwork.x: -[__NSURLSessionLocal dataTaskWithRequest:] first call");
     return %orig(unconditional(request) ?: request);
 }
 %end
 %end
 
 %ctor {
+    SGDebug(@"module Shared/AdBlock/AdNetwork.x on");
     ads = SGFlag(SGKeyHideAds, YES);
     premium = SGFlag(SGKeyFakePremium, YES);
     if (!ads && !premium) return;

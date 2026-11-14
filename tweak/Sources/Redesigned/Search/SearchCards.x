@@ -186,11 +186,13 @@ static void style(UIView *box) {
 
 %hook _TtCE16Encore_LayoutKitO16EncoreFoundation6Encore3Box
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Search/SearchCards.x: -[Box layoutSubviews] first call");
     %orig;
     style((UIView *)self);
 }
 
 - (void)setHighlighted:(BOOL)highlighted {
+    SGDebugOnce(@"hook Redesigned/Search/SearchCards.x: -[Box setHighlighted:] first call");
     UIView *box = (UIView *)self;
     BOOL was = [box isHighlighted];
     %orig;
@@ -203,6 +205,7 @@ static void style(UIView *box) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Search/SearchCards.x on");
     %init;
     SGRequireClasses(@[@"_TtCE16Encore_LayoutKitO16EncoreFoundation6Encore3Box"]);
 }

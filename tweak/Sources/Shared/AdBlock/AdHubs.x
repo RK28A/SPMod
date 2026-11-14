@@ -84,6 +84,7 @@ static NSArray *filtered(NSArray *components) {
 
 %hook HUBViewModelBuilderImplementation
 - (void)addJSONDictionary:(NSDictionary *)dictionary {
+    SGDebugOnce(@"hook Shared/AdBlock/AdHubs.x: -[HUBViewModelBuilderImplementation addJSONDictionary:] first call");
     if (![dictionary isKindOfClass:NSDictionary.class]) {
         %orig;
         return;
@@ -108,6 +109,7 @@ static NSArray *filtered(NSArray *components) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/AdBlock/AdHubs.x on");
     ads = SGFlag(SGKeyHideAds, YES);
     upsells = SGFlag(SGKeyHideUpsells, YES);
     if (!ads && !upsells) return;

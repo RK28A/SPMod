@@ -183,10 +183,12 @@ void SGRPlayerMixPillRelayout(UIViewController *unit) {
 
 %hook _TtC20NowPlaying_ModesImpl18HeaderElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMixing.x: -[HeaderElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     SGRPlayerMixPillRelayout((UIViewController *)self);
 }
 - (void)viewDidDisappear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMixing.x: -[HeaderElementsUnit viewDidDisappear:] first call");
     pillTearDown();
     sg_shown = NO;
     if (sg_pill) {
@@ -199,6 +201,7 @@ void SGRPlayerMixPillRelayout(UIViewController *unit) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerMixing.x on");
     %init;
     SGRequireClasses(@[@"_TtC20NowPlaying_ModesImpl18HeaderElementsUnit"]);
 }

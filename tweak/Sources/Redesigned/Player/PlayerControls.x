@@ -230,6 +230,7 @@ static void modeButtons(UIView *host) {
 
 %hook _TtC20NowPlaying_ModesImpl28PlaybackControlsElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[PlaybackControlsElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     UIView *host = ((UIViewController *)self).viewIfLoaded;
     if (!host) return;
@@ -278,6 +279,7 @@ static UILabel *monospaced(UIView *host, NSString *identifier, const void *findK
 // its own use the same class.
 %hook _TtC28EncoreConsumerMobile_BaseKit14PlayButtonView
 - (void)uiButtonTapped {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[PlayButtonView uiButtonTapped] first call");
     if ((UIView *)self == sg_playView) {
         playTapped();
         static dispatch_once_t once;
@@ -448,15 +450,18 @@ static const CGFloat kSeekTrackRest = 7, kSeekTrackHeld = 18;
 
 %hook _TtCO17NowPlaying_ECMKit11ProgressBar6Slider
 - (BOOL)isTracking {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[Slider isTracking] first call");
     return ((UISlider *)self == sg_seekSlider && seekHeld()) || %orig;
 }
 - (CGRect)trackRectForBounds:(CGRect)bounds {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[Slider trackRectForBounds:] first call");
     CGRect track = %orig;
     UISlider *slider = (UISlider *)self;
     CGFloat height = slider.isTracking ? kSeekTrackHeld : kSeekTrackRest, midY = CGRectGetMidY(track);
     return CGRectMake(track.origin.x, midY - height / 2, track.size.width, height);
 }
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[Slider didMoveToWindow] first call");
     %orig;
     UISlider *slider = (UISlider *)self;
     slider.minimumTrackTintColor = UIColor.whiteColor;
@@ -464,6 +469,7 @@ static const CGFloat kSeekTrackRest = 7, kSeekTrackHeld = 18;
     slider.thumbTintColor = slider.isTracking ? UIColor.whiteColor : UIColor.clearColor;
 }
 - (BOOL)beginTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[Slider beginTrackingWithTouch:withEvent:] first call");
     BOOL began = %orig;
     if (began) {
         UISlider *slider = (UISlider *)self;
@@ -475,12 +481,14 @@ static const CGFloat kSeekTrackRest = 7, kSeekTrackHeld = 18;
     return began;
 }
 - (void)endTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[Slider endTrackingWithTouch:withEvent:] first call");
     %orig;
     UISlider *slider = (UISlider *)self;
     slider.thumbTintColor = UIColor.clearColor;
     [slider setNeedsLayout];
 }
 - (void)cancelTrackingWithEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[Slider cancelTrackingWithEvent:] first call");
     %orig;
     UISlider *slider = (UISlider *)self;
     slider.thumbTintColor = UIColor.clearColor;
@@ -490,6 +498,7 @@ static const CGFloat kSeekTrackRest = 7, kSeekTrackHeld = 18;
 
 %hook _TtC20NowPlaying_ModesImpl19DurationElementUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerControls.x: -[DurationElementUnit viewDidLayoutSubviews] first call");
     %orig;
     UIView *host = ((UIViewController *)self).viewIfLoaded;
     if (!host) return;
@@ -505,6 +514,7 @@ static const CGFloat kSeekTrackRest = 7, kSeekTrackHeld = 18;
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerControls.x on");
     %init;
     sg_controlsWatcher = [SGRPlayerControlsWatcher new];
     SGAddPlayerStateObserver(sg_controlsWatcher);

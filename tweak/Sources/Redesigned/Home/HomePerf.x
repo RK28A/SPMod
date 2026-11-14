@@ -157,6 +157,7 @@ static BOOL isHomeTab(UIViewController *page) {
 
 %hook _TtC16Home_EvoPageImpl33EvoLoadableResourceViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomePerf.x: -[EvoLoadableResourceViewController viewDidLayoutSubviews] first call");
     %orig;
     if (!probing() || sg_list) return;
     UIViewController *page = (UIViewController *)self;
@@ -175,6 +176,7 @@ static BOOL isHomeTab(UIViewController *page) {
 // The list lays out on every frame it moves, which is when a scroll is noticed.
 %hook _TtC16Home_CarouselKit29TouchCancellingCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomePerf.x: -[TouchCancellingCollectionView layoutSubviews] first call");
     %orig;
     if ((UIView *)self != sg_list) return;
     if (!sg_meter) sg_meter = [SGRHomeScrollMeter new];
@@ -184,6 +186,7 @@ static BOOL isHomeTab(UIViewController *page) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Home/HomePerf.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC16Home_EvoPageImpl33EvoLoadableResourceViewController",

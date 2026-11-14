@@ -327,5 +327,6 @@ BOOL SGLocalJamJoinNamed(NSString *key) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/Jam/LocalJam.x on");
     SGLocalJamRuntimeStart();
 }

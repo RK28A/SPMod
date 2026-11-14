@@ -71,6 +71,7 @@ void SGNowPlayingSetExtras(NSString *owner, NSDictionary *extras, NSString *titl
 
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
+    SGDebugOnce(@"hook Shared/Player/NowPlayingExtras.x: -[MPNowPlayingInfoCenter setNowPlayingInfo:] first call");
     NSMutableDictionary *added = nil;
     @synchronized (sg_lock) {
         if (info[MPNowPlayingInfoPropertyElapsedPlaybackTime]) {
@@ -98,6 +99,7 @@ void SGNowPlayingSetExtras(NSString *owner, NSDictionary *extras, NSString *titl
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Player/NowPlayingExtras.x on");
     sg_lock = [NSObject new];
     sg_extras = [NSMutableDictionary dictionary];
     sg_titles = [NSMutableDictionary dictionary];

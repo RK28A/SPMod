@@ -46,10 +46,12 @@ static void watchHold(UIView *tilt) {
 
 %hook _TtC35CreativeWorkCommons_CoverArtTiltKit16CoverArtTiltView
 - (void)handleTap {
+    SGDebugOnce(@"hook Native/Player/PlayerGestures.x: -[CoverArtTiltView handleTap] first call");
     if (SGFlag(SGKeyGestures, NO)) return;
     %orig;
 }
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Player/PlayerGestures.x: -[CoverArtTiltView layoutSubviews] first call");
     %orig;
     UIView *tilt = (UIView *)self;
     if (tilt.bounds.size.width >= 200) watchHold(tilt);
@@ -58,6 +60,7 @@ static void watchHold(UIView *tilt) {
 
 %hook _TtC35NowPlaying_ContentLayerPlatformImpl24AccessibleCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Player/PlayerGestures.x: -[AccessibleCollectionView layoutSubviews] first call");
     %orig;
     SGGestureAttach((UIView *)self);
 }
@@ -65,6 +68,7 @@ static void watchHold(UIView *tilt) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Player/PlayerGestures.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC35NowPlaying_ContentLayerPlatformImpl24AccessibleCollectionView",

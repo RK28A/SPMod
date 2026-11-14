@@ -385,6 +385,7 @@ void SGRPlayerLyricsOrientationChanged(void) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerLandscape.x on");
     dispatch_async(dispatch_get_main_queue(), ^{
         [UIDevice.currentDevice beginGeneratingDeviceOrientationNotifications];
         [NSNotificationCenter.defaultCenter addObserverForName:UIDeviceOrientationDidChangeNotification object:nil queue:nil

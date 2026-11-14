@@ -514,6 +514,7 @@ void SGDSPCompanderResponse(NSArray<NSNumber *> *gains, NSInteger count, double 
 }
 
 %ctor {
+    SGDebug(@"module Shared/AudioEffects/AudioEffects.x on");
     static const SGAudioProcessor processor = {prepareOutput, rendered};
     if (!SGAudioPipelineRegister(SGAudioStageEffects, &processor)) return;
     SGLog(@"dsp: listening for Spotify's output unit (%@)", SGDSPSwitch(SGKeyDSP) ? @"on" : @"off");

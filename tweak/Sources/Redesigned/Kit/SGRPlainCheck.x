@@ -60,11 +60,13 @@ static void showState(UIButton *button) {
 
 %hook UIButton
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRPlainCheck.x: -[UIButton layoutSubviews] first call");
     %orig;
     if (SGRPlainCheckOn() && [self.accessibilityIdentifier isEqualToString:@"Components.UI.AddToButton"]) showState(self);
 }
 
 - (void)setSelected:(BOOL)selected {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRPlainCheck.x: -[UIButton setSelected:] first call");
     %orig;
     if (SGRPlainCheckOn() && [self.accessibilityIdentifier isEqualToString:@"Components.UI.AddToButton"]) showState(self);
 }
@@ -166,6 +168,7 @@ static void styleExplicitView(UIView *view) {
 
 %hook UIView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRPlainCheck.x: -[UIView layoutSubviews] first call");
     %orig;
     if (isExplicitView(self)) styleExplicitView(self);
 }
@@ -173,5 +176,6 @@ static void styleExplicitView(UIView *view) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Kit/SGRPlainCheck.x on");
     %init;
 }

@@ -12,6 +12,7 @@
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Sing/SingModel.x on");
     if (!SGSingSupported()) return;
     %init;
     SGRequireClasses(@[@"_TtC24MusicApp_ContainerWiring18SpotifyAppDelegate"]);

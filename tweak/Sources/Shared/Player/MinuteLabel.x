@@ -20,6 +20,7 @@ static void fixMinute(UIView *cell) {
 
 %hook _TtC24ContextMenu_InternalImpl24ContextMenuTableViewCell
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Shared/Player/MinuteLabel.x: -[ContextMenuTableViewCell layoutSubviews] first call");
     %orig;
     fixMinute((UIView *)self);
 }
@@ -27,12 +28,14 @@ static void fixMinute(UIView *cell) {
 
 %hook _TtC30PlaybackControl_SleepTimerImpl10OptionCell
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Shared/Player/MinuteLabel.x: -[OptionCell layoutSubviews] first call");
     %orig;
     fixMinute((UIView *)self);
 }
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Player/MinuteLabel.x on");
     %init;
     SGRequireClasses(@[@"_TtC24ContextMenu_InternalImpl24ContextMenuTableViewCell", @"_TtC30PlaybackControl_SleepTimerImpl10OptionCell"]);
 }

@@ -974,6 +974,7 @@ static void logDarkness(UIView *anyView) {
 %hook _TtC22NavigationUI_SheetImpl27SheetPresentationController
 
 - (void)presentationTransitionWillBegin {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMenu.x: -[SheetPresentationController presentationTransitionWillBegin] first call");
     %orig;
     UIPresentationController *presentation = (UIPresentationController *)self;
     UIViewController *sheet = presentation.presentedViewController;
@@ -994,6 +995,7 @@ static void logDarkness(UIView *anyView) {
 }
 
 - (void)containerViewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMenu.x: -[SheetPresentationController containerViewDidLayoutSubviews] first call");
     %orig;
     UIPresentationController *presentation = (UIPresentationController *)self;
     if ([objc_getAssociatedObject(presentation.presentedViewController, &kClaimKey) boolValue]) {
@@ -1006,18 +1008,21 @@ static void logDarkness(UIView *anyView) {
 %hook _TtC24ContextMenu_InternalImpl25ContextMenuViewController
 
 - (void)viewWillAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMenu.x: -[ContextMenuViewController viewWillAppear:] first call");
     %orig;
     SGRPlayerMenuTakeover *t = takeoverFor((UIViewController *)self);
     if (t) pass(t);
 }
 
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMenu.x: -[ContextMenuViewController viewDidLayoutSubviews] first call");
     %orig;
     SGRPlayerMenuTakeover *t = takeoverFor((UIViewController *)self);
     if (t) pass(t);
 }
 
 - (void)viewDidAppear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMenu.x: -[ContextMenuViewController viewDidAppear:] first call");
     %orig;
     SGRPlayerMenuTakeover *t = objc_getAssociatedObject(self, &kTakeoverKey);
     if ([t isKindOfClass:SGRPlayerMenuTakeover.class]) pass(t);
@@ -1025,6 +1030,7 @@ static void logDarkness(UIView *anyView) {
 
 // The sheet going away takes the card with it; a page of Spotify's pushed over the menu shows the sheet.
 - (void)viewWillDisappear:(BOOL)animated {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMenu.x: -[ContextMenuViewController viewWillDisappear:] first call");
     %orig;
     SGRPlayerMenuTakeover *t = objc_getAssociatedObject(self, &kTakeoverKey);
     if (![t isKindOfClass:SGRPlayerMenuTakeover.class]) return;
@@ -1039,6 +1045,7 @@ static void logDarkness(UIView *anyView) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerMenu.x on");
     sgr_menuOn = YES;
     %init;
     SGRequireClasses(@[@"_TtC24ContextMenu_InternalImpl25ContextMenuViewController", @"_TtC22NavigationUI_SheetImpl27SheetPresentationController"]);

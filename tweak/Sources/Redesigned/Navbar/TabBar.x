@@ -778,10 +778,12 @@ static BOOL sg_barPass, sg_itemsLaidOut;
 %hook _TtC23NavigationUI_TabBarImpl10TabBarView
 // Minimized, the middle of the row is the now playing card's, which lies under this view.
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Redesigned/Navbar/TabBar.x: -[TabBarView hitTest:withEvent:] first call");
     UIView *hit = %orig;
     return sg_minimized && hit == (UIView *)self ? nil : hit;
 }
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Navbar/TabBar.x: -[TabBarView layoutSubviews] first call");
     %orig;
     SGRComposeTabBar((UIView *)self);
     sg_barPass = YES;
@@ -813,6 +815,7 @@ static void itemDidLayOut(UIView *item) {
 
 %hook _TtC23NavigationUI_TabBarImpl21TabBarItemElementView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Navbar/TabBar.x: -[TabBarItemElementView layoutSubviews] first call");
     %orig;
     itemDidLayOut((UIView *)self);
 }
@@ -820,6 +823,7 @@ static void itemDidLayOut(UIView *item) {
 
 %hook _TtC25CreateMenu_TabBarItemImpl24CreateMenuTabBarItemView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Navbar/TabBar.x: -[CreateMenuTabBarItemView layoutSubviews] first call");
     %orig;
     itemDidLayOut((UIView *)self);
 }
@@ -828,6 +832,7 @@ static void itemDidLayOut(UIView *item) {
 // A tab changed from elsewhere (a link, the side drawer) repaints the labels without a layout pass.
 %hook _TtC23NavigationUI_TabBarImpl19TabBarContainerImpl
 - (void)setSelectedViewController:(UIViewController *)controller {
+    SGDebugOnce(@"hook Redesigned/Navbar/TabBar.x: -[TabBarContainerImpl setSelectedViewController:] first call");
     %orig;
     dispatch_async(dispatch_get_main_queue(), ^{
         UIView *bar = sg_stockBar;
@@ -835,6 +840,7 @@ static void itemDidLayOut(UIView *item) {
     });
 }
 - (void)viewSafeAreaInsetsDidChange {
+    SGDebugOnce(@"hook Redesigned/Navbar/TabBar.x: -[TabBarContainerImpl viewSafeAreaInsetsDidChange] first call");
     %orig;
     makeRoom((UIViewController *)self);
 }
@@ -842,6 +848,7 @@ static void itemDidLayOut(UIView *item) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Navbar/TabBar.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC23NavigationUI_TabBarImpl10TabBarView",

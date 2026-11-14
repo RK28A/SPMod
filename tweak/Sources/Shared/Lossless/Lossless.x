@@ -97,6 +97,7 @@ static const double kRetrySeconds = 2;
 @end
 
 %ctor {
+    SGDebug(@"module Shared/Lossless/Lossless.x on");
     if (!SGHidden(SGKeyLossless)) return;
     dispatch_async(dispatch_get_main_queue(), ^{
         static SGLosslessCoordinator *coordinator;

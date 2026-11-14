@@ -42,6 +42,7 @@ static void takeDown(UIView *view) {
 
 %hook _TtC18AdsPlatform_ECMKit37AdsSponsoredPlaylistHeaderCentralView
 - (void)didMoveToSuperview {
+    SGDebugOnce(@"hook Shared/AdBlock/AdServices.x: -[AdsSponsoredPlaylistHeaderCentralView didMoveToSuperview] first call");
     %orig;
     takeDown((UIView *)self);
 }
@@ -78,6 +79,7 @@ static void takeDown(UIView *view) {
 
 %hook _TtC13Upsells_UIKit29SelfLoadingUpsellBannerUIView
 - (void)didMoveToSuperview {
+    SGDebugOnce(@"hook Shared/AdBlock/AdServices.x: -[SelfLoadingUpsellBannerUIView didMoveToSuperview] first call");
     %orig;
     takeDown((UIView *)self);
 }
@@ -86,6 +88,7 @@ static void takeDown(UIView *view) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/AdBlock/AdServices.x on");
     if (SGFlag(SGKeyHideAds, YES)) {
         %init(Ads);
         SGRequireClasses(@[

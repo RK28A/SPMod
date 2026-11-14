@@ -64,10 +64,12 @@ static void backWithGlass(UIView *snapshot, UIView *source, NSString *what) {
 
 %hook SPTBarOverlayPresentationTransition
 - (void)setBarSnapshotView:(UIView *)view {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/BarTransition.x: -[SPTBarOverlayPresentationTransition setBarSnapshotView:] first call");
     backWithGlass(view, [self bottomBarView], @"bar");
     %orig;
 }
 - (void)setTabBarSnapshotView:(UIView *)view {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/BarTransition.x: -[SPTBarOverlayPresentationTransition setTabBarSnapshotView:] first call");
     backWithGlass(view, [self tabBarView], @"tab bar");
     %orig;
 }
@@ -80,6 +82,7 @@ static id ivarNamed(id object, const char *name) {
 
 %hook _TtC19MainUI_TabBarUIImpl24CompactOverlayTransition
 - (void)animateTransition:(id)context {
+    SGDebugOnce(@"hook Redesigned/NowPlayingBar/BarTransition.x: -[CompactOverlayTransition animateTransition:] first call");
     %orig;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ SGLog(@"player transition: CompactOverlayTransition animates, snapshots %@ / %@",
@@ -91,6 +94,7 @@ static id ivarNamed(id object, const char *name) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/NowPlayingBar/BarTransition.x on");
     %init;
     SGRequireClasses(@[
         @"SPTBarOverlayPresentationTransition",

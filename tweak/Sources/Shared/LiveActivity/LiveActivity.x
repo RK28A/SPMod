@@ -388,6 +388,7 @@ void SGSetLiveActivityEnabled(BOOL on) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/LiveActivity/LiveActivity.x on");
     if (@available(iOS 17.0, *)) {
         // It was the redesign's alone until it moved to Shared/; whoever had it on keeps it on.
         SGMigrateKey(SGKeyLiveActivityWas, SGKeyLiveActivity);

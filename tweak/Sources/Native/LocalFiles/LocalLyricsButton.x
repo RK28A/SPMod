@@ -69,6 +69,7 @@ static void addButton(UIViewController *unit) {
 
 %hook _TtC20NowPlaying_ModesImpl18FooterElementsUnit
 - (void)viewDidLoad {
+    SGDebugOnce(@"hook Native/LocalFiles/LocalLyricsButton.x: -[FooterElementsUnit viewDidLoad] first call");
     %orig;
     addButton((UIViewController *)self);
 }
@@ -77,6 +78,7 @@ static void addButton(UIViewController *unit) {
 // Read for every track in every list many times a second: a prefix check for any other track.
 %hook SPTPlayerTrack
 - (NSDictionary *)metadata {
+    SGDebugOnce(@"hook Native/LocalFiles/LocalLyricsButton.x: -[SPTPlayerTrack metadata] first call");
     NSDictionary *metadata = %orig;
     NSString *uri = SGURIString(self.URI);
     if (!SGLocalFileIs(uri) || [@"true" isEqual:metadata[@"has_lyrics"]] || !SGImportedLRCLinkedTo(uri)) return metadata;
@@ -88,6 +90,7 @@ static void addButton(UIViewController *unit) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/LocalFiles/LocalLyricsButton.x on");
     %init;
     sg_buttons = [NSHashTable weakObjectsHashTable];
     static SGLocalLyricsButtons *observer;

@@ -108,11 +108,13 @@ static CGFloat fitScale(UIFontWeight weight) {
 
 %hook UIFont
 + (UIFont *)fontWithName:(NSString *)name size:(CGFloat)size {
+    SGDebugOnce(@"hook Shared/Fonts/Fonts.x: +[UIFont fontWithName:size:] first call");
     UIFont *font = spotifys(name) ? systemFor(name, size * fitScale(weightOf(name))) : nil;
     return font ?: %orig;
 }
 
 + (UIFont *)fontWithDescriptor:(UIFontDescriptor *)descriptor size:(CGFloat)size {
+    SGDebugOnce(@"hook Shared/Fonts/Fonts.x: +[UIFont fontWithDescriptor:size:] first call");
     NSString *name = descriptor.fontAttributes[UIFontDescriptorNameAttribute] ?: descriptor.fontAttributes[UIFontDescriptorFamilyAttribute];
     if (!spotifys(name)) return %orig;
     NSNumber *weight = weightAsked(descriptor);
@@ -127,16 +129,19 @@ static CGFloat fitScale(UIFontWeight weight) {
 %group Designs
 %hook UIFont
 + (UIFont *)systemFontOfSize:(CGFloat)size weight:(UIFontWeight)weight {
+    SGDebugOnce(@"hook Shared/Fonts/Fonts.x: +[UIFont systemFontOfSize:weight:] first call");
     UIFont *font = %orig;
     return designed(font);
 }
 
 + (UIFont *)systemFontOfSize:(CGFloat)size {
+    SGDebugOnce(@"hook Shared/Fonts/Fonts.x: +[UIFont systemFontOfSize:] first call");
     UIFont *font = %orig;
     return designed(font);
 }
 
 + (UIFont *)boldSystemFontOfSize:(CGFloat)size {
+    SGDebugOnce(@"hook Shared/Fonts/Fonts.x: +[UIFont boldSystemFontOfSize:] first call");
     UIFont *font = %orig;
     return designed(font);
 }
@@ -160,6 +165,7 @@ NSArray<NSString *> *SGAppFontFamilies(void) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/Fonts/Fonts.x on");
     sg_font = SGAppFontChosen();
     if (sg_font == SGAppFontSpotify) return;
     // A process-wide registration ends with the process, so the file is registered again before any hook

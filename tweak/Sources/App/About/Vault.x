@@ -131,6 +131,7 @@ static void ask(NSDictionary *saved) {
 }
 
 %ctor {
+    SGDebug(@"module App/About/Vault.x on");
     dispatch_async(dispatch_get_main_queue(), ^{
         NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
         [center addObserverForName:NSUserDefaultsDidChangeNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) { saveSoon(); }];

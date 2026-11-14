@@ -34,6 +34,7 @@ static void glassBehindRoundButtons(UIViewController *unit) {
 
 %hook _TtC20NowPlaying_ModesImpl18HeaderElementsUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Player/Player.x: -[HeaderElementsUnit viewDidLayoutSubviews] first call");
     %orig;
     glassBehindRoundButtons((UIViewController *)self);
 }
@@ -90,6 +91,7 @@ static UIView *backdropIn(UIView *plane) {
 
 %hook _TtC21NowPlaying_ScrollImpl27NPVBackgroundViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Player/Player.x: -[NPVBackgroundViewController viewDidLayoutSubviews] first call");
     %orig;
     if (!backdropOn()) return;
     UIView *plane = ((UIViewController *)self).viewIfLoaded;
@@ -106,6 +108,7 @@ static UIView *backdropIn(UIView *plane) {
 
 %hook _TtC35NowPlaying_ContentLayerPlatformImpl24AccessibleCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Player/Player.x: -[AccessibleCollectionView layoutSubviews] first call");
     %orig;
     if (backdropOn()) showCover(coverInFront((UIScrollView *)self));
 }
@@ -115,6 +118,7 @@ static UIView *backdropIn(UIView *plane) {
 
 %hook _TtC35CreativeWorkCommons_CoverArtTiltKit16CoverArtTiltView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Player/Player.x: -[CoverArtTiltView layoutSubviews] first call");
     %orig;
     if (!backdropOn()) return;
     UIView *tilt = (UIView *)self;
@@ -137,6 +141,7 @@ static UIView *backdropIn(UIView *plane) {
 
 %hook _TtC22Lyrics_NPVContainerKit19LyricsContainerView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Player/Player.x: -[LyricsContainerView layoutSubviews] first call");
     %orig;
     if (backdropOn()) ((UIView *)self).alpha = 0.72;
 }
@@ -153,6 +158,7 @@ static UIFont *timeFont(void) {
 
 %hook _TtC20NowPlaying_ModesImpl19DurationElementUnit
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Player/Player.x: -[DurationElementUnit viewDidLayoutSubviews] first call");
     %orig;
     UIView *host = backdropOn() ? ((UIViewController *)self).viewIfLoaded : nil;
     if (!host) return;
@@ -166,6 +172,7 @@ static UIFont *timeFont(void) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Player/Player.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC20NowPlaying_ModesImpl18HeaderElementsUnit",

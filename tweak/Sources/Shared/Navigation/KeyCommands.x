@@ -83,6 +83,7 @@ static void selectTabAtIndex(NSUInteger index) {
 %hook UIApplication
 
 - (NSArray<UIKeyCommand *> *)keyCommands {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication keyCommands] first call");
     NSArray<UIKeyCommand *> *orig = %orig;
     if (!SGFlag(SGKeyKeyboardShortcuts, YES)) return orig;
 
@@ -133,21 +134,25 @@ static void selectTabAtIndex(NSUInteger index) {
 
 %new
 - (void)sg_keyPlayPause:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyPlayPause:] first call");
     SGPerformGestureAction(SGGesturePlayPause);
 }
 
 %new
 - (void)sg_keyNext:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyNext:] first call");
     SGPerformGestureAction(SGGestureNextTrack);
 }
 
 %new
 - (void)sg_keyPrevious:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyPrevious:] first call");
     SGPerformGestureAction(SGGesturePreviousTrack);
 }
 
 %new
 - (void)sg_keyLyrics:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyLyrics:] first call");
     UIWindow *window = activeWindow();
     if (!window) return;
     UIControl *btn = findControlWithIdentifier(window, @"NowPlaying.ReadAlongButton");
@@ -156,6 +161,7 @@ static void selectTabAtIndex(NSUInteger index) {
 
 %new
 - (void)sg_keyClose:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyClose:] first call");
     UIWindow *window = activeWindow();
     if (!window) return;
     UIControl *closeBtn = findControlWithIdentifier(window, @"NowPlaying_ScrollView_CloseButton");
@@ -172,26 +178,31 @@ static void selectTabAtIndex(NSUInteger index) {
 
 %new
 - (void)sg_keyHome:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyHome:] first call");
     selectTabAtIndex(0);
 }
 
 %new
 - (void)sg_keySearch:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keySearch:] first call");
     selectTabAtIndex(1);
 }
 
 %new
 - (void)sg_keyLibrary:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyLibrary:] first call");
     selectTabAtIndex(2);
 }
 
 %new
 - (void)sg_keyFind:(UIKeyCommand *)command {
+    SGDebugOnce(@"hook Shared/Navigation/KeyCommands.x: -[UIApplication sg_keyFind:] first call");
     selectTabAtIndex(1);
 }
 
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Navigation/KeyCommands.x on");
     %init;
 }

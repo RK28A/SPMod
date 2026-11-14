@@ -52,6 +52,7 @@ static void scrolled(UIScrollView *scrollView) {
 
 %hook UIScrollView
 - (void)setContentOffset:(CGPoint)offset {
+    SGDebugOnce(@"hook Redesigned/Navbar/TabBarMinimize.x: -[UIScrollView setContentOffset:] first call");
     %orig;
     scrolled(self);
 }
@@ -59,6 +60,7 @@ static void scrolled(UIScrollView *scrollView) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Navbar/TabBarMinimize.x on");
     sg_containerClass = NSClassFromString(@"_TtC23NavigationUI_TabBarImpl19TabBarContainerImpl");
     if (!sg_containerClass) return;
     %init;

@@ -78,6 +78,7 @@ static void keepPlatform(id platform) {
 
 %hook SPTCollectionPlatformImplementation
 - (id)stateProvider {
+    SGDebugOnce(@"hook Shared/HeadGestures/HeadGestures.x: -[SPTCollectionPlatformImplementation stateProvider] first call");
     keepPlatform(self);
     return %orig;
 }
@@ -85,6 +86,7 @@ static void keepPlatform(id platform) {
 
 %hook _TtC23Collection_PlatformImpl22CollectionPlatformImpl
 - (id)stateProvider {
+    SGDebugOnce(@"hook Shared/HeadGestures/HeadGestures.x: -[CollectionPlatformImpl stateProvider] first call");
     keepPlatform(self);
     return %orig;
 }
@@ -92,6 +94,7 @@ static void keepPlatform(id platform) {
 
 %hook _TtC23Collection_PlatformImpl27CollectionPlatformMigration
 - (id)stateProvider {
+    SGDebugOnce(@"hook Shared/HeadGestures/HeadGestures.x: -[CollectionPlatformMigration stateProvider] first call");
     keepPlatform(self);
     return %orig;
 }
@@ -99,6 +102,7 @@ static void keepPlatform(id platform) {
 
 %hook _TtC26AlignedCuration_CommonImpl21ACUCollectionPlatform
 - (id)stateProvider {
+    SGDebugOnce(@"hook Shared/HeadGestures/HeadGestures.x: -[ACUCollectionPlatform stateProvider] first call");
     keepPlatform(self);
     return %orig;
 }
@@ -523,6 +527,7 @@ double SGHeadGesturesLearnFrom(NSArray<NSData *> *motions, SGHeadAxis axis) {
 @end
 
 %ctor {
+    SGDebug(@"module Shared/HeadGestures/HeadGestures.x on");
     %init;
     SGRequireClasses(@[@"SPTCollectionPlatformImplementation", @"_TtC23Collection_PlatformImpl22CollectionPlatformImpl"]);
     static SGHeadGesturesObserver *observer;

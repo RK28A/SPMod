@@ -74,6 +74,7 @@ static void controlActed(UIControl *control, ControlKind kind, BOOL wasPaused) {
 
 %hook UIControl
 - (void)sendAction:(SEL)action to:(id)target forEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Shared/Haptics/ControlHaptics.x: -[UIControl sendAction:to:forEvent:] first call");
     ControlKind kind = kindOf(self);
     if (kind == ControlNone || !isTap(event)) {
         %orig;
@@ -85,6 +86,7 @@ static void controlActed(UIControl *control, ControlKind kind, BOOL wasPaused) {
 }
 
 - (void)sendAction:(UIAction *)action {
+    SGDebugOnce(@"hook Shared/Haptics/ControlHaptics.x: -[UIControl sendAction:] first call");
     ControlKind kind = kindOf(self);
     if (kind == ControlNone) {
         %orig;
@@ -141,18 +143,21 @@ static void scrubMoved(UISlider *slider) {
 
 %hook _TtCO17NowPlaying_ECMKit11ProgressBar6Slider
 - (BOOL)beginTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Shared/Haptics/ControlHaptics.x: -[Slider beginTrackingWithTouch:withEvent:] first call");
     BOOL tracking = %orig;
     if (tracking) scrubBegan((UISlider *)self);
     return tracking;
 }
 
 - (BOOL)continueTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Shared/Haptics/ControlHaptics.x: -[Slider continueTrackingWithTouch:withEvent:] first call");
     BOOL tracking = %orig;
     scrubMoved((UISlider *)self);
     return tracking;
 }
 
 - (void)endTrackingWithTouch:(UITouch *)touch withEvent:(UIEvent *)event {
+    SGDebugOnce(@"hook Shared/Haptics/ControlHaptics.x: -[Slider endTrackingWithTouch:withEvent:] first call");
     %orig;
     SGPlayFeedback(SGFeedbackRelease);
     static NSUInteger logged;
@@ -178,6 +183,7 @@ static void pageDetent(UIScrollView *list, NSInteger *lastPage) {
 
 %hook _TtC35NowPlaying_ContentLayerPlatformImpl24AccessibleCollectionView
 - (void)setContentOffset:(CGPoint)offset {
+    SGDebugOnce(@"hook Shared/Haptics/ControlHaptics.x: -[AccessibleCollectionView setContentOffset:] first call");
     %orig;
     static NSInteger lastPage;
     pageDetent((UIScrollView *)self, &lastPage);
@@ -186,6 +192,7 @@ static void pageDetent(UIScrollView *list, NSInteger *lastPage) {
 
 %hook _TtC18NowPlaying_BarImpl25InformationCollectionView
 - (void)setContentOffset:(CGPoint)offset {
+    SGDebugOnce(@"hook Shared/Haptics/ControlHaptics.x: -[InformationCollectionView setContentOffset:] first call");
     %orig;
     static NSInteger lastPage;
     pageDetent((UIScrollView *)self, &lastPage);
@@ -209,6 +216,7 @@ static void gesturePerformed(SGGestureAction action) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/Haptics/ControlHaptics.x on");
     SGMigrateKey(SGKeyControlHapticsWas, SGKeyControlHaptics);
     SGMigrateKey(SGKeyControlStrengthWas, SGKeyControlStrength);
     %init;

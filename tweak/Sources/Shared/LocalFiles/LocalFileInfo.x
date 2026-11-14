@@ -95,12 +95,14 @@ static NSDictionary *withEdit(NSDictionary *metadata, NSString *uri) {
 
 %hook SPTPlayerTrack
 - (NSDictionary *)metadata {
+    SGDebugOnce(@"hook Shared/LocalFiles/LocalFileInfo.x: -[SPTPlayerTrack metadata] first call");
     NSDictionary *metadata = %orig;
     if ([metadata isKindOfClass:NSDictionary.class]) objc_setAssociatedObject(self, &kOriginalMetadataKey, metadata, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     NSString *uri = SGURIString(self.URI);
     return withEdit(metadata, uri);
 }
 - (NSString *)trackTitle {
+    SGDebugOnce(@"hook Shared/LocalFiles/LocalFileInfo.x: -[SPTPlayerTrack trackTitle] first call");
     NSString *original = %orig;
     NSDictionary *metadata = self.metadata;
     NSString *albumURI = [metadata[@"album_uri"] isKindOfClass:NSString.class] ? metadata[@"album_uri"] : nil;
@@ -108,6 +110,7 @@ static NSDictionary *withEdit(NSDictionary *metadata, NSString *uri) {
     return edited.length ? edited : original;
 }
 - (NSString *)artistName {
+    SGDebugOnce(@"hook Shared/LocalFiles/LocalFileInfo.x: -[SPTPlayerTrack artistName] first call");
     NSString *original = %orig;
     NSDictionary *metadata = self.metadata;
     NSString *albumURI = [metadata[@"album_uri"] isKindOfClass:NSString.class] ? metadata[@"album_uri"] : nil;
@@ -118,6 +121,7 @@ static NSDictionary *withEdit(NSDictionary *metadata, NSString *uri) {
 
 %hook MPNowPlayingInfoCenter
 - (void)setNowPlayingInfo:(NSDictionary *)info {
+    SGDebugOnce(@"hook Shared/LocalFiles/LocalFileInfo.x: -[MPNowPlayingInfoCenter setNowPlayingInfo:] first call");
     NSDictionary *source = [info isKindOfClass:NSDictionary.class] ? info : @{};
     SPTPlayerState *state = SGPlayerState();
     SPTPlayerTrack *track = state.track;
@@ -161,6 +165,7 @@ static NSDictionary *withEdit(NSDictionary *metadata, NSString *uri) {
 
 %hook SPTLocalAVAssetImageLoaderRequest
 - (void)loadLocalFileImage {
+    SGDebugOnce(@"hook Shared/LocalFiles/LocalFileInfo.x: -[SPTLocalAVAssetImageLoaderRequest loadLocalFileImage] first call");
     NSString *path = SGLocalFileCoverInURL(self.URL.absoluteString);
     if (!path) {
         %orig;
@@ -177,6 +182,7 @@ static NSDictionary *withEdit(NSDictionary *metadata, NSString *uri) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/LocalFiles/LocalFileInfo.x on");
     %init;
     static SGTrackNowPlaying *nowPlaying;
     nowPlaying = [SGTrackNowPlaying new];

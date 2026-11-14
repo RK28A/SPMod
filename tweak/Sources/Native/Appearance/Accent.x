@@ -76,10 +76,12 @@ static BOOL swap(CGFloat *r, CGFloat *g, CGFloat *b) {
 
 %hook UIColor
 - (UIColor *)initWithRed:(CGFloat)r green:(CGFloat)g blue:(CGFloat)b alpha:(CGFloat)a {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: -[UIColor initWithRed:green:blue:alpha:] first call");
     swap(&r, &g, &b);
     return %orig(r, g, b, a);
 }
 + (UIColor *)colorWithRed:(CGFloat)r green:(CGFloat)g blue:(CGFloat)b alpha:(CGFloat)a {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: +[UIColor colorWithRed:green:blue:alpha:] first call");
     swap(&r, &g, &b);
     return %orig(r, g, b, a);
 }
@@ -103,12 +105,14 @@ static id swappedValue(id value) {
 
 %hook CAShapeLayer
 - (void)setFillColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: -[CAShapeLayer setFillColor:] first call");
     CGColorRef swapped = swappedCopy(color);
     CGColorRef used = swapped ?: color;
     %orig(used);
     if (swapped) CGColorRelease(swapped);
 }
 - (void)setStrokeColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: -[CAShapeLayer setStrokeColor:] first call");
     CGColorRef swapped = swappedCopy(color);
     CGColorRef used = swapped ?: color;
     %orig(used);
@@ -118,6 +122,7 @@ static id swappedValue(id value) {
 
 %hook CALayer
 - (void)setBackgroundColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: -[CALayer setBackgroundColor:] first call");
     CGColorRef swapped = swappedCopy(color);
     CGColorRef used = swapped ?: color;
     %orig(used);
@@ -127,10 +132,12 @@ static id swappedValue(id value) {
 
 %hook CABasicAnimation
 - (void)setFromValue:(id)value {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: -[CABasicAnimation setFromValue:] first call");
     id used = swappedValue(value);
     %orig(used);
 }
 - (void)setToValue:(id)value {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: -[CABasicAnimation setToValue:] first call");
     id used = swappedValue(value);
     %orig(used);
 }
@@ -138,6 +145,7 @@ static id swappedValue(id value) {
 
 %hook CAKeyframeAnimation
 - (void)setValues:(NSArray *)values {
+    SGDebugOnce(@"hook Native/Appearance/Accent.x: -[CAKeyframeAnimation setValues:] first call");
     NSMutableArray *mapped = nil;
     for (NSUInteger i = 0; i < values.count; i++) {
         id swapped = swappedValue(values[i]);
@@ -152,6 +160,7 @@ static id swappedValue(id value) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Appearance/Accent.x on");
     sg_accent = chosen();
     if (sg_accent >= 0) %init;
 }

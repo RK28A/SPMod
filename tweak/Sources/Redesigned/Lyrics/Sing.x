@@ -9,5 +9,6 @@ void SGRSingApplySwitch(void) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Lyrics/Sing.x on");
     dispatch_async(dispatch_get_main_queue(), ^{ SGRSingApplySwitch(); });
 }

@@ -121,6 +121,7 @@ static void hideBand(UIScrollView *list) {
 
 %hook UIScrollView
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Redesigned/Kit/SGREdgeEffect.x: -[UIScrollView didMoveToWindow] first call");
     %orig;
     objc_setAssociatedObject(self, &kThemedKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(self, &kSizeKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -129,6 +130,7 @@ static void hideBand(UIScrollView *list) {
 }
 
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Kit/SGREdgeEffect.x: -[UIScrollView layoutSubviews] first call");
     %orig;
     if (!self.window || SGLoopGuard("list pass")) return;
     soften(self);
@@ -141,5 +143,6 @@ static void hideBand(UIScrollView *list) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Kit/SGREdgeEffect.x on");
     %init;
 }

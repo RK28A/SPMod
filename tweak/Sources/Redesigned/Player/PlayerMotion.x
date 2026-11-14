@@ -850,10 +850,12 @@ void SGRPlayerMenuSetBackground(SGRPlayerBackgroundKind kind) {
 %group SGRVideoSurfaces
 %hook _TtC28NowPlaying_ContentLayersImpl24HorizontalVideoViewModel
 - (void)videoSurfaceDidAttachVideo:(id)surface {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMotion.x: -[HorizontalVideoViewModel videoSurfaceDidAttachVideo:] first call");
     %orig;
     videoSurface(self, YES);
 }
 - (void)videoSurfaceDidDetachVideo:(id)surface {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMotion.x: -[HorizontalVideoViewModel videoSurfaceDidDetachVideo:] first call");
     %orig;
     videoSurface(self, NO);
 }
@@ -861,10 +863,12 @@ void SGRPlayerMenuSetBackground(SGRPlayerBackgroundKind kind) {
 
 %hook _TtC28NowPlaying_ContentLayersImpl31VerticalVideoCellImplementation
 - (void)videoSurfaceDidAttachVideo:(id)surface {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMotion.x: -[VerticalVideoCellImplementation videoSurfaceDidAttachVideo:] first call");
     %orig;
     videoSurface(self, YES);
 }
 - (void)videoSurfaceDidDetachVideo:(id)surface {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMotion.x: -[VerticalVideoCellImplementation videoSurfaceDidDetachVideo:] first call");
     %orig;
     videoSurface(self, NO);
 }
@@ -872,10 +876,12 @@ void SGRPlayerMenuSetBackground(SGRPlayerBackgroundKind kind) {
 
 %hook _TtC22NowPlaying_ElementsKit14VideoElementUI
 - (void)videoSurfaceDidAttachVideo:(id)surface {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMotion.x: -[VideoElementUI videoSurfaceDidAttachVideo:] first call");
     %orig;
     videoSurface(self, YES);
 }
 - (void)videoSurfaceDidDetachVideo:(id)surface {
+    SGDebugOnce(@"hook Redesigned/Player/PlayerMotion.x: -[VideoElementUI videoSurfaceDidDetachVideo:] first call");
     %orig;
     videoSurface(self, NO);
 }
@@ -884,6 +890,7 @@ void SGRPlayerMenuSetBackground(SGRPlayerBackgroundKind kind) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Player/PlayerMotion.x on");
     sg_videos = [NSHashTable weakObjectsHashTable];
     // Here rather than on the clip's view, which is gone while they hold it off: the track is walked again
     // as either changes. The power state is reported off the main thread, which must not wait for main

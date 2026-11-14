@@ -595,6 +595,7 @@ void SGMusicHapticsWatchTaps(void (^watcher)(float intensity)) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/Haptics/MusicHaptics.x on");
     SGMigrateMusicHaptics();
     SGMigrateKey(SGKeyMusicStrengthWas, SGKeyMusicStrength);
     SGMigrateKey(SGKeyMusicFollowsWas, SGKeyMusicFollows);

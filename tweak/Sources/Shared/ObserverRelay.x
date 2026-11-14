@@ -1,3 +1,4 @@
+#import "Core/SGLog.h"
 // Posts no longer wait for queued observers. Every playlist-play hang we traced bottoms out the
 // same way: a worker queue (the Mobius model store, the Cosmos resolver, CFNetwork protocols,
 // Spotify's widget manager) posts a notification, and CFX delivers block observers registered with
@@ -12,6 +13,7 @@
 
 %hook NSNotificationCenter
 - (id)addObserverForName:(NSString *)name object:(id)obj queue:(NSOperationQueue *)queue usingBlock:(void (^)(NSNotification *note))block {
+    SGDebugOnce(@"hook Shared/ObserverRelay.x: -[NSNotificationCenter addObserverForName:object:queue:usingBlock:] first call");
   if (!block || !queue) return %orig;
   NSOperationQueue *target = queue;
   return %orig(name, obj, nil, ^(NSNotification *note) {

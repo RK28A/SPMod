@@ -147,6 +147,7 @@ static UIView *trackRowInCell(UIView *cell) {
 
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)layoutAttributes {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumRows.x: -[CollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *attributes = %orig;
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     UIView *row = trackRowInCell(cell);
@@ -160,6 +161,7 @@ static UIView *trackRowInCell(UIView *cell) {
 }
 
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Album/AlbumRows.x: -[CollectionViewCell layoutSubviews] first call");
     %orig;
     UICollectionViewCell *cell = (UICollectionViewCell *)self;
     UIView *row = trackRowInCell(cell);
@@ -171,6 +173,7 @@ static UIView *trackRowInCell(UIView *cell) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Album/AlbumRows.x on");
     %init;
     SGRequireClasses(@[@"_TtC12Element_List18CollectionViewCell"]);
 }

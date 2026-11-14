@@ -10,6 +10,7 @@ __weak UIView *sgr_artistRoot = nil;
 
 %hook CALayer
 - (void)setBackgroundColor:(CGColorRef)color {
+    SGDebugOnce(@"hook Redesigned/Kit/SGRRepaint.x: -[CALayer setBackgroundColor:] first call");
     if (color && (sgr_nowPlayingRoot || sgr_lyricsPageRoot || sgr_playlistRoot || sgr_albumRoot || sgr_artistRoot)) {
         UIView *view = (UIView *)self.delegate;
         if ([view isKindOfClass:UIView.class] && view.layer == self && !SGKeepsColor(view)) {
@@ -33,5 +34,6 @@ __weak UIView *sgr_artistRoot = nil;
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Kit/SGRRepaint.x on");
     %init;
 }

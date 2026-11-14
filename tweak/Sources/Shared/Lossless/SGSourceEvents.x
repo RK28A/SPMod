@@ -59,24 +59,29 @@ static void event(NSString *kind, NSString *evidence) {
 // Shorter seeks and skips forward here, so a single command is counted once.
 %hook SPTEsperantoPlayer
 - (id)seekTo:(double)position relative:(long long)relative options:(id)options creatorTimestampPositionMs:(double)creator {
+    SGDebugOnce(@"hook Shared/Lossless/SGSourceEvents.x: -[SPTEsperantoPlayer seekTo:relative:options:creatorTimestampPositionMs:] first call");
     event(@"seek", @"command");
     return %orig;
 }
 - (id)skipToNextTrackWithOptions:(id)options track:(id)track loggingParams:(id)params {
+    SGDebugOnce(@"hook Shared/Lossless/SGSourceEvents.x: -[SPTEsperantoPlayer skipToNextTrackWithOptions:track:loggingParams:] first call");
     event(@"skip", @"next_command");
     return %orig;
 }
 - (id)skipToPreviousTrackWithOptions:(id)options track:(id)track loggingParams:(id)params {
+    SGDebugOnce(@"hook Shared/Lossless/SGSourceEvents.x: -[SPTEsperantoPlayer skipToPreviousTrackWithOptions:track:loggingParams:] first call");
     event(@"skip", @"previous_command");
     return %orig;
 }
 - (id)stop {
+    SGDebugOnce(@"hook Shared/Lossless/SGSourceEvents.x: -[SPTEsperantoPlayer stop] first call");
     event(@"stop", @"command");
     return %orig;
 }
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Lossless/SGSourceEvents.x on");
     #if !SG_DRIVER
     if (!SGHidden(SGKeyLossless)) return;
     #endif

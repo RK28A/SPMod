@@ -17,6 +17,7 @@ static __weak _TtC31Preferences_CorePreferencesImpl28SPTPreferencesImplementatio
 
 %hook _TtC31Preferences_CorePreferencesImpl28SPTPreferencesImplementation
 - (id)initWithScheduler:(id)scheduler {
+    SGDebugOnce(@"hook Shared/Lossless/LosslessQuality.x: -[SPTPreferencesImplementation initWithScheduler:] first call");
     id made = %orig;
     sg_preferences = made;
     // Lowered when Spotify last quit, and lossless is off now: nothing else would put it back.
@@ -59,6 +60,7 @@ void SGLosslessLowerQuality(BOOL lower) {
 }
 
 %ctor {
+    SGDebug(@"module Shared/Lossless/LosslessQuality.x on");
     #if !SG_DRIVER
     if (!SGHidden(SGKeyLossless) && ![NSUserDefaults.standardUserDefaults arrayForKey:SGKeyLosslessSavedQuality]) return;
     #endif

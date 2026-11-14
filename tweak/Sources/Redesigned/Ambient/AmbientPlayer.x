@@ -101,6 +101,7 @@ static void placeAmbientChipInHeader(UIViewController *unit) {
 
 %hook _TtC21NowPlaying_ScrollImpl28NPVHeaderUnitViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Ambient/AmbientPlayer.x: -[NPVHeaderUnitViewController viewDidLayoutSubviews] first call");
     %orig;
     placeAmbientChipInHeader((UIViewController *)self);
 }
@@ -108,5 +109,6 @@ static void placeAmbientChipInHeader(UIViewController *unit) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Ambient/AmbientPlayer.x on");
     %init;
 }

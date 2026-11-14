@@ -142,6 +142,7 @@ static void applyBackdrop(UIView *layout) {
 
 %hook _TtC28EncoreConsumerMobile_BaseKit19HeaderContentLayout
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Playlist/Playlist.x: -[HeaderContentLayout layoutSubviews] first call");
     %orig;
     UIViewController *headerVC = playlistHeaderOf((UIView *)self);
     if (!headerVC) return;
@@ -156,6 +157,7 @@ static void applyBackdrop(UIView *layout) {
 // The cover loads after the header is laid out, and a new image does not lay the header out again.
 %hook UIImageView
 - (void)setImage:(UIImage *)image {
+    SGDebugOnce(@"hook Native/Playlist/Playlist.x: -[UIImageView setImage:] first call");
     %orig;
     if (!image || ![self.superview.accessibilityIdentifier isEqualToString:@"EditableHeaderArtworkElement.ImageView"]) return;
     for (UIView *v = self.superview; v; v = v.superview) {
@@ -168,6 +170,7 @@ static void applyBackdrop(UIView *layout) {
 
 %hook UIStackView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Playlist/Playlist.x: -[UIStackView layoutSubviews] first call");
     %orig;
     if ([self.accessibilityIdentifier isEqualToString:@"HeaderActionsRow"] && playlistHeaderOf(self)) applyActions(self);
 }
@@ -175,6 +178,7 @@ static void applyBackdrop(UIView *layout) {
 
 %hook SPTFreeTierPlaylistEncoreHeaderViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Native/Playlist/Playlist.x: -[SPTFreeTierPlaylistEncoreHeaderViewController viewDidLayoutSubviews] first call");
     %orig;
     UIView *header = ((UIViewController *)self).viewIfLoaded;
     if (header) applyFindBar(header);
@@ -183,6 +187,7 @@ static void applyBackdrop(UIView *layout) {
 
 %hook _TtC35ListUXPlatform_FreeTierPlaylistImpl25ElementCollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    SGDebugOnce(@"hook Native/Playlist/Playlist.x: -[ElementCollectionViewCell preferredLayoutAttributesFittingAttributes:] first call");
     UICollectionViewLayoutAttributes *result = %orig;
     if (!SGHidden(SGHidePlaylistPills) || !identNamed((UIView *)self, @"PlaylistCuration.Row.CurationActionsToolbar")) return result;
     result.size = CGSizeMake(result.size.width, 0);
@@ -195,6 +200,7 @@ static void applyBackdrop(UIView *layout) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Playlist/Playlist.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC28EncoreConsumerMobile_BaseKit19HeaderContentLayout",

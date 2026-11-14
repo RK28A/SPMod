@@ -31,14 +31,17 @@ static id enumFor(NSString *key, id orig) {
 
 %hook _TtC22RemoteConfigurationSDK25ConfigurationProviderImpl
 - (BOOL)boolValueForId:(NSString *)key defaultValue:(BOOL)fallback {
+    SGDebugOnce(@"hook Shared/Flags/Flags.x: -[ConfigurationProviderImpl boolValueForId:defaultValue:] first call");
     BOOL orig = %orig;
     return boolFor(key, orig);
 }
 - (long)intValueForId:(NSString *)key lower:(long)lower upper:(long)upper defaultValue:(long)fallback {
+    SGDebugOnce(@"hook Shared/Flags/Flags.x: -[ConfigurationProviderImpl intValueForId:lower:upper:defaultValue:] first call");
     long orig = %orig;
     return intFor(key, lower, upper, orig);
 }
 - (id)enumValueForId:(NSString *)key values:(NSArray *)values defaultValue:(id)fallback {
+    SGDebugOnce(@"hook Shared/Flags/Flags.x: -[ConfigurationProviderImpl enumValueForId:values:defaultValue:] first call");
     id orig = %orig;
     return enumFor(key, orig);
 }
@@ -47,20 +50,24 @@ static id enumFor(NSString *key, id orig) {
 // The observable properties listed in Info.plist go through a second provider.
 %hook _TtC22RemoteConfigurationSDK35ObservableConfigurationProviderImpl
 - (BOOL)boolValueForId:(NSString *)key defaultValue:(BOOL)fallback {
+    SGDebugOnce(@"hook Shared/Flags/Flags.x: -[ObservableConfigurationProviderImpl boolValueForId:defaultValue:] first call");
     BOOL orig = %orig;
     return boolFor(key, orig);
 }
 - (long)intValueForId:(NSString *)key lower:(long)lower upper:(long)upper defaultValue:(long)fallback {
+    SGDebugOnce(@"hook Shared/Flags/Flags.x: -[ObservableConfigurationProviderImpl intValueForId:lower:upper:defaultValue:] first call");
     long orig = %orig;
     return intFor(key, lower, upper, orig);
 }
 - (id)enumValueForId:(NSString *)key values:(NSArray *)values defaultValue:(id)fallback {
+    SGDebugOnce(@"hook Shared/Flags/Flags.x: -[ObservableConfigurationProviderImpl enumValueForId:values:defaultValue:] first call");
     id orig = %orig;
     return enumFor(key, orig);
 }
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Flags/Flags.x on");
     seedFlagDefaultsOnce();
     SGRegisterFlagForcer(NO, ^id(NSString *key) {
         return [key isEqualToString:@"floating_music_videos_unit_enabled"] ? @NO : nil;

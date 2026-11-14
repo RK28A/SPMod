@@ -93,11 +93,13 @@ static void styleSearchField(UIView *button) {
 
 %hook _TtCCE16Encore_ButtonKitO16EncoreFoundation6Encore6Button8Tertiary
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Navbar/SearchField.x: -[Tertiary layoutSubviews] first call");
     %orig;
     styleSearchField((UIView *)self);
 }
 // Back from the full screen search the field is styled before it draws, not a layout pass later.
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Redesigned/Navbar/SearchField.x: -[Tertiary didMoveToWindow] first call");
     %orig;
     if (isSearchField((UIView *)self)) {
         traceField((UIView *)self, @"moved");
@@ -106,6 +108,7 @@ static void styleSearchField(UIView *button) {
     styleSearchField((UIView *)self);
 }
 - (void)didAddSubview:(UIView *)subview {
+    SGDebugOnce(@"hook Redesigned/Navbar/SearchField.x: -[Tertiary didAddSubview:] first call");
     %orig;
     if (![subview isKindOfClass:UIVisualEffectView.class]) styleSearchField((UIView *)self);
 }
@@ -113,18 +116,21 @@ static void styleSearchField(UIView *button) {
 
 %hook UILabel
 - (void)setTextColor:(UIColor *)color {
+    SGDebugOnce(@"hook Redesigned/Navbar/SearchField.x: -[UILabel setTextColor:] first call");
     %orig(SGIsInside((UIView *)self, sg_searchField) ? UIColor.whiteColor : color);
 }
 %end
 
 %hook SPTEncoreIconView
 - (void)setForegroundColor:(UIColor *)color {
+    SGDebugOnce(@"hook Redesigned/Navbar/SearchField.x: -[SPTEncoreIconView setForegroundColor:] first call");
     %orig(SGIsInside((UIView *)self, sg_searchField) ? UIColor.whiteColor : color);
 }
 %end
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Navbar/SearchField.x on");
     %init;
     SGRequireClasses(@[@"_TtCCE16Encore_ButtonKitO16EncoreFoundation6Encore6Button8Tertiary", @"SPTEncoreIconView"]);
 }

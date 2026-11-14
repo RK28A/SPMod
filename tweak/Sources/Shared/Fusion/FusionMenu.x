@@ -270,6 +270,7 @@ static void install(UIViewController *menu) {
 
 %hook _TtC24ContextMenu_InternalImpl25ContextMenuViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Shared/Fusion/FusionMenu.x: -[ContextMenuViewController viewDidLayoutSubviews] first call");
     %orig;
     install((UIViewController *)self);
 }
@@ -518,11 +519,13 @@ void SGFusionAttachShuffleStandIn(UIView *standIn, UIView *real) {
 
 %hook _TtC19LegacyUI_ECMCoreKitP33_7AC6ABDB5A3E514EA5239D6986C3C90912EncoreButton
 - (void)didMoveToWindow {
+    SGDebugOnce(@"hook Shared/Fusion/FusionMenu.x: -[EncoreButton didMoveToWindow] first call");
     %orig;
     UIView *button = (UIView *)self;
     if (button.window && [button.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleMenu(button);
 }
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Shared/Fusion/FusionMenu.x: -[EncoreButton layoutSubviews] first call");
     %orig;
     UIView *button = (UIView *)self;
     if ([button.accessibilityIdentifier isEqualToString:@"Components.UI.ShuffleButton"]) SGFusionAttachShuffleMenu(button);
@@ -530,6 +533,7 @@ void SGFusionAttachShuffleStandIn(UIView *standIn, UIView *real) {
 %end
 
 %ctor {
+    SGDebug(@"module Shared/Fusion/FusionMenu.x on");
     %init;
     SGRequireClasses(@[@"_TtC24ContextMenu_InternalImpl25ContextMenuViewController",
                        @"_TtC19LegacyUI_ECMCoreKitP33_7AC6ABDB5A3E514EA5239D6986C3C90912EncoreButton"]);

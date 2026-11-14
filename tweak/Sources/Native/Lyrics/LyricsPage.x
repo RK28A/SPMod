@@ -17,12 +17,14 @@ static UIView *clearAncestors(UIView *view) {
 %hook _TtC32Lyrics_FullscreenElementPageImpl14FullscreenView
 // A colour kept here is re-applied whenever UIKit feels like it, so it is refused outright.
 - (void)setBackgroundColor:(UIColor *)color {
+    SGDebugOnce(@"hook Native/Lyrics/LyricsPage.x: -[FullscreenView setBackgroundColor:] first call");
     static dispatch_once_t once;
     dispatch_once(&once, ^{ SGLog(@"lyrics page paints itself %@ through UIView", color); });
     %orig(SGFlag(SGKeyLyricsCard, NO) ? nil : color);
 }
 
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Native/Lyrics/LyricsPage.x: -[FullscreenView layoutSubviews] first call");
     %orig;
     if (!SGFlag(SGKeyLyricsCard, NO)) return;
     UIView *page = (UIView *)self;
@@ -42,6 +44,7 @@ static UIView *clearAncestors(UIView *view) {
 
 %ctor {
     if (!SGNativeUI()) return;
+    SGDebug(@"module Native/Lyrics/LyricsPage.x on");
     %init;
     SGRequireClasses(@[@"_TtC32Lyrics_FullscreenElementPageImpl14FullscreenView"]);
 }

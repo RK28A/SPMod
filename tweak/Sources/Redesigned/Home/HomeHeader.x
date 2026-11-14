@@ -265,6 +265,7 @@ static void layoutHeader(UIViewController *page) {
 // The page's own list is the one collection view with no other inside which it sits: the shelves are nested in it.
 %hook _TtC16Home_CarouselKit29TouchCancellingCollectionView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomeHeader.x: -[TouchCancellingCollectionView layoutSubviews] first call");
     %orig;
     UIScrollView *list = (UIScrollView *)self;
     if (list.bounds.size.height < 300 || !sg_bar) return;
@@ -277,6 +278,7 @@ static void layoutHeader(UIViewController *page) {
 
 %hook _TtC19Home_FunkisPageImpl20FunkisViewController
 - (void)viewDidLayoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Home/HomeHeader.x: -[FunkisViewController viewDidLayoutSubviews] first call");
     %orig;
     CFTimeInterval began = SGRHomeProbeBegin();
     layoutHeader((UIViewController *)self);
@@ -285,6 +287,7 @@ static void layoutHeader(UIViewController *page) {
 }
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previous {
+    SGDebugOnce(@"hook Redesigned/Home/HomeHeader.x: -[FunkisViewController traitCollectionDidChange:] first call");
     %orig;
     [((UIViewController *)self).viewIfLoaded setNeedsLayout];
 }
@@ -292,6 +295,7 @@ static void layoutHeader(UIViewController *page) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Home/HomeHeader.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC19Home_FunkisPageImpl20FunkisViewController",

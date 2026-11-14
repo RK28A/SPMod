@@ -51,6 +51,7 @@ static SGRArtworkField *fieldIn(UIView *page) {
 
 %hook _TtC32CreativeWorkPlatform_TemplateKit12TemplateView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistField.x: -[TemplateView layoutSubviews] first call");
     %orig;
     UIView *page = (UIView *)self;
     if (![page.accessibilityIdentifier isEqualToString:kPageIdentifier] || page.bounds.size.height < 200) return;
@@ -66,6 +67,7 @@ static SGRArtworkField *fieldIn(UIView *page) {
 
 %hook _TtC32CreativeWorkPlatform_TemplateKit28CreativeWorkTemplateListView
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistField.x: -[CreativeWorkTemplateListView layoutSubviews] first call");
     %orig;
     UIView *list = (UIView *)self;
     if (!SGRArtistPageOf(list)) return;
@@ -100,6 +102,7 @@ static void hideStrip(UIView *strip) {
 // The strip's buttons are the one class of it Spotify names, and they lay out whenever the strip does.
 %hook _TtCOOOE16PodcastUI_ECMKitO19LegacyUI_ECMCoreKit10Components18TabsSectionHeading2UI7Private9TabButton
 - (void)layoutSubviews {
+    SGDebugOnce(@"hook Redesigned/Artist/ArtistField.x: -[TabButton layoutSubviews] first call");
     %orig;
     if (!SGHidden(SGRKeyArtistHideTabs)) return;
     for (UIView *v = ((UIView *)self).superview; v; v = v.superview) {
@@ -112,6 +115,7 @@ static void hideStrip(UIView *strip) {
 
 %ctor {
     if (!SGRedesignedUI()) return;
+    SGDebug(@"module Redesigned/Artist/ArtistField.x on");
     %init;
     SGRequireClasses(@[
         @"_TtC32CreativeWorkPlatform_TemplateKit12TemplateView",

@@ -1,3 +1,4 @@
+#import "Core/SGLog.h"
 #import <AVFoundation/AVFoundation.h>
 #import "AmbientSession.h"
 
@@ -5,6 +6,7 @@
 // down the independent ambient engine. OS interruptions still suspend it normally.
 %hook AVAudioSession
 - (BOOL)setActive:(BOOL)active error:(NSError **)error {
+    SGDebugOnce(@"hook Shared/Ambient/AmbientSession.x: -[AVAudioSession setActive:error:] first call");
     if (self == AVAudioSession.sharedInstance && SGAmbientDeferSessionDeactivation(active, 0)) {
         return YES;
     }
@@ -12,6 +14,7 @@
 }
 
 - (BOOL)setActive:(BOOL)active withOptions:(AVAudioSessionSetActiveOptions)options error:(NSError **)error {
+    SGDebugOnce(@"hook Shared/Ambient/AmbientSession.x: -[AVAudioSession setActive:withOptions:error:] first call");
     if (self == AVAudioSession.sharedInstance && SGAmbientDeferSessionDeactivation(active, options)) {
         return YES;
     }
