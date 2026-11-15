@@ -54,11 +54,18 @@ static void placeComposer(UIViewController *chat, BOOL animated) {
     if (!page.window) return;
     UIView *composer = nil;
     UIScrollView *list = nil;
+    NSMutableArray<UIView *> *under = [NSMutableArray array];   // the panel Spotify keeps under the field
+    CGFloat height = page.bounds.size.height;
     for (UIView *sub in page.subviews) {
         if (!composer && isComposer(sub)) composer = sub;
         else if (!list && [sub isKindOfClass:UICollectionView.class]) list = (UIScrollView *)sub;
+        else if (sub.class == UIView.class && !sub.hidden && sub.center.y - sub.bounds.size.height / 2 > height * 0.4
+                 && sub.bounds.size.width >= page.bounds.size.width - 1) [under addObject:sub];
     }
     if (!composer) return;
+    // Over everything else the page holds there (Spotify's panel and fades).
+    composer.layer.zPosition = 5;
+    SGDebugOnce(@"redesign messages: field alpha %.2f, %lu panel(s) under it, list %@", composer.alpha, (unsigned long)under.count, list ? @"found" : @"missing");
     CGFloat delta = 0;
     CGFloat top = SGRFloatingBarsTop();
     if (!sg_keyboardUp && !isnan(top) && !composer.hidden) {
@@ -69,7 +76,10 @@ static void placeComposer(UIViewController *chat, BOOL animated) {
     CGAffineTransform want = CGAffineTransformMakeTranslation(0, round(delta));
     if (!CGAffineTransformEqualToTransform(composer.transform, want)) {
         SGDebug(@"redesign messages: field moved by %.0f (bars top %.0f, keyboard %d)", delta, top, sg_keyboardUp);
-        void (^move)(void) = ^{ composer.transform = want; };
+        void (^move)(void) = ^{
+            composer.transform = want;
+            for (UIView *panel in under) panel.transform = want;
+        };
         if (animated) [UIView animateWithDuration:0.45 delay:0 usingSpringWithDamping:0.88 initialSpringVelocity:0
                                           options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionAllowUserInteraction
                                        animations:move completion:nil];

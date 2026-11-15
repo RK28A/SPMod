@@ -20,6 +20,8 @@
 @end
 @interface _TtC12Element_List18CollectionViewCell : UICollectionViewCell
 @end
+@interface _TtC15Campfire_ECMKit16TappableTextView : UITextView
+@end
 
 static NSString *const kKey = @"⟦spjam:";
 static NSString *const kSeenKey = @"spotifyglass.webjam.chatSeen";
@@ -67,21 +69,41 @@ static void sendInvite(UIView *from, NSString *address) {
     NSString *draft = field.text ?: @"";
     NSString *nonce = [[NSUUID UUID].UUIDString substringToIndex:8];
     NSString *text = [NSString stringWithFormat:@"🎧 Join my Jam: %@ (same Wi-Fi)\n%@%@|%@⟧", address, kKey, nonce, address];
-    [field becomeFirstResponder];
+    // Nothing of it shows: the field's text is see-through while it holds the invite, and no keyboard comes
+    // up unless the send button only wakes for the first responder.
+    field.layer.opacity = 0;
     field.selectedRange = NSMakeRange(0, field.text.length);
     [field insertText:text];
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        UIView *container = viewWithID(root, @"Components.UI.MessageComposeView.sendButton");
-        UIControl *send = (UIControl *)findView(container, ^BOOL(UIView *v) { return [v isKindOfClass:UIControl.class] && v.userInteractionEnabled; });
-        if (send) [send sendActionsForControlEvents:UIControlEventTouchUpInside];
-        SGLog(@"web jam chat: invite %@ %@", nonce, send ? @"sent" : @"written, but no send button was found");
-        if (!send) return;
-        [[UINotificationFeedbackGenerator new] notificationOccurred:UINotificationFeedbackTypeSuccess];
-        if (!draft.length) return;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if (!field.text.length) [field insertText:draft];
+    __block BOOL woke = NO;
+    __block void (^press)(void);
+    void (^done)(void) = ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if (draft.length && !field.text.length) [field insertText:draft];
+            if (woke) [field resignFirstResponder];
+            field.layer.opacity = 1;
         });
-    });
+    };
+    press = ^{
+        UIView *container = viewWithID(root, @"Components.UI.MessageComposeView.sendButton");
+        UIControl *send = (UIControl *)findView(container, ^BOOL(UIView *v) { return [v isKindOfClass:UIControl.class] && v.userInteractionEnabled && ((UIControl *)v).enabled; });
+        if (!send && !woke) {
+            woke = YES;
+            [field becomeFirstResponder];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), press);
+            return;
+        }
+        if (send) [send sendActionsForControlEvents:UIControlEventTouchUpInside];
+        SGLog(@"web jam chat: invite %@ %@%@", nonce, send ? @"sent" : @"written, but no send button was found",
+              woke ? @" (the field had to be focused)" : @"");
+        if (send) [[UINotificationFeedbackGenerator new] notificationOccurred:UINotificationFeedbackTypeSuccess];
+        else {
+            field.selectedRange = NSMakeRange(0, field.text.length);
+            [field insertText:@""];
+        }
+        done();
+        press = nil;
+    };
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), press);
 }
 
 // Started if it is off; the address comes once the server is listening on Wi-Fi.
@@ -257,6 +279,15 @@ static void offerToJoin(NSString *nonce, NSString *address, NSString *who) {
     [top presentViewController:alert animated:YES completion:nil];
 }
 
+// The whole row see-through (its element view sits on the cell itself, not only in its content view), and
+// clipped so nothing hangs out of the line it is sized to.
+static void markRow(UICollectionViewCell *cell, BOOL keyed) {
+    objc_setAssociatedObject(cell, &kHiddenKey, @(keyed), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    cell.layer.opacity = keyed ? 0 : 1;
+    cell.clipsToBounds = keyed;
+    cell.accessibilityElementsHidden = keyed;
+}
+
 // A row holding an invite: drawn nowhere and sized to nothing. Rows are reused, so every sizing says again.
 %hook _TtC12Element_List18CollectionViewCell
 - (UICollectionViewLayoutAttributes *)preferredLayoutAttributesFittingAttributes:(UICollectionViewLayoutAttributes *)attributes {
@@ -266,12 +297,7 @@ static void offerToJoin(NSString *nonce, NSString *address, NSString *who) {
     NSString *text = keyedText(self, &textView);
     BOOL keyed = text != nil;
     BOOL was = [objc_getAssociatedObject(self, &kHiddenKey) boolValue];
-    if (keyed != was) {
-        objc_setAssociatedObject(self, &kHiddenKey, @(keyed), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        self.contentView.layer.opacity = keyed ? 0 : 1;
-        self.isAccessibilityElement = NO;
-        self.contentView.accessibilityElementsHidden = keyed;
-    }
+    if (keyed != was) markRow(self, keyed);
     if (!keyed) return fitted;
     CGRect frame = fitted.frame;
     frame.size.height = 1;
@@ -282,6 +308,41 @@ static void offerToJoin(NSString *nonce, NSString *address, NSString *who) {
         dispatch_async(dispatch_get_main_queue(), ^{ offerToJoin(key[0], key[1], who); });
     }
     return fitted;
+}
+
+- (void)applyLayoutAttributes:(UICollectionViewLayoutAttributes *)attributes {
+    %orig;
+    if ([objc_getAssociatedObject(self, &kHiddenKey) boolValue]) self.layer.opacity = 0;
+}
+%end
+
+// The message's text arrives before the row is sized: the row goes see-through at once.
+static void textArrived(UITextView *view, NSString *text) {
+    if (!sg_inChat) return;
+    BOOL keyed = [text containsString:kKey];
+    UIView *row = view.superview;
+    while (row && ![row isKindOfClass:UICollectionViewCell.class]) row = row.superview;
+    if (!row) {
+        if (keyed) view.layer.opacity = 0;
+        return;
+    }
+    if (keyed != [objc_getAssociatedObject(row, &kHiddenKey) boolValue]) markRow((UICollectionViewCell *)row, keyed);
+}
+
+%hook _TtC15Campfire_ECMKit16TappableTextView
+- (void)setAttributedText:(NSAttributedString *)text {
+    %orig;
+    textArrived((UITextView *)self, text.string);
+}
+
+- (void)setText:(NSString *)text {
+    %orig;
+    textArrived((UITextView *)self, text);
+}
+
+- (void)didMoveToWindow {
+    %orig;
+    textArrived((UITextView *)self, ((UITextView *)self).attributedText.string);
 }
 %end
 

@@ -60,7 +60,6 @@ static CGRect jamFrame(UIView *host) {
 @implementation SGWebJamPress
 @end
 
-static char kRingKey, kPressKey, kTapKey;
 
 // Spotify's own Jam needs Premium on its server and only says an error came: the button starts the Web Jam
 // instead and opens its sheet, a tap or a hold alike. Spotify never sees the touch.
@@ -120,53 +119,65 @@ static void openWebJam(NSString *how) {
 }
 @end
 
+// A button of ours over Spotify's, in the hosting view's superview: SwiftUI's gestures never see the touch,
+// so its "Premium needed" error never comes. A tap starts the Web Jam and shows its code, a hold opens its
+// settings. While the Web Jam runs the button is filled in the accent, flat, with a thin edge.
+@interface SGWebJamOverlay : UIButton
+@end
+
+@implementation SGWebJamOverlay
+- (instancetype)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        self.accessibilityLabel = @"Web Jam";
+        SGWebJamPressTarget *target = SGWebJamPressTarget.shared;
+        [self addTarget:self action:@selector(tapped) forControlEvents:UIControlEventTouchUpInside];
+        SGWebJamPress *press = [[SGWebJamPress alloc] initWithTarget:target action:@selector(pressed:)];
+        press.minimumPressDuration = 0.45;
+        press.target = CGRectInfinite;
+        [self addGestureRecognizer:press];
+    }
+    return self;
+}
+
+- (void)tapped {
+    openWebJam(@"tap");
+    __weak UIView *weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [weakSelf.superview setNeedsLayout];
+    });
+}
+@end
+
+static char kOverlayKey;
+
 static void markJam(UIView *host) {
     CGRect frame = jamFrame(host);
-    CAShapeLayer *ring = objc_getAssociatedObject(host, &kRingKey);
-    SGWebJamPress *press = objc_getAssociatedObject(host, &kPressKey);
-    SGWebJamTap *tap = objc_getAssociatedObject(host, &kTapKey);
-    if (!press) {
-        SGWebJamPressTarget *target = SGWebJamPressTarget.shared;
-        press = [[SGWebJamPress alloc] initWithTarget:target action:@selector(pressed:)];
-        press.delegate = target;
-        press.minimumPressDuration = 0.45;
-        [host addGestureRecognizer:press];
-        objc_setAssociatedObject(host, &kPressKey, press, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        tap = [[SGWebJamTap alloc] initWithTarget:target action:@selector(tapped:)];
-        tap.delegate = target;
-        [tap requireGestureRecognizerToFail:press];
-        [host addGestureRecognizer:tap];
-        objc_setAssociatedObject(host, &kTapKey, tap, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        SGDebug(@"web jam: Start a Jam taken over at %@", NSStringFromCGRect(frame));
-    }
-    press.target = frame;
-    tap.target = frame;
-    BOOL lit = SGWebJamRunning() && !CGRectIsNull(frame);
-    if (!lit) {
-        ring.hidden = YES;
+    // The element's frame runs above the drawn button (its label's line spacing); the button is the foot of it.
+    if (!CGRectIsNull(frame) && frame.size.height > 62) frame = CGRectMake(frame.origin.x, CGRectGetMaxY(frame) - 58, frame.size.width, 56);
+    SGWebJamOverlay *overlay = objc_getAssociatedObject(host, &kOverlayKey);
+    UIView *holder = host.superview;
+    if (CGRectIsNull(frame) || !holder) {
+        overlay.hidden = YES;
         return;
     }
-    if (!ring) {
-        ring = [CAShapeLayer layer];
-        ring.fillColor = nil;
-        ring.lineWidth = 2;
-        objc_setAssociatedObject(host, &kRingKey, ring, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (!overlay) {
+        overlay = [[SGWebJamOverlay alloc] initWithFrame:CGRectZero];
+        objc_setAssociatedObject(host, &kOverlayKey, overlay, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        SGLog(@"web jam: Start a Jam covered at %@", NSStringFromCGRect(frame));
     }
-    if (ring.superlayer != host.superview.layer) [host.superview.layer addSublayer:ring];
+    if (overlay.superview != holder) [holder addSubview:overlay];
+    else if (holder.subviews.lastObject != overlay) [holder bringSubviewToFront:overlay];
+    CGRect inHolder = [holder convertRect:frame fromView:host];
+    if (!CGRectEqualToRect(overlay.frame, inHolder)) overlay.frame = inHolder;
+    overlay.hidden = NO;
+    BOOL lit = SGWebJamRunning();
     UIColor *accent = (SGFusionAccent ? SGFusionAccent() : nil) ?: SGAccentMark();
-    CGRect inHost = [host.superview convertRect:frame fromView:host];
-    [CATransaction begin];
-    [CATransaction setDisableActions:YES];
-    ring.hidden = NO;
-    ring.zPosition = 10;
-    ring.strokeColor = accent.CGColor;
-    ring.fillColor = [accent colorWithAlphaComponent:0.32].CGColor;
-    ring.shadowColor = accent.CGColor;
-    ring.shadowOpacity = 0.7;
-    ring.shadowRadius = 8;
-    ring.shadowOffset = CGSizeZero;
-    ring.path = [UIBezierPath bezierPathWithRoundedRect:inHost cornerRadius:MIN(22, inHost.size.height / 2)].CGPath;
-    [CATransaction commit];
+    overlay.layer.cornerRadius = MIN(22, inHolder.size.height / 2);
+    overlay.layer.cornerCurve = kCACornerCurveContinuous;
+    overlay.backgroundColor = lit ? [accent colorWithAlphaComponent:0.3] : UIColor.clearColor;
+    overlay.layer.borderWidth = lit ? 1 : 0;
+    overlay.layer.borderColor = [accent colorWithAlphaComponent:0.7].CGColor;
+    overlay.layer.shadowOpacity = 0;
 }
 
 %hook _TtC26Connect_DevicePickerUIImpl26DevicePickerViewController
