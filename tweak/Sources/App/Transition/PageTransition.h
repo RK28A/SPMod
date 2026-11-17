@@ -19,3 +19,7 @@ NSArray<NSString *> *SGPageTransitionNotes(void);
 
 // The veil up from `point` (in the window), until a new page is on top of the stack, then away. Main thread.
 void SGPageVeilUp(CGPoint point);
+// Whether a veil is up now (the transition is not Off).
+BOOL SGPageVeilIsUp(void);
+// The page is in under the veil: it goes away now instead of waiting for the stack to change.
+void SGPageVeilReady(void);

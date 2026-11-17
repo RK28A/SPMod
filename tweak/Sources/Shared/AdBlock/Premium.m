@@ -77,8 +77,16 @@ static NSData *patchAttributes(NSData *response) {
     NSDictionary<NSString *, id> *forced = forcedAttributes();
     NSMutableArray<SGPBField *> *out = [NSMutableArray array];
     NSMutableSet<NSString *> *seen = [NSMutableSet set];
+    NSMutableArray<NSString *> *told = [NSMutableArray array];
     for (SGPBField *field in fields) {
         NSString *key = field.number == 1 && field.wire == 2 ? SGPBText(SGPBFirst(SGPBParse(field.payload), 1)) : nil;
+        // What the server said, for the log: a broken spoof shows which attribute it still reads.
+        if (key && told.count < 120) {
+            NSArray<SGPBField *> *value = SGPBParse(SGPBFirst(SGPBParse(field.payload), 2).payload);
+            SGPBField *one = value.firstObject;
+            NSString *text = one.wire == 2 ? SGPBText(one) : [NSString stringWithFormat:@"%llu", one.varint];
+            [told addObject:[NSString stringWithFormat:@"%@=%@%@", key, text.length > 40 ? [text substringToIndex:40] : (text ?: @"?"), forced[key] ? @"*" : (stripped(key) ? @"-" : @"")]];
+        }
         if (!key || (!forced[key] && !stripped(key))) {
             [out addObject:field];
             continue;
@@ -90,6 +98,8 @@ static NSData *patchAttributes(NSData *response) {
     for (NSString *key in forced) {
         if (![seen containsObject:key]) [out addObject:attributeEntry(key, forced[key])];
     }
+    SGLog(@"premium: account attributes from the server (* forced, - dropped), %lu more forced: %@",
+          (unsigned long)(forced.count - seen.count), [told componentsJoinedByString:@" "]);
     return SGPBSerialize(out);
 }
 

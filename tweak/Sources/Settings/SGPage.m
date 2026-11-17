@@ -53,6 +53,11 @@ void SGRegisterPages(void) {
     if (!sg_pagesConform) SGLog(@"SPTPageController not found, the mod's pages are presented instead of pushed");
 }
 
+void SGShowPageQuietly(UIViewController *owner, UIViewController *page) {
+    if (owner.navigationController && sg_pagesConform) [owner.navigationController pushViewController:page animated:NO];
+    else [owner presentViewController:[[UINavigationController alloc] initWithRootViewController:page] animated:NO completion:nil];
+}
+
 void SGShowPage(UIViewController *owner, UIViewController *page) {
     if (owner.navigationController && sg_pagesConform) [owner.navigationController pushViewController:page animated:YES];
     else [owner presentViewController:[[UINavigationController alloc] initWithRootViewController:page] animated:YES completion:nil];

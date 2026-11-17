@@ -21,6 +21,7 @@ NSArray<NSString *> *SGPageTransitionNotes(void) {
 }
 
 static UIView *sg_veil;
+static BOOL sg_ready;   // the opener said the page is in (SGPageVeilReady)
 static CGPoint sg_from;
 
 static UIWindow *mainWindow(void) {
@@ -137,7 +138,7 @@ static void away(UIView *veil) {
 // The menu closes first (the top becomes Home), then the page is pushed (the top becomes the page): the veil
 // waits for a second change, or for a first one that stays half a second, or for kLongest.
 static void waitForPage(UIView *veil, UIViewController *was, UIViewController *first, CFTimeInterval since, CFTimeInterval firstAt) {
-    if (sg_veil != veil) return;
+    if (sg_veil != veil || sg_ready) return;
     UIViewController *now = SGTopController();
     CFTimeInterval clock = CACurrentMediaTime();
     BOOL settled = NO;
@@ -180,9 +181,25 @@ void SGPageVeilUp(CGPoint point) {
     // The page's own background, so the veil is the page before the page is there.
     SGBackdropPlace(veil);
     sg_veil = veil;
+    sg_ready = NO;
     SGDebug(@"page transition: veil up from %@", NSStringFromCGPoint(point));
     UIViewController *was = SGTopController();
     [UIView animateWithDuration:kIn animations:^{ veil.alpha = 1; } completion:^(BOOL ended) {
         waitForPage(veil, was, nil, CACurrentMediaTime(), 0);
     }];
+}
+
+BOOL SGPageVeilIsUp(void) {
+    return sg_veil != nil;
+}
+
+void SGPageVeilReady(void) {
+    UIView *veil = sg_veil;
+    if (!veil || sg_ready) return;
+    sg_ready = YES;
+    SGDebug(@"page transition: the page is in, the veil goes");
+    // One frame for the page's first layout under the veil.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.05 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (sg_veil == veil) away(veil);
+    });
 }

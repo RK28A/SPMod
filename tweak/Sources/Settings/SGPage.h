@@ -8,5 +8,7 @@
 void SGRegisterPages(void);
 // Pushes the page if it can go on Spotify's stack, presents it otherwise.
 void SGShowPage(UIViewController *owner, UIViewController *page);
+// The same without the push animation, for a page that comes up under a transition veil.
+void SGShowPageQuietly(UIViewController *owner, UIViewController *page);
 // Mod Settings, pushed onto the selected tab's stack; `source` is any view on the tab bar.
 void SGOpenModSettings(UIView *source);

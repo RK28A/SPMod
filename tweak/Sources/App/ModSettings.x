@@ -398,6 +398,28 @@ static UINavigationController *navigationIn(UIViewController *page) {
     return nil;
 }
 
+// From the side menu: the page is built while the veil comes up, the menu goes without its animation and the
+// page is pushed without its own under the veil, which then goes at once. With transitions off, Spotify's way.
+static void openFromMenu(UIView *from, UIViewController *presenting, UIViewController *(^build)(void)) {
+    SGPageVeilUp([from convertPoint:CGPointMake(CGRectGetMidX(from.bounds), CGRectGetMidY(from.bounds)) toView:nil]);
+    BOOL veiled = SGPageVeilIsUp();
+    CFTimeInterval start = CACurrentMediaTime();
+    UIViewController *page = build();
+    SGDebug(@"mod settings: %@ built in %.0f ms", page.title ?: NSStringFromClass(page.class), (CACurrentMediaTime() - start) * 1000);
+    void (^go)(void) = ^{
+        [presenting dismissViewControllerAnimated:!veiled completion:^{
+            UIViewController *owner = navigationIn(presenting).topViewController ?: presenting;
+            if (veiled) {
+                SGShowPageQuietly(owner, page);
+                SGPageVeilReady();
+            } else SGShowPage(owner, page);
+        }];
+    };
+    if (veiled) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), go);
+    else go();
+}
+
+
 - (void)open {
     UIViewController *owner = nil;
     for (UIResponder *r = self; r && !owner; r = r.nextResponder) {
@@ -405,10 +427,7 @@ static UINavigationController *navigationIn(UIViewController *page) {
     }
     UIViewController *presenting = self.drawer ? owner.presentingViewController : nil;
     if (presenting) {
-        SGPageVeilUp([self convertPoint:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds)) toView:nil]);
-        [presenting dismissViewControllerAnimated:YES completion:^{
-            SGShowPage(navigationIn(presenting).topViewController ?: presenting, modSettingsPage());
-        }];
+        openFromMenu(self, presenting, ^UIViewController *{ return modSettingsPage(); });
         return;
     }
     SGShowPage(owner, modSettingsPage());
@@ -799,10 +818,7 @@ static void trimDrawer(UICollectionView *list) {
     }
     UIViewController *presenting = owner.presentingViewController;
     if (presenting) {
-        SGPageVeilUp([self convertPoint:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds)) toView:nil]);
-        [presenting dismissViewControllerAnimated:YES completion:^{
-            SGShowPage(navigationIn(presenting).topViewController ?: presenting, SGListeningStatsPage());
-        }];
+        openFromMenu(self, presenting, ^UIViewController *{ return SGListeningStatsPage(); });
         return;
     }
     SGShowPage(owner, SGListeningStatsPage());
