@@ -24,6 +24,7 @@
 #import "Shared/AutoMix/AutoMix.h"
 #import "Shared/LocalFiles/LocalFiles.h"
 #import "Shared/Jam/WebJam.h"
+#import "Shared/Location/Location.h"
 #import "Shared/LiveActivity/LiveActivity.h"
 #import "Shared/HeadGestures/HeadGestures.h"
 #import "Shared/Haptics/Haptics.h"
@@ -286,6 +287,7 @@ static UIViewController *modSettingsPage(void) {
         pageRow(@"AutoMix", @"waveform.path", ^UIViewController *{ return SGAutoMixSettingsPage(); }),
         webJam,
         pageRow(@"Vibrations", @"iphone.radiowaves.left.and.right", ^UIViewController *{ return SGVibrationsSettingsPage(); }),
+        pageRow(@"Location", @"location", ^UIViewController *{ return SGLocationPage(); }),
     ]];
     if (@available(iOS 17.0, *)) {
         SGModRow *liveActivity = pageRow(@"Live Activity", @"platter.filled.top.iphone", ^UIViewController *{ return SGLiveActivitySettingsPage(); });
