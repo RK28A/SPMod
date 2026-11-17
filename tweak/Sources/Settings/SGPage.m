@@ -2,6 +2,7 @@
 #import "SGPageStyle.h"
 #import "SGBackdrop.h"
 #import "Core/SGCore.h"
+#import "SGModPage.h"
 
 
 static BOOL sg_pagesConform;
@@ -34,6 +35,13 @@ static BOOL sg_pagesConform;
 
 - (NSURL *)spt_pageURI {
     return [NSURL URLWithString:@"spotify:internal:spotifyglass"];
+}
+
+// Every settings page hands its rows to the glass decorator the redesign installs (SGModCellDecorator).
+- (void)tableView:(UITableView *)table willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)path {
+    if (!SGModCellDecorator) return;
+    NSInteger count = [table numberOfRowsInSection:path.section];
+    SGModCellDecorator(cell, path.row == 0, path.row == count - 1);
 }
 
 @end
