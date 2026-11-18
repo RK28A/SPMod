@@ -455,7 +455,7 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
 // A locked phone keeps the player in its window, so being in front counts as much as being in one.
 - (void)updateMotion {
     BOOL front = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
-    BOOL may = !_restoring && !_retired && !_inactive && self.window && front && !SGRPlayerIsTransitioning() && !SGRReduceMotion() && !NSProcessInfo.processInfo.lowPowerModeEnabled
+    BOOL may = !_restoring && !_retired && !_inactive && self.window && front && !SGRPlayerIsTransitioning() && !SGRReduceMotion() && !SGRLowPowerHoldsMotion()
         && !SGPlayerState().isPaused;
     if (may) [_player play];
     else {
@@ -637,6 +637,10 @@ static NSURL *sg_previewFile;
 static UIImage *sg_previewPoster;
 static void (^sg_previewArrived)(void);
 
+NSURL *SGRPlayerMotionFile(void) {
+    return sg_motionFile;
+}
+
 UIView *SGRPlayerMotionPreview(void (^arrived)(void)) {
     if (sg_motionFile) {
         UIImageView *preview = [UIImageView new];
@@ -696,7 +700,7 @@ static BOOL videoShowing(void) {
 
 // Reduce Motion asks for no looping clip, and Low Power Mode for no video decoding behind the player.
 static BOOL motionAllowed(void) {
-    return !SGRReduceMotion() && !NSProcessInfo.processInfo.lowPowerModeEnabled;
+    return !SGRReduceMotion() && !SGRLowPowerHoldsMotion();
 }
 
 static BOOL lyricsBlurEnabledForTrack(NSString *track) {

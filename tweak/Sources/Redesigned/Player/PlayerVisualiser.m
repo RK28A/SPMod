@@ -291,7 +291,7 @@ static CAGradientLayer *fill(CAShapeLayer *shape) {
 - (void)updateMotion {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(updateMotion) object:nil];
     BOOL front = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
-    BOOL may = self.window && front && !NSProcessInfo.processInfo.lowPowerModeEnabled;
+    BOOL may = self.window && front && !SGRLowPowerHoldsMotion();
     NSTimeInterval wait = SGPlayerTransitionEnds() - CACurrentMediaTime();
     if (may && (wait > 0 || SGRPlayerIsTransitioning())) {
         may = NO;

@@ -652,7 +652,7 @@ static const float kSettled = 0.02f;
 - (void)updateMotion {
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(updateMotion) object:nil];
     BOOL may = SGRShaderReady() && self.window && UIApplication.sharedApplication.applicationState == UIApplicationStateActive
-        && !NSProcessInfo.processInfo.lowPowerModeEnabled;
+        && !SGRLowPowerHoldsMotion();
     NSTimeInterval wait = SGPlayerTransitionEnds() - CACurrentMediaTime();
     if (may && (wait > 0 || SGRPlayerIsTransitioning())) {
         may = NO;

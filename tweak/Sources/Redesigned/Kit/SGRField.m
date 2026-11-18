@@ -409,7 +409,7 @@ static const CGFloat kLyricsBlur = 0.3;
     // A locked phone keeps the player in its window, so being in front counts as much as being in one.
     BOOL front = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
     BOOL may = self.window && front && !SGRPlayerIsTransitioning() && !SGRReduceMotion()
-            && !NSProcessInfo.processInfo.lowPowerModeEnabled && !_motionHeld;
+            && !SGRLowPowerHoldsMotion() && !_motionHeld;
     _fluidLayer.moving = may && _fluid;
     BOOL moving = may && _flows && !_flow.hidden;
     if (!_flow || moving == _flow.moving) return;

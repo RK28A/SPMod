@@ -161,7 +161,7 @@ static char kReadyContext;
 - (void)findMotionOf:(NSString *)album by:(NSString *)artist {
     if (!album.length || !artist.length || !SGFlag(SGRKeyAnimatedCovers, YES)) return;
     // Not even looked up while it could not move: the clip is megabytes.
-    if (SGRReduceMotion() || NSProcessInfo.processInfo.lowPowerModeEnabled) return;
+    if (SGRReduceMotion() || SGRLowPowerHoldsMotion()) return;
     NSString *wanted = [NSString stringWithFormat:@"%@\n%@", artist, album];
     if ([_motionFor isEqualToString:wanted]) return;
     _motionFor = wanted;
@@ -232,7 +232,7 @@ static char kReadyContext;
 - (void)updateMotion {
     if (!_player) return;
     BOOL front = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
-    BOOL moving = self.window && front && !SGRReduceMotion() && !NSProcessInfo.processInfo.lowPowerModeEnabled;
+    BOOL moving = self.window && front && !SGRReduceMotion() && !SGRLowPowerHoldsMotion();
     if (moving && _player.rate == 0) [_player play];
     else if (!moving && _player.rate != 0) [_player pause];
 }

@@ -10,6 +10,7 @@
 // answers landscape for this screen's own window and portrait for every other, and the scene is asked to
 // turn while the window is up. Spotify's own windows never turn.
 #import <objc/runtime.h>
+#import <AVFoundation/AVFoundation.h>
 #import "Core/SGCore.h"
 #import "Redesigned/Kit/SGRKit.h"
 #import "Redesigned/Lyrics/SGRKaraokeView.h"
@@ -19,6 +20,7 @@
 
 static const CGFloat kSide = 32, kCoverGap = 16, kControlSide = 44, kColumnShare = 0.38;
 static const NSTimeInterval kLandscapeRest = 4;
+static const CGFloat kScrub = 36;   // the time bar and its two times under it
 
 static UIWindow *sg_window;
 // Shut from the screen: turning the phone again does not reopen it until it has stood upright.
@@ -41,6 +43,14 @@ static BOOL sg_shut;
     BOOL _withLines;                 // the lyrics column is there; without it the cover and controls share the screen
     UITapGestureRecognizer *_hide;   // only while the controls are up
     UIView *_shield;                 // only while they are not: the touch that brings them back
+    UISlider *_scrub;
+    UILabel *_elapsed, *_remaining;
+    BOOL _scrubbing;
+    NSTimer *_clock;
+    AVQueuePlayer *_clipPlayer;      // the player's clip, looping in the cover (SGRPlayerMotionFile)
+    AVPlayerLooper *_looper;
+    AVPlayerLayer *_clipLayer;
+    NSURL *_clipFile;
 }
 
 // Portrait once the screen is on its way out, or the scene could not turn back while it fades.
@@ -140,6 +150,22 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     _shield.accessibilityElementsHidden = YES;
     [_shield addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(wake)]];
     [_shield addGestureRecognizer:[[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(wake)]];
+    _scrub = [UISlider new];
+    _scrub.minimumTrackTintColor = UIColor.whiteColor;
+    _scrub.maximumTrackTintColor = [UIColor colorWithWhite:1 alpha:0.25];
+    [_scrub setThumbImage:[self thumb] forState:UIControlStateNormal];
+    _scrub.accessibilityLabel = @"Position";
+    [_scrub addTarget:self action:@selector(scrubMoved) forControlEvents:UIControlEventValueChanged];
+    [_scrub addTarget:self action:@selector(scrubEnded) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+    [self.view addSubview:_scrub];
+    _elapsed = [UILabel new];
+    _remaining = [UILabel new];
+    for (UILabel *label in @[_elapsed, _remaining]) {
+        label.font = [UIFont monospacedDigitSystemFontOfSize:12 weight:UIFontWeightMedium];
+        label.textColor = [UIColor colorWithWhite:1 alpha:0.6];
+        [self.view addSubview:label];
+    }
+    _remaining.textAlignment = NSTextAlignmentRight;
     SGAddPlayerStateObserver(self);
     [self playerStateDidChange:SGPlayerState()];
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(artworkChanged)
@@ -152,6 +178,78 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
 - (void)dealloc {
     [NSNotificationCenter.defaultCenter removeObserver:self];
     [_rest invalidate];
+    [_clock invalidate];
+    [_clipPlayer pause];
+}
+
+- (UIImage *)thumb {
+    return [[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(14, 14)] imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        [UIColor.whiteColor setFill];
+        [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(1, 1, 12, 12)] fill];
+    }];
+}
+
+static NSString *clockText(double seconds) {
+    long total = lround(MAX(0, seconds));
+    return [NSString stringWithFormat:@"%ld:%02ld", total / 60, total % 60];
+}
+
+// Twice a second while the screen is up; a drag holds it.
+- (void)tick {
+    SPTPlayerState *state = SGPlayerState();
+    double length = state.duration;
+    // The clip is found a moment after the track changes: it comes in on the next beat.
+    NSURL *file = SGRPlayerMotionFile();
+    if (!(file == _clipFile || [file isEqual:_clipFile])) [self updateClip:state.isPaused];
+    if (_scrubbing || length <= 0) return;
+    double at = MIN(length, MAX(0, state.position));
+    _scrub.value = at / length;
+    _elapsed.text = clockText(at);
+    _remaining.text = [@"-" stringByAppendingString:clockText(length - at)];
+}
+
+- (void)scrubMoved {
+    _scrubbing = YES;
+    double length = SGPlayerState().duration;
+    _elapsed.text = clockText(_scrub.value * length);
+    _remaining.text = [@"-" stringByAppendingString:clockText(length - _scrub.value * length)];
+    [self restartRest];
+}
+
+- (void)scrubEnded {
+    double length = SGPlayerState().duration;
+    if (_scrubbing && length > 0) {
+        [SGPlaybackPlayer() seekTo:_scrub.value * length];
+        SGDebug(@"redesign player: landscape seek to %.0f s", _scrub.value * length);
+    }
+    _scrubbing = NO;
+}
+
+// The player's own clip in the cover, muted and looping, paused with the song.
+- (void)updateClip:(BOOL)paused {
+    NSURL *file = SGRPlayerMotionFile();
+    if (!(file == _clipFile || [file isEqual:_clipFile])) {
+        _clipFile = file;
+        [_clipPlayer pause];
+        [_clipLayer removeFromSuperlayer];
+        _clipPlayer = nil;
+        _looper = nil;
+        _clipLayer = nil;
+        if (file) {
+            AVPlayerItem *item = [AVPlayerItem playerItemWithURL:file];
+            _clipPlayer = [AVQueuePlayer new];
+            _clipPlayer.muted = YES;
+            _clipPlayer.preventsDisplaySleepDuringVideoPlayback = NO;
+            _looper = [AVPlayerLooper playerLooperWithPlayer:_clipPlayer templateItem:item];
+            _clipLayer = [AVPlayerLayer playerLayerWithPlayer:_clipPlayer];
+            _clipLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+            _clipLayer.frame = _cover.bounds;
+            [_cover.layer addSublayer:_clipLayer];
+        }
+        SGDebug(@"redesign player: landscape clip %@", file ? file.lastPathComponent : @"none, the cover shows");
+    }
+    if (paused) [_clipPlayer pause];
+    else [_clipPlayer play];
 }
 
 - (BOOL)wantsLines {
@@ -166,7 +264,7 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     _cover.frame = CGRectMake(left, CGRectGetMidY(safe) - side / 2, side, side);
     CGFloat columnLeft = CGRectGetMaxX(_cover.frame) + 2 * kSide;
     CGFloat width = CGRectGetMaxX(safe) - kSide - columnLeft;
-    CGFloat block = titleHeight + artistHeight + kCoverGap * 2 + kControlSide;
+    CGFloat block = titleHeight + artistHeight + kCoverGap * 2 + kScrub + kCoverGap + kControlSide;
     CGFloat top = CGRectGetMidY(safe) - block / 2;
     _title.frame = CGRectMake(columnLeft, top, width - kControlSide, titleHeight);
     _artist.frame = CGRectMake(columnLeft, CGRectGetMaxY(_title.frame), width - kControlSide, artistHeight);
@@ -174,6 +272,22 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     CGFloat controlsWidth = MIN(width, 260);
     _controls.frame = CGRectMake(columnLeft + (width - controlsWidth) / 2, CGRectGetMaxY(_artist.frame) + 2 * kCoverGap, controlsWidth, kControlSide);
     _stage.frame = CGRectZero;
+    [self placeScrubAt:CGRectGetMaxY(_artist.frame) + kCoverGap / 2 left:columnLeft width:width];
+    _controls.frame = CGRectMake(columnLeft + (width - controlsWidth) / 2, CGRectGetMaxY(_scrub.frame) + 16 + kCoverGap / 2, controlsWidth, kControlSide);
+    [self placeClip];
+}
+
+- (void)placeScrubAt:(CGFloat)top left:(CGFloat)left width:(CGFloat)width {
+    _scrub.frame = CGRectMake(left, top, width, 20);
+    _elapsed.frame = CGRectMake(left, CGRectGetMaxY(_scrub.frame), width / 2, 16);
+    _remaining.frame = CGRectMake(left + width / 2, CGRectGetMaxY(_scrub.frame), width / 2, 16);
+}
+
+- (void)placeClip {
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    _clipLayer.frame = _cover.bounds;
+    [CATransaction commit];
 }
 
 - (void)viewDidLayoutSubviews {
@@ -191,15 +305,17 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     CGFloat left = CGRectGetMinX(safe) + kSide;
     CGFloat titleHeight = ceil(_title.font.lineHeight), artistHeight = ceil(_artist.font.lineHeight);
     CGFloat textHeight = MAX(titleHeight + artistHeight, kControlSide), controlsHeight = kControlSide;
-    CGFloat side = MIN(column - kSide, safe.size.height - 2 * kSide - textHeight - controlsHeight - 2 * kCoverGap);
-    CGFloat top = CGRectGetMidY(safe) - (side + kCoverGap + textHeight + kCoverGap + controlsHeight) / 2;
+    CGFloat side = MIN(column - kSide, safe.size.height - 2 * kSide - textHeight - controlsHeight - 3 * kCoverGap - kScrub);
+    CGFloat top = CGRectGetMidY(safe) - (side + kCoverGap + textHeight + kCoverGap + kScrub + kCoverGap + controlsHeight) / 2;
     _cover.frame = CGRectMake(left, top, side, side);
     // The close button at the text's trailing end, its glyph (about 20pt in the 44pt square) at the cover's edge.
     CGFloat textTop = CGRectGetMaxY(_cover.frame) + kCoverGap;
     _close.frame = CGRectMake(left + side - kControlSide + 12, textTop + (textHeight - kControlSide) / 2, kControlSide, kControlSide);
     _title.frame = CGRectMake(left, textTop + (textHeight - titleHeight - artistHeight) / 2, side - kControlSide, titleHeight);
     _artist.frame = CGRectMake(left, CGRectGetMaxY(_title.frame), side - kControlSide, artistHeight);
-    _controls.frame = CGRectMake(left + side * 0.1, textTop + textHeight + kCoverGap, side * 0.8, controlsHeight);
+    [self placeScrubAt:textTop + textHeight + kCoverGap left:left width:side];
+    _controls.frame = CGRectMake(left + side * 0.1, CGRectGetMaxY(_scrub.frame) + 16 + kCoverGap, side * 0.8, controlsHeight);
+    [self placeClip];
     CGFloat linesLeft = left + side + kSide;
     _stage.frame = CGRectMake(linesLeft, CGRectGetMinY(safe), CGRectGetMaxX(safe) - linesLeft, safe.size.height);
     _lyrics.frame = _stage.bounds;
@@ -208,6 +324,18 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     [self restartRest];
+    [_clock invalidate];
+    __weak SGRLandscapeLyricsController *weakSelf = self;
+    _clock = [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer *timer) { [weakSelf tick]; }];
+    _clock.tolerance = 0.1;
+    [self tick];
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [_clock invalidate];
+    _clock = nil;
+    [_clipPlayer pause];
 }
 
 // The window comes up clear and fades in as the scene turns, so the screen is never seen laid out upright.
@@ -243,6 +371,8 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
         [UIImageSymbolConfiguration configurationWithPointSize:30 weight:UIImageSymbolWeightBold]] forState:UIControlStateNormal];
     _play.accessibilityLabel = state.isPaused ? @"Play" : @"Pause";
     _field.motionHeld = state.isPaused;
+    [self updateClip:state.isPaused];
+    [self tick];
     // A pause brings the controls back and keeps them; playing again, from here or anywhere, starts the
     // clock. The tap on the play button cannot: the state saying so arrives a beat after it.
     if (state.isPaused) [self setControlsShown:YES];
@@ -305,7 +435,7 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     // Back at a tap with the Kit's response, from where a fade out is; they go with the slow fade, as the
     // portrait player's do (PlayerLyrics.x).
     SGRAnimate(shown ? SGRMotionRespond : SGRMotionFade, ^{
-        for (UIView *view in @[self->_controls, self->_close, self->_title, self->_artist]) view.alpha = shown ? 1 : 0;
+        for (UIView *view in @[self->_controls, self->_close, self->_title, self->_artist, self->_scrub, self->_elapsed, self->_remaining]) view.alpha = shown ? 1 : 0;
         self->_lyrics.extrasHidden = !shown;
     }, nil);
     if (shown) [self restartRest];

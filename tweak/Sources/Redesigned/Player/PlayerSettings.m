@@ -534,6 +534,8 @@ UIViewController *SGRPlayerSettingsPage(NSArray *more) {
                        keepTitle,
                        SGSwitchRow(@"Landscape player", @"Turn the player sideways with the phone, lyrics open or not",
                                    SGRKeyPlayerLandscape),
+                       SGOptionRow(@"Animations in Low Power Mode", @"The moving artwork and backgrounds go on when Low Power Mode is on. Uses more battery; restart to apply",
+                                   SGRKeyMotionLowPower),
                        SGSwitchRow(@"Auto-hide landscape controls", @"Bring them back with a tap after a few seconds",
                                    SGRKeyLyricsLandscapeAutoHide),
                        SGOptionRow(@"Lyrics line under the cover", @"One line of the song as it plays", SGRKeyPlayerLyricLine),

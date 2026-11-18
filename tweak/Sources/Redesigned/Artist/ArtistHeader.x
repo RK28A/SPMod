@@ -151,7 +151,7 @@ static UIView *containerOf(UIView *header) {
 
 - (void)findAppleArtworkFor:(NSString *)artist {
     BOOL wantPhoto = SGEnabled(SGRKeyArtistApplePhoto);
-    BOOL wantMotion = SGEnabled(SGRKeyArtistMotion) && !SGRReduceMotion() && !NSProcessInfo.processInfo.lowPowerModeEnabled;
+    BOOL wantMotion = SGEnabled(SGRKeyArtistMotion) && !SGRReduceMotion() && !SGRLowPowerHoldsMotion();
     if (!artist.length || (!wantPhoto && !wantMotion) || [_appleArtist isEqualToString:artist]) return;
     _appleArtist = [artist copy];
     __weak SGRArtistHero *weakSelf = self;
@@ -213,7 +213,7 @@ static UIView *containerOf(UIView *header) {
 - (void)updateMotion {
     if (!_player) return;
     BOOL front = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
-    BOOL moving = self.window && front && !SGRReduceMotion() && !NSProcessInfo.processInfo.lowPowerModeEnabled;
+    BOOL moving = self.window && front && !SGRReduceMotion() && !SGRLowPowerHoldsMotion();
     if (moving && _player.rate == 0) [_player play];
     else if (!moving && _player.rate != 0) [_player pause];
 }

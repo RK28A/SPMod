@@ -31,6 +31,10 @@ UIFont *SGRFont(UIFontTextStyle style, UIFontWeight weight, UIContentSizeCategor
 UIFont *SGRMonospacedDigitsFont(UIFont *font);
 
 BOOL SGRReduceMotion(void);
+// Off until switched on: the redesign's moving artwork and backgrounds go on in Low Power Mode.
+#define SGRKeyMotionLowPower @"spotifyglass.redesign.motion.lowPower"
+// Low Power Mode is on and holds the redesign's motion off (unless that switch says to go on).
+BOOL SGRLowPowerHoldsMotion(void);
 BOOL SGRReduceTransparency(void);
 BOOL SGRIncreaseContrast(void);
 

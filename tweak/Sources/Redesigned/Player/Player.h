@@ -114,6 +114,8 @@ void SGRPlayerShowLandscape(BOOL show);
 #define SGRKeyPlayerLandscape @"spotifyglass.redesign.player.landscape"
 // Whether the full player is on screen (PlayerFooter.x).
 BOOL SGRPlayerIsVisible(void);
+// The clip the player shows behind its cover now, nil when none (PlayerMotion.x).
+NSURL *SGRPlayerMotionFile(void);
 // The landscape screen gains or loses its lyrics column as the lines come and go.
 void SGRPlayerLandscapeLyricsChanged(void);
 

@@ -87,6 +87,10 @@ BOOL SGRReduceMotion(void) {
     return UIAccessibilityIsReduceMotionEnabled();
 }
 
+BOOL SGRLowPowerHoldsMotion(void) {
+    return NSProcessInfo.processInfo.lowPowerModeEnabled && !SGFlag(SGRKeyMotionLowPower, NO);
+}
+
 BOOL SGRReduceTransparency(void) {
     return UIAccessibilityIsReduceTransparencyEnabled();
 }
