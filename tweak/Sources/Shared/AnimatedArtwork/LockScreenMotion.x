@@ -107,8 +107,9 @@ static void show(NSURL *file) {
         NSURL *shaped = fits ? file : SGMotionMadeFile([NSString stringWithFormat:@"cut\n%@\n%g", file.lastPathComponent, ratio]);
         // The clip the system is handed, cut on the first ask: the lock screen's, or a pause's (LockScreenFreeze.h).
         void (^clip)(void (^)(NSURL *)) = ^(void (^done)(NSURL *)) {
-            if (fits) {
-                done(file);
+            // A pause asks again: a clip already cut goes at once instead of queueing behind another track's cut.
+            if (fits || [NSFileManager.defaultManager fileExistsAtPath:shaped.path]) {
+                done(fits ? file : shaped);
                 return;
             }
             dispatch_async(sg_queue, ^{
@@ -229,6 +230,10 @@ static void showCover(NSString *picture) {
     CGSize size = SGLyricsClipSize(SGMotionPixels());
     NSString *name = file.lastPathComponent;
     void (^clip)(void (^)(NSURL *)) = ^(void (^done)(NSURL *)) {
+        if ([NSFileManager.defaultManager fileExistsAtPath:file.path]) {
+            done(file);
+            return;
+        }
         withCover(title, picture, ^(CGImageRef cover) {
             CFAbsoluteTime start = CFAbsoluteTimeGetCurrent();
             BOOL ok = [NSFileManager.defaultManager fileExistsAtPath:file.path]
@@ -267,6 +272,10 @@ static void showFill(NSString *picture) {
     __block UIImage *renderedFrame;
     NSString *name = file.lastPathComponent;
     void (^clip)(void (^)(NSURL *)) = ^(void (^done)(NSURL *)) {
+        if ([NSFileManager.defaultManager fileExistsAtPath:file.path]) {
+            done(file);
+            return;
+        }
         withCover(title, picture, ^(CGImageRef cover) {
             if (!renderedFrame) {
                 CGImageRef frame = SGFillClipFrame(cover, size);

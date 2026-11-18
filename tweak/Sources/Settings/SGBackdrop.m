@@ -1112,6 +1112,7 @@ void SGBackdropSetPlaying(BOOL playing) {
     if (sg_stepper) return;
     sg_stepper = [NSTimer scheduledTimerWithTimeInterval:0.52 repeats:YES block:^(NSTimer *timer) {
         if (!sg_playing || !sg_hosts.count || CACurrentMediaTime() - sg_lastBeat < 1.5) return;
+        if (UIApplication.sharedApplication.applicationState == UIApplicationStateBackground) return;
         static int step;
         // Every other step a stronger one, and now and then none: a pulse, not a metronome.
         if (arc4random_uniform(6) == 0) return;

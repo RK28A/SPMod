@@ -41,6 +41,7 @@
 #import "Redesigned/Kit/SGRGlassSettings.h"
 
 static const CGFloat kRowHeight = 56;
+static CFTimeInterval sg_askedAt;   // when the SPMod row was tapped, for the open's timing in the log
 static char kRowKey, kInsetKey;
 
 // The Misc page's switch that hides the Discord banner row in modSettingsPage below.
@@ -183,6 +184,12 @@ static void collectSectionsFromPage(NSString *prefix, SGModPage *page, NSMutable
     _mastheadByline.text = @"by RK28A";
 }
 
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    if (sg_askedAt > 0) SGLog(@"mod settings: on screen %.0f ms after the tap", (CACurrentMediaTime() - sg_askedAt) * 1000);
+    sg_askedAt = 0;
+}
+
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     CGFloat width = self.tableView.bounds.size.width;
@@ -287,7 +294,6 @@ static UIViewController *modSettingsPage(void) {
         pageRow(@"AutoMix", @"waveform.path", ^UIViewController *{ return SGAutoMixSettingsPage(); }),
         webJam,
         pageRow(@"Vibrations", @"iphone.radiowaves.left.and.right", ^UIViewController *{ return SGVibrationsSettingsPage(); }),
-        pageRow(@"Location", @"location", ^UIViewController *{ return SGLocationPage(); }),
     ]];
     if (@available(iOS 17.0, *)) {
         SGModRow *liveActivity = pageRow(@"Live Activity", @"platter.filled.top.iphone", ^UIViewController *{ return SGLiveActivitySettingsPage(); });
@@ -316,7 +322,10 @@ static UIViewController *modSettingsPage(void) {
         karaoke.refreshOn = SGSingModelDidChangeNotification;
         [sections addObject:SGSection(nil, @[karaoke])];
     }
+    SGModRow *location = pageRow(@"Location", @"location", ^UIViewController *{ return SGLocationPage(); });
+    location.value = ^NSString *{ return SGLocationName(SGLocationDeviceCountry()); };
     [sections addObjectsFromArray:@[
+        SGSection(@"Account", @[location]),
         SGSection(nil, parts),
         SGSection(nil, @[
             pageRow(@"Premium, ads & privacy", @"crown", ^UIViewController *{ return SGAdsSettingsPage(); }),
@@ -406,6 +415,7 @@ static void openFromMenu(UIView *from, UIViewController *presenting, UIViewContr
     SGPageVeilUp([from convertPoint:CGPointMake(CGRectGetMidX(from.bounds), CGRectGetMidY(from.bounds)) toView:nil]);
     BOOL veiled = SGPageVeilIsUp();
     CFTimeInterval start = CACurrentMediaTime();
+    sg_askedAt = start;
     UIViewController *page = build();
     SGDebug(@"mod settings: %@ built in %.0f ms", page.title ?: NSStringFromClass(page.class), (CACurrentMediaTime() - start) * 1000);
     void (^go)(void) = ^{

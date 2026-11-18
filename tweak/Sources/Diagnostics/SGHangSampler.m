@@ -159,7 +159,8 @@ static void *guard(void *unused) {
     int samples = 0;
     uint64_t last = mach_absolute_time();
     for (;;) {
-        usleep(500000);
+        // In the background there is nothing to watch: a slow beat, not two a second.
+        usleep(atomic_load(&sg_awake) ? 500000 : 3000000);
         uint64_t now = mach_absolute_time();
         // This thread stopped too (the app was suspended): what it measured is no stall.
         BOOL slept = seconds(now - last) > 1.5;

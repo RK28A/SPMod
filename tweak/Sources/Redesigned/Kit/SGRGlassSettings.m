@@ -194,8 +194,12 @@ static void glassSettingsCell(UITableViewCell *cell, BOOL first, BOOL last) {
     card.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 }
 
+// After launch: at the dylib's load the look is not read yet, and SGRedesignedUI() answered NO there.
 __attribute__((constructor)) static void installSettingsGlass(void) {
-    if (SGRedesignedUI()) SGModCellDecorator = glassSettingsCell;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (SGRedesignedUI()) SGModCellDecorator = glassSettingsCell;
+        SGDebug(@"redesign glass: settings decorator %@", SGModCellDecorator ? @"installed" : @"not installed (native look)");
+    });
 }
 
 UIViewController *SGRGlassSettingsPage(void) {

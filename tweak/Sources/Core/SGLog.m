@@ -36,6 +36,51 @@ static void turnLogOver(void) {
     [files moveItemAtURL:logFile() toURL:previousLogFile() error:nil];
 }
 
+// The file stays open and its size is kept here: a line is one write, nothing more. Past the limit the file is
+// cut once to its newer half (not on every line, which rewrote two megabytes each time).
+static NSFileHandle *sg_handle;
+static unsigned long long sg_size;
+
+static BOOL openLog(void) {
+    if (sg_handle) return YES;
+    NSURL *url = logFile();
+    NSError *error = nil;
+    if (![NSFileManager.defaultManager createDirectoryAtURL:url.URLByDeletingLastPathComponent
+                               withIntermediateDirectories:YES attributes:nil error:&error]) {
+        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot create diagnostics directory: %{public}s",
+                         error.localizedDescription.UTF8String ?: "unknown error");
+        return NO;
+    }
+    if (![NSFileManager.defaultManager fileExistsAtPath:url.path] &&
+        ![NSFileManager.defaultManager createFileAtPath:url.path contents:nil attributes:nil]) {
+        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot create diagnostics log");
+        return NO;
+    }
+    sg_handle = [NSFileHandle fileHandleForWritingAtPath:url.path];
+    if (!sg_handle) {
+        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot open diagnostics log");
+        return NO;
+    }
+    sg_size = [sg_handle seekToEndOfFile];
+    return YES;
+}
+
+static void cutLog(void) {
+    [sg_handle closeFile];
+    sg_handle = nil;
+    NSURL *url = logFile();
+    NSMutableData *data = [[NSData dataWithContentsOfURL:url options:0 error:nil] mutableCopy];
+    if (data.length > kLogLimit / 2) {
+        NSUInteger discard = data.length - kLogLimit / 2;
+        const uint8_t *bytes = data.bytes;
+        while (discard < data.length && bytes[discard] != '\n') discard++;
+        if (discard < data.length) discard++;
+        [data replaceBytesInRange:NSMakeRange(0, discard) withBytes:NULL length:0];
+        [data writeToURL:url options:NSDataWritingAtomic error:nil];
+    }
+    openLog();
+}
+
 static void appendLog(NSString *message) {
     turnLogOver();
     static NSDateFormatter *formatter;
@@ -46,64 +91,18 @@ static void appendLog(NSString *message) {
     }
     NSString *line = [NSString stringWithFormat:@"%@ [spotifyglass] %@\n", [formatter stringFromDate:NSDate.date], message];
     NSData *addition = [line dataUsingEncoding:NSUTF8StringEncoding];
-    NSURL *url = logFile();
+    if (!openLog()) return;
+    if (sg_size + addition.length > kLogLimit) cutLog();
+    if (!sg_handle) return;
     NSError *error = nil;
-    if (![NSFileManager.defaultManager createDirectoryAtURL:url.URLByDeletingLastPathComponent
-                               withIntermediateDirectories:YES attributes:nil error:&error]) {
-        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot create diagnostics directory: %{public}s",
-                         error.localizedDescription.UTF8String ?: "unknown error");
-        return;
-    }
-    if (![NSFileManager.defaultManager fileExistsAtPath:url.path] &&
-        ![NSFileManager.defaultManager createFileAtPath:url.path contents:nil attributes:nil]) {
-        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot create diagnostics log");
-        return;
-    }
-    NSNumber *size = nil;
-    if (![url getResourceValue:&size forKey:NSURLFileSizeKey error:&error]) {
-        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot inspect diagnostics log: %{public}s",
-                         error.localizedDescription.UTF8String ?: "unknown error");
-        return;
-    }
-    if (size.unsignedIntegerValue + addition.length > kLogLimit) {
-        NSMutableData *data = [[NSData dataWithContentsOfURL:url options:0 error:&error] mutableCopy];
-        if (!data) {
-            os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot rotate diagnostics log: %{public}s",
-                             error.localizedDescription.UTF8String ?: "unknown error");
-            return;
-        }
-        [data appendData:addition];
-        NSUInteger discard = data.length - kLogLimit;
-        const uint8_t *bytes = data.bytes;
-        while (discard < data.length && bytes[discard] != '\n') discard++;
-        if (discard < data.length) {
-            discard++;
-        } else {
-            discard = data.length - kLogLimit;
-            while (discard < data.length && (bytes[discard] & 0xC0) == 0x80) discard++;
-        }
-        [data replaceBytesInRange:NSMakeRange(0, discard) withBytes:NULL length:0];
-        if (![data writeToURL:url options:NSDataWritingAtomic error:&error]) {
-            os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot save diagnostics log: %{public}s",
-                             error.localizedDescription.UTF8String ?: "unknown error");
-        }
-        return;
-    }
-    NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:url.path];
-    if (!handle) {
-        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot open diagnostics log");
-        return;
-    }
-    [handle seekToEndOfFile];
-    if (![handle writeData:addition error:&error]) {
+    if (![sg_handle writeData:addition error:&error]) {
         os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot append diagnostics log: %{public}s",
                          error.localizedDescription.UTF8String ?: "unknown error");
+        [sg_handle closeFile];
+        sg_handle = nil;
+        return;
     }
-    error = nil;
-    if (![handle closeAndReturnError:&error]) {
-        os_log_with_type(OS_LOG_DEFAULT, OS_LOG_TYPE_ERROR, "[spotifyglass] cannot close diagnostics log: %{public}s",
-                         error.localizedDescription.UTF8String ?: "unknown error");
-    }
+    sg_size += addition.length;
 }
 
 BOOL SGDebugOn(void) {

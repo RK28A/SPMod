@@ -469,8 +469,11 @@ static NSTimer *sg_redress;
                 [timer invalidate];
                 sg_redress = nil;
             }
+            // Nothing is drawn in the background: no work there.
+            if (UIApplication.sharedApplication.applicationState == UIApplicationStateBackground) return;
             for (UIView *button in sg_attached.allObjects) if (button.window) dress(button);
         }];
+        sg_redress.tolerance = 0.1;
         SGDebug(@"fusion shuffle: its glyph kept on the shuffle buttons (%lu)", (unsigned long)sg_attached.count);
     }
 }

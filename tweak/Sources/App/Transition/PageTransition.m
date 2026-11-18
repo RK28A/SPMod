@@ -178,8 +178,8 @@ void SGPageVeilUp(CGPoint point) {
     veil.userInteractionEnabled = YES;
     veil.alpha = 0;
     [window addSubview:veil];
-    // The page's own background, so the veil is the page before the page is there.
-    SGBackdropPlace(veil);
+    // The page's plain colour: a second animated background built for half a second made the open slower.
+    veil.backgroundColor = SGPageBackground();
     sg_veil = veil;
     sg_ready = NO;
     SGDebug(@"page transition: veil up from %@", NSStringFromCGPoint(point));

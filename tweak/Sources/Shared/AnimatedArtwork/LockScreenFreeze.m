@@ -33,6 +33,7 @@ static double sg_origin;        // where in the clip the file the system holds s
 static double sg_played;        // seconds it has played since the system took it, up to sg_since
 static CFTimeInterval sg_since; // when it last began to play, 0 while the song is paused
 static BOOL sg_paused, sg_held;
+static BOOL sg_still;   // the held frame is what the system was last handed, whatever happened since
 static double sg_heldAt;
 static NSURL *sg_heldClip;
 
@@ -95,6 +96,7 @@ static void offer(NSString *key, NSString *title, NSURL *file, UIImage *preview,
 }
 
 static void startOver(void) {
+    sg_still = NO;
     sg_origin = 0;
     sg_played = 0;
     sg_since = sg_paused ? 0 : CACurrentMediaTime();
@@ -130,6 +132,7 @@ static void hold(void) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (!ok || offered != sg_offer || turn != sg_turn) return;
                 sg_held = YES;
+                sg_still = YES;
                 sg_heldAt = where;
                 sg_heldClip = file;
                 offer(key, title, still, preview, NO);
@@ -149,7 +152,8 @@ static void hold(void) {
 API_AVAILABLE(ios(26.0))
 static void goOn(void) {
     NSUInteger offered = sg_offer, turn = ++sg_turn;
-    if (!sg_held) return;
+    // A play whose clip was dropped for a quicker pause and play left the frame up: this play takes it down.
+    if (!sg_held && !sg_still) return;
     sg_held = NO;
     NSURL *file = sg_heldClip;
     double where = sg_heldAt;
@@ -181,6 +185,7 @@ static void goOn(void) {
             sg_played = 0;
             sg_since = sg_paused ? 0 : CACurrentMediaTime();
             sg_turned = turned.lastPathComponent;
+            sg_still = NO;
             offer(key, title, turned, preview, YES);
         });
     });
@@ -229,6 +234,7 @@ void SGLockFreezeOffered(NSString *key, NSString *title, NSString *name,
     sg_origin = 0;
     sg_played = 0;
     sg_since = sg_paused ? 0 : CACurrentMediaTime();
+    sg_still = NO;
     sg_held = NO;
     sg_heldClip = nil;
     // A track that comes in paused is held on its first frame, as it would be had it been paused there.
@@ -256,6 +262,7 @@ void SGLockFreezeCleared(void) {
     sg_turned = nil;
     sg_clip = nil;
     sg_again = nil;
+    sg_still = NO;
     sg_held = NO;
     sg_heldClip = nil;
     sg_since = 0;
