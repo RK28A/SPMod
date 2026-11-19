@@ -95,7 +95,7 @@ static UIBlurEffect *blurEffect(void) {
 
 static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIViewPropertyAnimator *animator, CGFloat intensity) {
     intensity = MIN(1, MAX(0, intensity));
-    if (animator && animator.state != UIViewAnimatingStateInactive) [animator stopAnimation:YES];
+    SGRAnimatorEnd(animator);
     view.effect = nil;
     if (intensity <= 0) return nil;
 
@@ -142,7 +142,7 @@ static CAGradientLayer *fill(CAShapeLayer *shape) {
 
     NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
     for (NSNotificationName name in @[UIApplicationDidBecomeActiveNotification, UIApplicationWillResignActiveNotification,
-                                      NSProcessInfoPowerStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
+                                      NSProcessInfoPowerStateDidChangeNotification, NSProcessInfoThermalStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
         [center addObserver:self selector:@selector(updateMotionSoon) name:name object:nil];
     }
     [center addObserver:self selector:@selector(artworkChanged) name:SGRNowPlayingArtworkDidChangeNotification object:nil];
@@ -158,6 +158,7 @@ static CAGradientLayer *fill(CAShapeLayer *shape) {
 - (void)dealloc {
     [NSNotificationCenter.defaultCenter removeObserver:self];
     [_link invalidate];
+    SGRAnimatorEnd(_lyricsBlurAnimator);
     if (NSThread.isMainThread) SGRSpectrumSetReading(self, NO);
     else dispatch_async(dispatch_get_main_queue(), ^{ SGRSpectrumSetReading(nil, NO); });
 }

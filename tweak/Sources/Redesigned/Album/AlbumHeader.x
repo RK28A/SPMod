@@ -203,7 +203,7 @@ static char kReadyContext;
     [_motion addObserver:self forKeyPath:@"readyForDisplay" options:0 context:&kReadyContext];
     NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
     for (NSNotificationName name in @[UIApplicationDidBecomeActiveNotification, UIApplicationWillResignActiveNotification,
-                                      NSProcessInfoPowerStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
+                                      NSProcessInfoPowerStateDidChangeNotification, NSProcessInfoThermalStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
         [center addObserver:self selector:@selector(updateMotionSoon) name:name object:nil];
     }
     [self updateMotion];

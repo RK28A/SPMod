@@ -35,6 +35,8 @@ BOOL SGRReduceMotion(void);
 #define SGRKeyMotionLowPower @"spotifyglass.redesign.motion.lowPower"
 // Low Power Mode is on and holds the redesign's motion off (unless that switch says to go on).
 BOOL SGRLowPowerHoldsMotion(void);
+// A paused or stopped property animator throws when it is released: this ends it so it may go.
+void SGRAnimatorEnd(UIViewPropertyAnimator *animator);
 BOOL SGRReduceTransparency(void);
 BOOL SGRIncreaseContrast(void);
 

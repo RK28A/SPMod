@@ -260,13 +260,16 @@ static CGPathRef ribbon(CGSize size, CGFloat top, CGFloat height, CGFloat phase)
     sg_spread = SGBackdropTuneValue(SGBackdropTuneSpread, _style);
     double glow = SGBackdropTuneValue(SGBackdropTuneGlow, _style);
     NSInteger rate = SGInt(SGKeyBackdropRate, 0);
+    // A hot phone or Low Power Mode: the scene moves at 15 frames a second whatever is chosen.
+    BOOL spare = NSProcessInfo.processInfo.thermalState >= NSProcessInfoThermalStateSerious || NSProcessInfo.processInfo.lowPowerModeEnabled;
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
     [self build:size still:still];
     // The style's own speed and the frame rate, on what was just built; what a beat adds later runs as it is.
     for (CALayer *layer in self.layer.sublayers) {
         layer.speed = _speed;
-        if (rate < 2) pace(layer, rate == 1 ? CAFrameRateRangeMake(40, 60, 60) : CAFrameRateRangeMake(20, 30, 30));
+        if (spare) pace(layer, CAFrameRateRangeMake(10, 15, 15));
+        else if (rate < 2) pace(layer, rate == 1 ? CAFrameRateRangeMake(40, 60, 60) : CAFrameRateRangeMake(20, 30, 30));
     }
     if (glow < 0.99) {
         CALayer *dim = [CALayer layer];

@@ -389,7 +389,7 @@ static const CGFloat kLyricsBlur = 0.3;
     _watching = YES;
     NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
     for (NSNotificationName name in @[UIApplicationDidBecomeActiveNotification, UIApplicationWillResignActiveNotification,
-                                      NSProcessInfoPowerStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
+                                      NSProcessInfoPowerStateDidChangeNotification, NSProcessInfoThermalStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
         [center addObserver:self selector:@selector(updateMotionSoon) name:name object:nil];
     }
     SGRObservePlayerTransition(self, ^(id owner) { [owner updateMotion]; }, ^(id owner) { [owner updateMotion]; });
@@ -397,6 +397,7 @@ static const CGFloat kLyricsBlur = 0.3;
 
 - (void)dealloc {
     [NSNotificationCenter.defaultCenter removeObserver:self];
+    SGRAnimatorEnd(_lyricsBlurAnimator);
 }
 
 // The power state is reported off the main thread.

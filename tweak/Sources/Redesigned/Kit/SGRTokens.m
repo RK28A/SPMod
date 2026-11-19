@@ -88,7 +88,15 @@ BOOL SGRReduceMotion(void) {
 }
 
 BOOL SGRLowPowerHoldsMotion(void) {
+    // A phone running hot rests its motion whatever the switch says: that is what heats it most.
+    if (NSProcessInfo.processInfo.thermalState >= NSProcessInfoThermalStateSerious) return YES;
     return NSProcessInfo.processInfo.lowPowerModeEnabled && !SGFlag(SGRKeyMotionLowPower, NO);
+}
+
+void SGRAnimatorEnd(UIViewPropertyAnimator *animator) {
+    if (!animator) return;
+    if (animator.state == UIViewAnimatingStateActive) [animator stopAnimation:NO];
+    if (animator.state == UIViewAnimatingStateStopped) [animator finishAnimationAtPosition:UIViewAnimatingPositionCurrent];
 }
 
 BOOL SGRReduceTransparency(void) {

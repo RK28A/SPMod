@@ -323,7 +323,10 @@ static UIViewController *modSettingsPage(void) {
         [sections addObject:SGSection(nil, @[karaoke])];
     }
     SGModRow *location = pageRow(@"Location", @"location", ^UIViewController *{ return SGLocationPage(); });
-    location.value = ^NSString *{ return SGLocationName(SGLocationDeviceCountry()); };
+    location.value = ^NSString *{
+        NSString *set = [NSUserDefaults.standardUserDefaults stringForKey:SGKeyLocationSet];
+        return set.length ? SGLocationName(set) : @"";
+    };
     [sections addObjectsFromArray:@[
         SGSection(@"Account", @[location]),
         SGSection(nil, parts),

@@ -175,7 +175,7 @@ static CGFloat blurOpacity(NSString *key) {
 
 static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIViewPropertyAnimator *animator, CGFloat intensity) {
     intensity = MIN(1, MAX(0, intensity));
-    if (animator && animator.state != UIViewAnimatingStateInactive) [animator stopAnimation:YES];
+    SGRAnimatorEnd(animator);
     view.effect = nil;
     if (intensity <= 0) return nil;
 
@@ -236,7 +236,7 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
     [center addObserver:self selector:@selector(suspendMotion) name:UIApplicationWillResignActiveNotification object:nil];
     [center addObserver:self selector:@selector(resumeMotion) name:UIApplicationDidBecomeActiveNotification object:nil];
     for (NSNotificationName name in @[UIApplicationDidEnterBackgroundNotification,
-                                      NSProcessInfoPowerStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
+                                      NSProcessInfoPowerStateDidChangeNotification, NSProcessInfoThermalStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
         [center addObserver:self selector:@selector(updateMotionSoon) name:name object:nil];
     }
     [center addObserver:self selector:@selector(updateDim) name:UIAccessibilityDarkerSystemColorsStatusDidChangeNotification object:nil];
@@ -267,6 +267,9 @@ static UIViewPropertyAnimator *setBlurIntensity(UIVisualEffectView *view, UIView
     // AVFoundation tears a looping player down while it plays: pause, then stop the looper, before both go.
     [_player pause];
     [_looper disableLooping];
+    // Paused animators throw as they go (Low Power Mode took the clip down with its blurs paused at a level).
+    SGRAnimatorEnd(_seamBlurAnimator);
+    SGRAnimatorEnd(_lyricsBlurAnimator);
 }
 
 - (void)setScreenHeight:(CGFloat)height {
@@ -907,7 +910,7 @@ void SGRPlayerMenuSetBackground(SGRPlayerBackgroundKind kind) {
     // as either changes. The power state is reported off the main thread, which must not wait for main
     // (AGENTS.md), so the observer takes it where it is posted and hops.
     __block BOOL allowed = motionAllowed();
-    for (NSNotificationName name in @[NSProcessInfoPowerStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
+    for (NSNotificationName name in @[NSProcessInfoPowerStateDidChangeNotification, NSProcessInfoThermalStateDidChangeNotification, UIAccessibilityReduceMotionStatusDidChangeNotification]) {
         [NSNotificationCenter.defaultCenter addObserverForName:name object:nil queue:nil usingBlock:^(NSNotification *note) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (motionAllowed() == allowed) return;

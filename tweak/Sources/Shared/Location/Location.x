@@ -1,9 +1,12 @@
-// Changing the account's country from the app. The account page (spotify.com/account/profile) opens in a web
-// view of the mod's; once it has loaded (after signing in, the first time), a script finds the country list
-// (the <select> whose options are country codes), picks the country and presses the page's save button. The
-// page stays on screen, so a change it could not make is finished by hand. Every step goes to the log.
+// Changing the account's country from the app, without a page on screen. The account page (spotify.com/account/
+// profile) loads in a web view of the mod's that nobody sees; a script picks the country in its country list
+// and presses its save button, and a banner says how it went. Only when the page asks to sign in does it come
+// up, once: its session is kept in the keychain (pw.spoti.spmod.settings / web-session), so a reinstall finds
+// it again. Spotify only offers the country it places the phone in (by its network), so that is what
+// "where I am" means: the market in the page's own address (/ch-fr/ → CH). Every step goes to the log.
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
+#import <Security/Security.h>
 #import "Core/SGCore.h"
 #import "Settings/SGPage.h"
 #import "Settings/SGPageStyle.h"
@@ -22,16 +25,115 @@ NSString *SGLocationName(NSString *code) {
     return [NSLocale.currentLocale localizedStringForCountryCode:code] ?: code;
 }
 
+#pragma mark - the session, kept in the keychain
+
+static NSDictionary *vaultQuery(void) {
+    return @{(id)kSecClass: (id)kSecClassGenericPassword, (id)kSecAttrService: @"pw.spoti.spmod.settings", (id)kSecAttrAccount: @"web-session"};
+}
+
+static void keepSession(WKWebView *web) {
+    [web.configuration.websiteDataStore.httpCookieStore getAllCookies:^(NSArray<NSHTTPCookie *> *cookies) {
+        NSMutableArray *kept = [NSMutableArray array];
+        for (NSHTTPCookie *cookie in cookies) {
+            if (![cookie.domain hasSuffix:@"spotify.com"]) continue;
+            NSMutableDictionary *properties = [NSMutableDictionary dictionary];
+            [cookie.properties enumerateKeysAndObjectsUsingBlock:^(NSHTTPCookiePropertyKey key, id value, BOOL *stop) {
+                if ([value isKindOfClass:NSString.class] || [value isKindOfClass:NSNumber.class]) properties[key] = value;
+                else if ([value isKindOfClass:NSDate.class]) properties[key] = @([(NSDate *)value timeIntervalSince1970]);
+            }];
+            [kept addObject:properties];
+        }
+        NSData *data = [NSPropertyListSerialization dataWithPropertyList:kept format:NSPropertyListBinaryFormat_v1_0 options:0 error:nil];
+        if (!data) return;
+        NSDictionary *fresh = @{(id)kSecValueData: data, (id)kSecAttrAccessible: (id)kSecAttrAccessibleAfterFirstUnlock};
+        OSStatus status = SecItemUpdate((__bridge CFDictionaryRef)vaultQuery(), (__bridge CFDictionaryRef)fresh);
+        if (status == errSecItemNotFound) {
+            NSMutableDictionary *item = [vaultQuery() mutableCopy];
+            [item addEntriesFromDictionary:fresh];
+            status = SecItemAdd((__bridge CFDictionaryRef)item, NULL);
+        }
+        SGDebug(@"location: %lu spotify.com cookies kept in the keychain (%d)", (unsigned long)kept.count, (int)status);
+    }];
+}
+
+static void bringSession(WKWebView *web, void (^then)(void)) {
+    NSMutableDictionary *ask = [vaultQuery() mutableCopy];
+    ask[(id)kSecReturnData] = @YES;
+    CFTypeRef found = NULL;
+    NSArray *kept = nil;
+    if (SecItemCopyMatching((__bridge CFDictionaryRef)ask, &found) == errSecSuccess && found) {
+        kept = [NSPropertyListSerialization propertyListWithData:(__bridge_transfer NSData *)found options:0 format:NULL error:nil];
+    }
+    if (![kept isKindOfClass:NSArray.class] || !kept.count) {
+        then();
+        return;
+    }
+    WKHTTPCookieStore *store = web.configuration.websiteDataStore.httpCookieStore;
+    dispatch_group_t group = dispatch_group_create();
+    NSUInteger brought = 0;
+    for (NSDictionary *saved in kept) {
+        NSMutableDictionary *properties = [saved mutableCopy];
+        if ([properties[NSHTTPCookieExpires] isKindOfClass:NSNumber.class])
+            properties[NSHTTPCookieExpires] = [NSDate dateWithTimeIntervalSince1970:[properties[NSHTTPCookieExpires] doubleValue]];
+        NSHTTPCookie *cookie = [NSHTTPCookie cookieWithProperties:properties];
+        if (!cookie) continue;
+        brought++;
+        dispatch_group_enter(group);
+        [store setCookie:cookie completionHandler:^{ dispatch_group_leave(group); }];
+    }
+    SGDebug(@"location: %lu kept cookies put back", (unsigned long)brought);
+    dispatch_group_notify(group, dispatch_get_main_queue(), then);
+}
+
+#pragma mark - the banner
+
+static void banner(NSString *text) {
+    UIWindow *window = nil;
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes)
+        if ([scene isKindOfClass:UIWindowScene.class]) for (UIWindow *w in ((UIWindowScene *)scene).windows) if (w.isKeyWindow) window = w;
+    if (!window) return;
+    UIVisualEffectView *card = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark]];
+    card.layer.cornerRadius = 22;
+    card.layer.cornerCurve = kCACornerCurveContinuous;
+    card.clipsToBounds = YES;
+    card.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+    UILabel *label = [UILabel new];
+    label.text = text;
+    label.numberOfLines = 0;
+    label.textAlignment = NSTextAlignmentCenter;
+    label.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+    label.textColor = UIColor.whiteColor;
+    CGFloat width = MIN(window.bounds.size.width - 32, 420);
+    CGSize size = [label sizeThatFits:CGSizeMake(width - 32, CGFLOAT_MAX)];
+    card.frame = CGRectMake((window.bounds.size.width - width) / 2, window.safeAreaInsets.top + 8, width, size.height + 28);
+    label.frame = CGRectInset(card.bounds, 16, 14);
+    [card.contentView addSubview:label];
+    card.alpha = 0;
+    card.transform = CGAffineTransformMakeTranslation(0, -20);
+    [window addSubview:card];
+    [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0 options:0 animations:^{
+        card.alpha = 1;
+        card.transform = CGAffineTransformIdentity;
+    } completion:nil];
+    [UIView animateWithDuration:0.3 delay:3.5 options:0 animations:^{ card.alpha = 0; } completion:^(BOOL done) { [card removeFromSuperview]; }];
+}
+
+#pragma mark - the page
+
 static NSString *script(NSString *code, BOOL save) {
     return [NSString stringWithFormat:@
         "(function(code, save){"
         "var res = {url: location.href};"
         "var selects = Array.prototype.slice.call(document.querySelectorAll('select'));"
-        "res.selects = selects.length;"
-        "var sel = selects.filter(function(s){ return s.options.length > 50 && Array.prototype.some.call(s.options, function(o){ return (o.value||'').toUpperCase() === code; }); })[0];"
+        "res.selects = selects.map(function(s){ return (s.id || s.name || '?') + ':' + s.options.length; }).join(',');"
+        "function has(s){ return Array.prototype.some.call(s.options, function(o){ return (o.value||'').toUpperCase() === code; }); }"
+        "var sel = selects.filter(function(s){ return /country|land|pays|region/i.test((s.id||'') + ' ' + (s.name||'')); })[0]"
+        "  || selects.filter(has)[0];"
         "if (!sel) { res.found = false; return JSON.stringify(res); }"
         "res.found = true; res.before = sel.value;"
+        "res.offered = Array.prototype.map.call(sel.options, function(o){ return o.value; }).slice(0, 12).join(',');"
         "var opt = Array.prototype.filter.call(sel.options, function(o){ return (o.value||'').toUpperCase() === code; })[0];"
+        "if (!opt) { res.missing = true; return JSON.stringify(res); }"
         "var setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;"
         "setter.call(sel, opt.value);"
         "sel.dispatchEvent(new Event('input', {bubbles: true}));"
@@ -49,64 +151,87 @@ static NSString *script(NSString *code, BOOL save) {
         "})('%@', %@)", code, save ? @"true" : @"false"];
 }
 
-@interface SGLocationWeb : UIViewController <WKNavigationDelegate>
-- (instancetype)initWithCountry:(NSString *)code save:(BOOL)save;
+// The market in the page's address: /ch-fr/account/... → CH.
+static NSString *marketOf(NSURL *url) {
+    NSString *first = url.pathComponents.count > 1 ? url.pathComponents[1] : @"";
+    NSRegularExpression *market = [NSRegularExpression regularExpressionWithPattern:@"^([a-z]{2})(-[a-z]{2,3})?$" options:0 error:nil];
+    NSTextCheckingResult *match = [market firstMatchInString:first options:0 range:NSMakeRange(0, first.length)];
+    return match ? [first substringWithRange:[match rangeAtIndex:1]].uppercaseString : nil;
+}
+
+// One change at a time. The web view sits unseen in a 1pt corner of the window; it comes up full only to sign in.
+@interface SGLocationRun : UIViewController <WKNavigationDelegate>
 @end
 
-@implementation SGLocationWeb {
-    NSString *_code;
-    BOOL _save, _done;
+static SGLocationRun *sg_run;
+
+@implementation SGLocationRun {
+    NSString *_code;   // empty: where Spotify places the phone
+    BOOL _done, _shown;
     WKWebView *_web;
-    UILabel *_status;
     int _tries;
 }
 
-- (instancetype)initWithCountry:(NSString *)code save:(BOOL)save {
+- (instancetype)initWithCountry:(NSString *)code {
     if ((self = [super init])) {
-        _code = code.uppercaseString;
-        _save = save;
-        self.title = @"Location";
+        _code = code.uppercaseString ?: @"";
+        self.title = @"Sign in to Spotify";
     }
     return self;
 }
 
-- (void)viewDidLoad {
-    [super viewDidLoad];
-    self.view.backgroundColor = SGPageBackground();
-    self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-    _web = [[WKWebView alloc] initWithFrame:CGRectZero configuration:[WKWebViewConfiguration new]];
+- (void)start {
+    WKWebViewConfiguration *configuration = [WKWebViewConfiguration new];
+    configuration.websiteDataStore = WKWebsiteDataStore.defaultDataStore;
+    _web = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 390, 800) configuration:configuration];
     _web.navigationDelegate = self;
-    _web.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:_web];
-    _status = [UILabel new];
-    _status.font = SGSubtitleFont();
-    _status.textColor = UIColor.whiteColor;
-    _status.numberOfLines = 0;
-    _status.textAlignment = NSTextAlignmentCenter;
-    _status.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.95];
-    _status.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:_status];
-    [NSLayoutConstraint activateConstraints:@[
-        [_web.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor],
-        [_web.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [_web.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [_web.bottomAnchor constraintEqualToAnchor:_status.topAnchor],
-        [_status.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [_status.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [_status.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
-        [_status.heightAnchor constraintGreaterThanOrEqualToConstant:84],
-    ]];
-    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemClose primaryAction:
-        [UIAction actionWithHandler:^(UIAction *action) { [self dismissViewControllerAnimated:YES completion:nil]; }] menu:nil];
-    [self say:[NSString stringWithFormat:@"Opening your account to set %@…", SGLocationName(_code)]];
+    _web.alpha = 0.01;
+    _web.userInteractionEnabled = NO;
+    UIWindow *window = nil;
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes)
+        if ([scene isKindOfClass:UIWindowScene.class]) for (UIWindow *w in ((UIWindowScene *)scene).windows) if (w.isKeyWindow) window = w;
+    [window insertSubview:_web atIndex:0];
     NSString *page = [NSUserDefaults.standardUserDefaults stringForKey:SGKeyLocationURL];
     NSURL *url = [NSURL URLWithString:[page containsString:@"spotify.com"] ? page : kProfilePage];
-    SGLog(@"location: opening %@ to set %@", url.host, _code);
-    [_web loadRequest:[NSURLRequest requestWithURL:url]];
+    SGLog(@"location: loading %@%@ unseen to set %@", url.host, url.path, _code.length ? _code : @"where Spotify places the phone");
+    __weak WKWebView *web = _web;
+    bringSession(_web, ^{ [web loadRequest:[NSURLRequest requestWithURL:url]]; });
+    // Never more than 40 s.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(40 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (sg_run == self && !self->_done && !self->_shown) [self endSaying:@"Spotify's account page didn't answer. Try again later."];
+    });
 }
 
-- (void)say:(NSString *)text {
-    _status.text = [NSString stringWithFormat:@"%@\n", text];
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = UIColor.blackColor;
+    self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemClose primaryAction:
+        [UIAction actionWithHandler:^(UIAction *action) { [self endSaying:nil]; }] menu:nil];
+}
+
+// The page wants a sign-in: it comes up, once; the session it gets is kept.
+- (void)showToSignIn {
+    if (_shown) return;
+    _shown = YES;
+    SGLog(@"location: the account page asks to sign in, shown once");
+    [_web removeFromSuperview];
+    _web.alpha = 1;
+    _web.userInteractionEnabled = YES;
+    _web.frame = self.view.bounds;
+    _web.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:_web];
+    UINavigationController *navigation = [[UINavigationController alloc] initWithRootViewController:self];
+    navigation.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+    [SGTopController() presentViewController:navigation animated:YES completion:nil];
+}
+
+- (void)endSaying:(NSString *)text {
+    if (text) banner(text);
+    [_web stopLoading];
+    if (_shown) [self.navigationController dismissViewControllerAnimated:YES completion:nil];
+    [_web removeFromSuperview];
+    if (sg_run == self) sg_run = nil;
 }
 
 - (void)webView:(WKWebView *)web didFinishNavigation:(WKNavigation *)navigation {
@@ -114,18 +239,26 @@ static NSString *script(NSString *code, BOOL save) {
     [self tryNow];
 }
 
-// The page draws its form after it loads: a second at a time, ten times.
 - (void)tryNow {
     if (_done || !_web.URL) return;
     NSString *path = _web.URL.path.lowercaseString ?: @"";
-    if (![_web.URL.host containsString:@"spotify.com"] || ![path containsString:@"account"]) {
-        [self say:@"Sign in to your Spotify account; the country is set once your profile shows."];
+    if (![_web.URL.host containsString:@"spotify.com"] || [path containsString:@"login"] || ![path containsString:@"account"]) {
+        [self showToSignIn];
         return;
     }
-    __weak SGLocationWeb *weakSelf = self;
-    [_web evaluateJavaScript:script(_code, _save) completionHandler:^(id result, NSError *error) {
-        SGLocationWeb *me = weakSelf;
-        if (!me) return;
+    if ([path containsString:@"overview"] || ![path containsString:@"profile"]) {
+        // Signed in, but on another account page: straight to the profile, in the same market.
+        NSString *market = _web.URL.pathComponents.count > 1 && marketOf(_web.URL) ? _web.URL.pathComponents[1] : nil;
+        NSString *address = market ? [NSString stringWithFormat:@"https://www.spotify.com/%@/account/profile/", market] : kProfilePage;
+        [_web loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:address]]];
+        return;
+    }
+    keepSession(_web);
+    NSString *code = _code.length ? _code : (marketOf(_web.URL) ?: SGLocationDeviceCountry());
+    __weak SGLocationRun *weakSelf = self;
+    [_web evaluateJavaScript:script(code, YES) completionHandler:^(id result, NSError *error) {
+        SGLocationRun *me = weakSelf;
+        if (!me || me->_done) return;
         NSDictionary *res = [result isKindOfClass:NSString.class]
             ? [NSJSONSerialization JSONObjectWithData:[result dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil] : nil;
         if (![res[@"found"] boolValue]) {
@@ -133,30 +266,44 @@ static NSString *script(NSString *code, BOOL save) {
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [me tryNow]; });
                 return;
             }
-            SGLog(@"location: no country list on %@ (%@ select(s)%@)", me->_web.URL.path, res[@"selects"] ?: @"?",
+            SGLog(@"location: no country list on %@ (selects %@%@)", me->_web.URL.path, res[@"selects"] ?: @"?",
                   error ? [@", " stringByAppendingString:error.localizedDescription] : @"");
-            [me say:[NSString stringWithFormat:@"Couldn't find the country on this page. Pick %@ yourself and save.", SGLocationName(me->_code)]];
+            me->_done = YES;
+            [me endSaying:@"Couldn't find the country on Spotify's account page."];
             return;
         }
         me->_done = YES;
-        BOOL changed = ![res[@"before"] isEqual:res[@"after"]];
-        SGLog(@"location: country %@ -> %@, save %@", res[@"before"], res[@"after"], res[@"save"] ?: @"not needed");
-        [NSUserDefaults.standardUserDefaults setObject:me->_code forKey:SGKeyLocationSet];
-        if (!changed) [me say:[NSString stringWithFormat:@"Your profile is already set to %@.", SGLocationName(me->_code)]];
-        else if (!me->_save) [me say:[NSString stringWithFormat:@"%@ is picked: check the page and save.", SGLocationName(me->_code)]];
-        else if ([res[@"save"] boolValue]) [me say:[NSString stringWithFormat:@"Saved: your profile is now %@. Restart Spotify to play again.", SGLocationName(me->_code)]];
-        else [me say:[NSString stringWithFormat:@"%@ is picked, but no save button was found: save it on the page.", SGLocationName(me->_code)]];
+        SGLog(@"location: country %@ -> %@ (asked %@, offered %@), save %@", res[@"before"], res[@"after"] ?: @"-", code,
+              res[@"offered"], res[@"save"] ?: @"not needed");
+        if ([res[@"missing"] boolValue]) {
+            [me endSaying:[NSString stringWithFormat:@"Spotify doesn't offer %@ from where you are now.", SGLocationName(code)]];
+            return;
+        }
+        [NSUserDefaults.standardUserDefaults setObject:code forKey:SGKeyLocationSet];
+        if ([res[@"before"] isEqual:res[@"after"]]) {
+            [me endSaying:[NSString stringWithFormat:@"Your account is already set to %@.", SGLocationName(code)]];
+            return;
+        }
+        // The save button posts the form: a moment for it, then the session is kept again.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            keepSession(me->_web);
+            [me endSaying:[res[@"save"] boolValue]
+                ? [NSString stringWithFormat:@"Your account is now set to %@. Restart Spotify to play.", SGLocationName(code)]
+                : @"The country is picked, but Spotify's save button wasn't found."];
+        });
     }];
 }
 @end
 
 void SGLocationChange(NSString *code, BOOL save) {
-    if (!code.length) return;
-    UIViewController *top = SGTopController();
-    if (!top) return;
-    UINavigationController *navigation = [[UINavigationController alloc] initWithRootViewController:[[SGLocationWeb alloc] initWithCountry:code save:save]];
-    navigation.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-    [top presentViewController:navigation animated:YES completion:nil];
+    (void)save;
+    if (sg_run) {
+        SGLog(@"location: a change is already running");
+        return;
+    }
+    sg_run = [[SGLocationRun alloc] initWithCountry:code ?: @""];
+    [sg_run start];
+    banner(code.length ? [NSString stringWithFormat:@"Setting your account to %@…", SGLocationName(code)] : @"Setting your account to where you are…");
 }
 
 #pragma mark - the country list
@@ -215,11 +362,10 @@ void SGLocationChange(NSString *code, BOOL save) {
 @end
 
 UIViewController *SGLocationPage(void) {
-    NSString *here = SGLocationDeviceCountry();
     SGModRow *automatic = SGSwitchRow(@"Match my country automatically",
-        [NSString stringWithFormat:@"When Spotify says your location doesn't match your profile, the profile is set to this phone's country (%@)", SGLocationName(here)],
+        @"When Spotify says your location doesn't match your profile, the account is set to where you are, without leaving the app",
         SGKeyLocationAuto);
-    SGModRow *now = SGActionRow(@"Set to this phone's country", SGLocationName(here), ^{ SGLocationChange(SGLocationDeviceCountry(), YES); });
+    SGModRow *now = SGActionRow(@"Set to where I am", @"The country Spotify places you in by your network", ^{ SGLocationChange(@"", YES); });
     now.symbol = @"location.fill";
     SGModRow *other = SGPageRow(@"Choose a country", ^UIViewController *{ return [[SGCountryList alloc] initWithStyle:UITableViewStyleInsetGrouped]; });
     other.symbol = @"globe";
@@ -228,7 +374,7 @@ UIViewController *SGLocationPage(void) {
         return set.length ? SGLocationName(set) : @"";
     };
     SGModSection *section = SGNotedSection(nil, @[automatic, now, other],
-        @"The country is your account's own setting: it is changed on your Spotify account page, signed in the first time. Spotify may limit how often it can change.");
+        @"The country is your account's own setting, changed on Spotify's account page in the background. The first time, that page asks you to sign in; the session is kept in the keychain, so a reinstall doesn't ask again. Spotify only offers the country it places you in.");
     return [[SGModPage alloc] initWithTitle:@"Location" intro:nil sections:@[section] footer:nil];
 }
 
@@ -258,9 +404,8 @@ static void checkPresented(UIViewController *presented) {
     SGLog(@"location: Spotify says the location doesn't match the profile (%@)", NSStringFromClass(presented.class));
     if (!SGFlag(SGKeyLocationAuto, YES) || sg_handled) return;
     sg_handled = YES;
-    NSString *here = SGLocationDeviceCountry();
-    SGLog(@"location: setting the profile to this phone's country, %@", here);
-    [presented dismissViewControllerAnimated:YES completion:^{ SGLocationChange(here, YES); }];
+    SGLog(@"location: setting the account to where Spotify places the phone");
+    [presented dismissViewControllerAnimated:YES completion:^{ SGLocationChange(@"", YES); }];
 }
 
 %hook UIViewController

@@ -177,18 +177,25 @@ void SGRGlassZoomList(UIScrollView *list) {
 // SPMod's own pages on glass: each row's card colour cleared and a card of glass the shape of the section's
 // rounded block put behind it, top corners on the first row, bottom ones on the last.
 static void glassSettingsCell(UITableViewCell *cell, BOOL first, BOOL last) {
+    (void)first;
+    (void)last;
     static char kSettingsCardKey;
     BOOL on = SGFlag(SGRKeySettingsGlass, NO);
     BOOL clear = CGColorGetAlpha(cell.backgroundColor.CGColor) < 0.01;
     if (on && !clear) cell.backgroundColor = UIColor.clearColor;
     else if (!on && clear) cell.backgroundColor = SGCardBackground();
-    CGRect frame = cell.bounds;
-    SGRGlassCard(cell, &kSettingsCardKey, frame, 0, on);
+    // Each row its own rounded pane of glass, a little apart from the next: no lines between them.
+    UIView *table = cell.superview;
+    while (table && ![table isKindOfClass:UITableView.class]) table = table.superview;
+    UITableViewCellSeparatorStyle lines = on ? UITableViewCellSeparatorStyleNone : UITableViewCellSeparatorStyleSingleLine;
+    if (table && ((UITableView *)table).separatorStyle != lines) ((UITableView *)table).separatorStyle = lines;
+    CGRect frame = CGRectInset(cell.bounds, 0, 3);
+    SGRGlassCard(cell, &kSettingsCardKey, frame, 22, on);
     UIView *card = objc_getAssociatedObject(cell, &kSettingsCardKey);
     if (!on || !card) return;
-    CACornerMask corners = (first ? kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner : 0) | (last ? kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner : 0);
-    card.layer.cornerRadius = corners ? 26 : 0;
-    card.layer.maskedCorners = corners;
+    card.frame = frame;
+    card.layer.cornerRadius = 22;
+    card.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
     card.layer.cornerCurve = kCACornerCurveContinuous;
     card.clipsToBounds = YES;
     card.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
