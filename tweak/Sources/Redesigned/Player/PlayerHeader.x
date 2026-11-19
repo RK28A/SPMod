@@ -188,10 +188,25 @@ static void pillBehindContext(UIViewController *unit) {
     CGSize text = label.attributedText.length ? label.attributedText.size
                                               : [label.text sizeWithAttributes:@{NSFontAttributeName: label.font ?: [UIFont systemFontOfSize:14]}];
     text.width = MAX(text.width, [label sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)].width);
-    CGFloat width = MIN(ceil(text.width) + 2 * kPillPadX, MAX(parent.bounds.size.width - 8, 0));
+    // The room is between the two round buttons, not the label's own box (narrower than its words): the pill
+    // takes what the words need up to that room, and words longer than the room are drawn smaller to fit in it.
+    __block CGRect close = CGRectNull, more = CGRectNull;
+    SGForEachView(host, ^(UIView *view) {
+        NSString *name = view.accessibilityIdentifier.length ? view.accessibilityIdentifier : view.accessibilityLabel;
+        if ([name isEqualToString:@"now-playing-minimize-button"] && CGRectIsNull(close)) close = [view convertRect:view.bounds toView:parent];
+        else if ([name isEqualToString:@"Context menu"] && CGRectIsNull(more)) more = [view convertRect:view.bounds toView:parent];
+    });
+    CGFloat left = CGRectIsNull(close) ? 4 : CGRectGetMaxX(close) + 8;
+    CGFloat right = CGRectIsNull(more) ? parent.bounds.size.width - 4 : CGRectGetMinX(more) - 8;
+    CGFloat room = MAX(right - left, 60);
+    CGFloat scale = MIN(1, (room - 2 * kPillPadX) / MAX(ceil(text.width), 1));
+    CGAffineTransform shrink = scale < 0.999 ? CGAffineTransformMakeScale(scale, scale) : CGAffineTransformIdentity;
+    if (!CGAffineTransformEqualToTransform(label.transform, shrink)) label.transform = shrink;
+    CGFloat width = MIN(ceil(text.width * scale) + 2 * kPillPadX, room);
     CGFloat height = MAX(kPillMinHeight, ceil(text.height) + 14);
     box.bounds = CGRectMake(0, 0, width, height);
-    box.center = label.center;
+    CGFloat x = MIN(MAX(label.center.x, left + width / 2), right - width / 2);
+    box.center = CGPointMake(x, label.center.y);
     box.hidden = label.hidden;
     box.alpha = label.alpha;
     SGRGlassCapsuleInside(box, &kPillKey, box.bounds.size, NO);

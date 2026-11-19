@@ -495,7 +495,7 @@ static SGRPlayerMenuItem *itemFor(SGRPlayerMenuTakeover *t, SGRPlayerMenuSpotify
 }
 
 static SGRPlayerMenuItem *speedAndPitchItem(void) {
-    SGRPlayerMenuItem *item = [SGRPlayerMenuItem itemWithTitle:@"Speed, pitch and reverb" image:symbol(@"slider.horizontal.3") action:nil];
+    SGRPlayerMenuItem *item = [SGRPlayerMenuItem itemWithTitle:@"Speed, pitch and sound" image:symbol(@"slider.horizontal.3") action:nil];
     item.key = @"spotifyglass.speedPitch";
     item.subtitle = SGSpeedPitchSummary();
     item.makeExpansion = ^UIView *{ return SGSpeedPitchPanelMake(); };

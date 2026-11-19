@@ -63,6 +63,17 @@ void SGDSPSetSwitch(NSString *key, BOOL on);
 double SGDSPNumber(NSString *key);
 void SGDSPSetNumber(NSString *key, double value);
 void SGDSPSetReverbAmount(double amount);
+// The player menu's quick controls (SpeedPitchMenu.x). Bass: dB of lift, 0 turning Bass off. Boost: dB added
+// at the end of the chain (the limiter keeps it from clipping), 0 leaving the gain as it was. Saturation: the
+// tube stage on or off, its drive in dB. Each turns the effects on when it adds something.
+double SGDSPBassBoost(void);
+void SGDSPSetBassBoost(double gain);
+double SGDSPSoundBoost(void);
+void SGDSPSetSoundBoost(double gain);
+BOOL SGDSPSaturationOn(void);
+void SGDSPSetSaturationOn(BOOL on);
+double SGDSPSaturationDrive(void);
+void SGDSPSetSaturationDrive(double drive);
 NSString *SGDSPString(NSString *key);
 void SGDSPSetString(NSString *key, NSString *value);
 

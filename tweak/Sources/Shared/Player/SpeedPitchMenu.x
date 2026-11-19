@@ -74,10 +74,11 @@ NSNotificationName const SGSpeedPitchChangedNotification = @"SGSpeedPitchChanged
     UILabel *_title, *_summary;
     UIView *_panel;
     UILabel *_speedName, *_pitchName, *_followName, *_keepSongName, *_fadePauseName, *_reverbName;
-    UIButton *_speedValue, *_pitchValue, *_reverbValue;
-    UISlider *_speed, *_pitch, *_reverb;
-    UISwitch *_follow, *_keepSong, *_fadePause;
-    float _shownSpeed, _shownPitch, _shownReverb;
+    UILabel *_bassName, *_boostName, *_saturateName, *_driveName;
+    UIButton *_speedValue, *_pitchValue, *_reverbValue, *_bassValue, *_boostValue, *_driveValue;
+    UISlider *_speed, *_pitch, *_reverb, *_bass, *_boost, *_drive;
+    UISwitch *_follow, *_keepSong, *_fadePause, *_saturate;
+    float _shownSpeed, _shownPitch, _shownReverb, _shownBass, _shownBoost, _shownDrive;
     NSTimeInterval _speedSentAt;
     BOOL _speedPending;
 }
@@ -169,7 +170,7 @@ static void placeTick(UISlider *slider) {
     _icon = [[UIImageView alloc] initWithImage:paintedSymbol(@"slider.horizontal.3", 20, UIImageSymbolWeightRegular, secondary())];
     _icon.contentMode = UIViewContentModeCenter;
     _title = makeLabel(font(UIFontTextStyleBody, UIFontWeightRegular, UIContentSizeCategoryExtraLarge), primary());
-    _title.text = @"Speed, pitch and reverb";
+    _title.text = @"Speed, pitch and sound";
     _summary = makeLabel(monospacedDigits(font(UIFontTextStyleSubheadline, UIFontWeightRegular, UIContentSizeCategoryExtraLarge)), secondary());
     _summary.textAlignment = NSTextAlignmentRight;
     _chevron = [[UIImageView alloc] initWithImage:paintedSymbol(@"chevron.down", 13, UIImageSymbolWeightSemibold, secondary())];
@@ -197,6 +198,28 @@ static void placeTick(UISlider *slider) {
     _reverbValue = [self valueButton:@selector(resetReverb)];
     _reverb = [self slider:0 max:100 normal:0 minImage:@"speaker.slash.fill" maxImage:@"speaker.wave.3.fill"];
     _reverb.accessibilityLabel = @"Reverb";
+    _bassName = makeLabel(nameFont, secondary());
+    _bassName.text = @"Bass";
+    _bassValue = [self valueButton:@selector(resetBass)];
+    _bass = [self slider:0 max:15 normal:0 minImage:@"speaker.fill" maxImage:@"speaker.wave.3.fill"];
+    _bass.accessibilityLabel = @"Bass";
+    _boostName = makeLabel(nameFont, secondary());
+    _boostName.text = @"Sound boost";
+    _boostValue = [self valueButton:@selector(resetBoost)];
+    _boost = [self slider:0 max:12 normal:0 minImage:@"speaker.fill" maxImage:@"speaker.wave.3.fill"];
+    _boost.accessibilityLabel = @"Sound boost";
+    _saturateName = makeLabel(nameFont, secondary());
+    _saturateName.text = @"Saturation";
+    _saturateName.isAccessibilityElement = NO;
+    _saturate = [UISwitch new];
+    _saturate.onTintColor = SGGreen();
+    _saturate.accessibilityLabel = @"Saturation";
+    [_saturate addTarget:self action:@selector(saturateChanged) forControlEvents:UIControlEventValueChanged];
+    _driveName = makeLabel(nameFont, secondary());
+    _driveName.text = @"Drive";
+    _driveValue = [self valueButton:@selector(resetDrive)];
+    _drive = [self slider:0 max:18 normal:4 minImage:@"waveform.path" maxImage:@"flame.fill"];
+    _drive.accessibilityLabel = @"Saturation drive";
     _followName = makeLabel(nameFont, secondary());
     _followName.text = @"Pitch follows speed";
     _followName.adjustsFontSizeToFitWidth = YES;
@@ -226,7 +249,8 @@ static void placeTick(UISlider *slider) {
     _fadePause.accessibilityLabel = @"Fade on pause";
     [_fadePause addTarget:self action:@selector(fadePauseChanged) forControlEvents:UIControlEventValueChanged];
     for (UIView *view in @[_speedName, _speedValue, _speed, _followName, _follow, _keepSongName, _keepSong, _fadePauseName, _fadePause,
-                           _pitchName, _pitchValue, _pitch, _reverbName, _reverbValue, _reverb]) [_panel addSubview:view];
+                           _pitchName, _pitchValue, _pitch, _reverbName, _reverbValue, _reverb, _bassName, _bassValue, _bass,
+                           _boostName, _boostValue, _boost, _saturateName, _saturate, _driveName, _driveValue, _drive]) [_panel addSubview:view];
 
     [self refresh];
     return self;
@@ -234,7 +258,8 @@ static void placeTick(UISlider *slider) {
 
 // The sliders' part: speed, the switches, and pitch unless it follows speed.
 static CGFloat panelHeight(void) {
-    return kSliderBlockHeight * 2 + kFollowHeight * 3 + (SGPlayerPitchFollowsSpeed() ? 0 : kSliderBlockHeight) + kPanelBottom;
+    return kSliderBlockHeight * 4 + kFollowHeight * 4 + (SGDSPSaturationOn() ? kSliderBlockHeight : 0)
+        + (SGPlayerPitchFollowsSpeed() ? 0 : kSliderBlockHeight) + kPanelBottom;
 }
 
 + (CGFloat)heightOpen:(BOOL)open {
@@ -255,10 +280,17 @@ static CGFloat panelHeight(void) {
 
     _row.hidden = self.panelOnly;
     // Pitch stays laid out under the switch when it folds away, so it fades where it was rather than moving.
-    _panel.frame = CGRectMake(0, self.panelOnly ? 0 : kRowHeight, width, kSliderBlockHeight * 3 + kFollowHeight * 3 + kPanelBottom);
+    // The drive's slider is laid out under its switch either way and fades with it, as pitch does.
+    _panel.frame = CGRectMake(0, self.panelOnly ? 0 : kRowHeight, width, kSliderBlockHeight * 6 + kFollowHeight * 4 + kPanelBottom);
     CGFloat y = 0;
-    for (NSArray<UIView *> *line in @[@[_speedName, _speedValue, _speed], @[_followName, _follow], @[_keepSongName, _keepSong],
-                                      @[_fadePauseName, _fadePause], @[_reverbName, _reverbValue, _reverb], @[_pitchName, _pitchValue, _pitch]]) {
+    BOOL saturating = SGDSPSaturationOn();
+    NSMutableArray *lines = [@[@[_speedName, _speedValue, _speed], @[_followName, _follow], @[_keepSongName, _keepSong],
+                               @[_fadePauseName, _fadePause], @[_reverbName, _reverbValue, _reverb], @[_bassName, _bassValue, _bass],
+                               @[_boostName, _boostValue, _boost], @[_saturateName, _saturate]] mutableCopy];
+    if (saturating) [lines addObject:@[_driveName, _driveValue, _drive]];
+    [lines addObject:@[_pitchName, _pitchValue, _pitch]];
+    if (!saturating) [lines addObject:@[_driveName, _driveValue, _drive]];
+    for (NSArray<UIView *> *line in lines) {
         if (line.count == 2) {
             CGSize toggle = [_follow sizeThatFits:CGSizeZero];
             line[1].frame = CGRectMake(width - side - toggle.width, y + roundf((kFollowHeight - toggle.height) / 2), toggle.width, toggle.height);
@@ -291,6 +323,10 @@ static NSString *pitchText(float pitch) {
     return [NSString stringWithFormat:@"%@%.0f", pitch > 0 ? @"+" : @"−", fabsf(pitch)];
 }
 
+static NSString *decibelText(float decibels) {
+    return decibels == 0 ? @"Off" : [NSString stringWithFormat:@"+%.0f dB", decibels];
+}
+
 static NSString *reverbText(float amount) {
     return [NSString stringWithFormat:@"%.0f%%", amount];
 }
@@ -319,6 +355,13 @@ static NSString *summaryText(float speed, BOOL speedShown, float pitch, BOOL fol
     if (!_speed.tracking) _shownSpeed = snappedSpeed(SGPlayerSpeed());
     if (!_pitch.tracking) _shownPitch = SGPlayerPitch();
     if (!_reverb.tracking) _shownReverb = SGDSPNumber(SGKeyDSPReverbAmount);
+    if (!_bass.tracking) _shownBass = roundf(SGDSPBassBoost());
+    if (!_boost.tracking) _shownBoost = roundf(SGDSPSoundBoost());
+    if (!_drive.tracking) _shownDrive = roundf(SGDSPSaturationDrive());
+    _bass.value = _shownBass;
+    _boost.value = _shownBoost;
+    _drive.value = _shownDrive;
+    _saturate.on = SGDSPSaturationOn();
     _speed.value = _shownSpeed;
     _pitch.value = _shownPitch;
     _reverb.value = _shownReverb;
@@ -340,6 +383,12 @@ static NSString *summaryText(float speed, BOOL speedShown, float pitch, BOOL fol
         [_speedValue setTitle:speedAllowed ? speedText(_shownSpeed) : @"Unavailable here" forState:UIControlStateNormal];
         [_pitchValue setTitle:pitchAvailable ? [pitchText(_shownPitch) stringByAppendingString:_shownPitch ? @" st" : @""] : @"Unavailable" forState:UIControlStateNormal];
         [_reverbValue setTitle:reverbText(_shownReverb) forState:UIControlStateNormal];
+        [_bassValue setTitle:decibelText(_shownBass) forState:UIControlStateNormal];
+        [_boostValue setTitle:decibelText(_shownBoost) forState:UIControlStateNormal];
+        [_driveValue setTitle:decibelText(_shownDrive) forState:UIControlStateNormal];
+        [_bassValue layoutIfNeeded];
+        [_boostValue layoutIfNeeded];
+        [_driveValue layoutIfNeeded];
         [_speedValue layoutIfNeeded];
         [_pitchValue layoutIfNeeded];
         [_reverbValue layoutIfNeeded];
@@ -347,6 +396,14 @@ static NSString *summaryText(float speed, BOOL speedShown, float pitch, BOOL fol
     _speedValue.enabled = speedAllowed && _shownSpeed != 1;
     _pitchValue.enabled = pitchAvailable && _shownPitch != 0;
     _reverbValue.enabled = _shownReverb != 0;
+    _bassValue.enabled = _shownBass != 0;
+    _boostValue.enabled = _shownBoost != 0;
+    _driveValue.enabled = _shownDrive != 4;
+    _bass.accessibilityValue = decibelText(_shownBass);
+    _boost.accessibilityValue = decibelText(_shownBoost);
+    _drive.accessibilityValue = decibelText(_shownDrive);
+    BOOL saturating = SGDSPSaturationOn();
+    for (UIView *view in @[_driveName, _driveValue, _drive]) view.alpha = saturating ? 1 : 0;
     BOOL follows = SGPlayerPitchFollowsSpeed();
     NSString *followed = follows ? followedPitchText(_shownSpeed) : nil;
     _speed.accessibilityValue = !speedAllowed ? @"Unavailable" : followed ? [NSString stringWithFormat:@"%@, pitch %@", speedText(_shownSpeed), followed] : speedText(_shownSpeed);
@@ -421,6 +478,15 @@ static NSString *summaryText(float speed, BOOL speedShown, float pitch, BOOL fol
     SGLog(@"speed and pitch: pitch %@ speed at %.2fx", SGPlayerPitchFollowsSpeed() ? @"follows" : @"no longer follows", _shownSpeed);
 }
 
+- (void)saturateChanged {
+    SGDSPSetSaturationOn(_saturate.on);
+    SGPlayFeedback(SGFeedbackDetent);
+    [self resize];
+    [self showValues];
+    UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, nil);
+    SGLog(@"speed and pitch: saturation %@ (drive %.0f dB)", _saturate.on ? @"on" : @"off", _shownDrive);
+}
+
 - (void)keepSongChanged {
     SGSetPlayerKeepForCurrentSong(_keepSong.on);
 }
@@ -457,6 +523,15 @@ static NSString *summaryText(float speed, BOOL speedShown, float pitch, BOOL fol
         if (pitch == 0 || _shownPitch == 0) SGPlayFeedback(SGFeedbackDetent);
         _shownPitch = pitch;
         SGSetPlayerPitch(pitch);
+    } else if (slider == _bass || slider == _boost || slider == _drive) {
+        float value = roundf(slider.value);
+        float *shown = slider == _bass ? &_shownBass : slider == _boost ? &_shownBoost : &_shownDrive;
+        if (value == *shown) return;
+        if (value == 0 || *shown == 0) SGPlayFeedback(SGFeedbackDetent);
+        *shown = value;
+        if (slider == _bass) SGDSPSetBassBoost(value);
+        else if (slider == _boost) SGDSPSetSoundBoost(value);
+        else SGDSPSetSaturationDrive(value);
     } else {
         float amount = roundf(slider.value);
         if (amount == _shownReverb) return;
@@ -473,6 +548,12 @@ static NSString *summaryText(float speed, BOOL speedShown, float pitch, BOOL fol
         if (_speedPending || snappedSpeed(SGPlayerSpeed()) != _shownSpeed) [self sendSpeed];
     } else if (slider == _pitch) {
         slider.value = _shownPitch;
+    } else if (slider == _bass) {
+        slider.value = _shownBass;
+    } else if (slider == _boost) {
+        slider.value = _shownBoost;
+    } else if (slider == _drive) {
+        slider.value = _shownDrive;
     } else {
         slider.value = _shownReverb;
     }
@@ -490,6 +571,27 @@ static NSString *summaryText(float speed, BOOL speedShown, float pitch, BOOL fol
     _shownPitch = 0;
     SGSetPlayerPitch(0);
     [_pitch setValue:0 animated:YES];
+    [self showValues];
+}
+
+- (void)resetBass {
+    _shownBass = 0;
+    SGDSPSetBassBoost(0);
+    [_bass setValue:0 animated:YES];
+    [self showValues];
+}
+
+- (void)resetBoost {
+    _shownBoost = 0;
+    SGDSPSetSoundBoost(0);
+    [_boost setValue:0 animated:YES];
+    [self showValues];
+}
+
+- (void)resetDrive {
+    _shownDrive = 4;
+    SGDSPSetSaturationDrive(4);
+    [_drive setValue:4 animated:YES];
     [self showValues];
 }
 

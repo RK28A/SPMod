@@ -105,6 +105,52 @@ void SGDSPSetReverbAmount(double amount) {
     SGDSPApply(SGKeyDSPReverb);
 }
 
+static void wakeEffects(void) {
+    if (SGDSPSwitch(SGKeyDSP)) return;
+    SGSetEnabled(SGKeyDSP, YES);
+    SGDSPApply(SGKeyDSP);
+}
+
+double SGDSPBassBoost(void) {
+    return SGDSPSwitch(SGKeyDSPBass) ? SGDSPNumber(SGKeyDSPBassGain) : 0;
+}
+
+void SGDSPSetBassBoost(double gain) {
+    BOOL on = gain >= 1;
+    if (on) [store() setDouble:MIN(SGDSPRangeFor(SGKeyDSPBassGain).max, gain) forKey:SGKeyDSPBassGain];
+    SGSetEnabled(SGKeyDSPBass, on);
+    if (on) wakeEffects();
+    SGDSPApply(SGKeyDSPBass);
+}
+
+double SGDSPSoundBoost(void) {
+    return MAX(0, SGDSPNumber(SGKeyDSPPostGain));
+}
+
+void SGDSPSetSoundBoost(double gain) {
+    [store() setDouble:MAX(0, MIN(SGDSPRangeFor(SGKeyDSPPostGain).max, gain)) forKey:SGKeyDSPPostGain];
+    if (gain > 0) wakeEffects();
+    SGDSPApply(SGKeyDSP);
+}
+
+BOOL SGDSPSaturationOn(void) {
+    return SGDSPSwitch(SGKeyDSPTube);
+}
+
+void SGDSPSetSaturationOn(BOOL on) {
+    SGSetEnabled(SGKeyDSPTube, on);
+    if (on) wakeEffects();
+    SGDSPApply(SGKeyDSPTube);
+}
+
+double SGDSPSaturationDrive(void) {
+    return SGDSPNumber(SGKeyDSPTubeDrive);
+}
+
+void SGDSPSetSaturationDrive(double drive) {
+    SGDSPSetNumber(SGKeyDSPTubeDrive, drive);
+}
+
 NSString *SGDSPString(NSString *key) {
     id value = [store() objectForKey:key];
     return [value isKindOfClass:NSString.class] ? value : (stringDefaults()[key] ?: @"");
