@@ -129,7 +129,11 @@ static CGFloat screenRadius(void) {
     if (bar.superview == container) [container bringSubviewToFront:bar];
 
     UIImage *artwork = SGRNowPlayingArtwork(NULL, NULL);
-    if (artwork && !CGRectIsNull(_barArtwork)) {
+    // With the fill background or an animated artwork there is no square cover to land on: no copy is
+    // flown (it showed as a second cover hanging mid-screen while the player was pulled down).
+    BOOL drawn = SGRPlayerCoverDrawn() || !SGRPlayerIsVisible();
+    BOOL fill = SGRPlayerBackground() == SGRPlayerBackgroundFill;
+    if (artwork && !CGRectIsNull(_barArtwork) && drawn && !fill) {
         _cover = [[UIImageView alloc] initWithImage:artwork];
         _cover.userInteractionEnabled = NO;
         _cover.contentMode = UIViewContentModeScaleAspectFill;

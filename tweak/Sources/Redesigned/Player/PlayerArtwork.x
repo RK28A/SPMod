@@ -97,6 +97,17 @@ CGRect SGRPlayerCoverFrameIn(UIView *host) {
     return cover && host ? [host convertRect:cover.bounds fromView:cover] : CGRectNull;
 }
 
+BOOL SGRPlayerCoverDrawn(void) {
+    UIView *cover = coverIn(showingTilt());
+    if (!cover.window) return NO;
+    CGFloat alpha = 1;
+    for (UIView *v = cover; v && v != cover.window; v = v.superview) {
+        if (v.hidden) return NO;
+        alpha *= v.alpha * v.layer.opacity;
+    }
+    return alpha > 0.05;
+}
+
 CGFloat SGRPlayerCoverScale(void) {
     return currentScale();
 }

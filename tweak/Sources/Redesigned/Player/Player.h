@@ -66,6 +66,9 @@ void SGRPlayerHoldField(void);
 // The sideways list of covers behind the player, nil until one has laid out.
 UIView *SGRPlayerCoverList(void);
 CGRect SGRPlayerCoverFrameIn(UIView *host);
+// Whether the square cover is drawn at all (not with the fill background, an animated artwork or a hide of
+// its own): the open and close fly a copy to it only then.
+BOOL SGRPlayerCoverDrawn(void);
 CGRect SGRPlayerArtworkAreaIn(UIView *host);
 void SGRPlayerSetCoverHidden(BOOL hidden);
 CGFloat SGRPlayerCoverScale(void);

@@ -1,6 +1,8 @@
 #import <UIKit/UIKit.h>
 #import "Core/SGCore.h"
 #import "Settings/SGPageStyle.h"
+#import "Settings/SGBackdrop.h"
+#import "Shared/Fusion/Fusion.h"
 #import "WebJam.h"
 
 // The code to scan and the address to type, nothing else: the settings page stays where it is.
@@ -16,7 +18,9 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
-    self.view.backgroundColor = [UIColor colorWithWhite:0.06 alpha:1];
+    self.view.backgroundColor = SGPageBackground();
+    // The mod's theme behind it, as on its settings pages.
+    SGBackdropPlace(self.view);
     _title = [UILabel new];
     _title.text = @"Web Jam";
     _title.font = [UIFont systemFontOfSize:24 weight:UIFontWeightBold];
@@ -43,6 +47,8 @@
     look.image = [UIImage systemImageNamed:@"doc.on.doc"];
     look.imagePadding = 8;
     look.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
+    look.baseBackgroundColor = (SGFusionAccent ? SGFusionAccent() : nil) ?: SGAccentMark();
+    look.baseForegroundColor = UIColor.whiteColor;
     _copy.configuration = look;
     [_copy addTarget:self action:@selector(copyAddress) forControlEvents:UIControlEventTouchUpInside];
     _stop = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -69,7 +75,6 @@
                      : @"Web Jam needs this iPhone on Wi-Fi, with Web Jam on in SPMod settings.";
     _copy.enabled = url != nil;
     _stop.hidden = !SGWebJamRunning();
-    _copy.tintColor = self.view.tintColor;
     [self.view setNeedsLayout];
 }
 

@@ -172,12 +172,29 @@ static void markJam(UIView *host) {
     overlay.hidden = NO;
     BOOL lit = SGWebJamRunning();
     UIColor *accent = (SGFusionAccent ? SGFusionAccent() : nil) ?: SGAccentMark();
-    overlay.layer.cornerRadius = MIN(22, inHolder.size.height / 2);
+    // While the Web Jam runs the button is a solid accent pill drawn over Spotify's, with its own glyph and
+    // words in white; otherwise the overlay is clear and Spotify's button shows through as it is.
+    overlay.layer.cornerRadius = MIN(20, inHolder.size.height / 2);
     overlay.layer.cornerCurve = kCACornerCurveContinuous;
-    overlay.backgroundColor = lit ? [accent colorWithAlphaComponent:0.3] : UIColor.clearColor;
-    overlay.layer.borderWidth = lit ? 1 : 0;
-    overlay.layer.borderColor = [accent colorWithAlphaComponent:0.7].CGColor;
+    overlay.clipsToBounds = YES;
+    overlay.layer.borderWidth = 0;
     overlay.layer.shadowOpacity = 0;
+    overlay.backgroundColor = lit ? accent : UIColor.clearColor;
+    UIButtonConfiguration *look = [UIButtonConfiguration plainButtonConfiguration];
+    if (lit) {
+        look.title = @"Web Jam";
+        look.image = [UIImage systemImageNamed:@"person.2.wave.2.fill"
+                             withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:17 weight:UIImageSymbolWeightSemibold]];
+        look.imagePlacement = NSDirectionalRectEdgeTop;
+        look.imagePadding = 4;
+        look.baseForegroundColor = UIColor.whiteColor;
+        look.titleTextAttributesTransformer = ^NSDictionary *(NSDictionary *attributes) {
+            NSMutableDictionary *out = [attributes mutableCopy];
+            out[NSFontAttributeName] = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+            return out;
+        };
+    }
+    overlay.configuration = look;
 }
 
 %hook _TtC26Connect_DevicePickerUIImpl26DevicePickerViewController
