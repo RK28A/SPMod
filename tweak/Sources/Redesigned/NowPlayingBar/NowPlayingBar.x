@@ -175,9 +175,12 @@ static void ensureMiniProgress(UIView *card) {
     sg_miniProgressView = progress;
     updateMiniProgress();
     if (!sg_progressTimer) {
+        // Ten beats a second for the bar's line, none while the app is in the background or the bar is gone.
         sg_progressTimer = [NSTimer timerWithTimeInterval:0.1 repeats:YES block:^(NSTimer *timer) {
+            if (SGAppInBackground() || !sg_miniProgressView.window) return;
             updateMiniProgress();
         }];
+        sg_progressTimer.tolerance = 0.03;
         [NSRunLoop.mainRunLoop addTimer:sg_progressTimer forMode:NSRunLoopCommonModes];
     }
 }

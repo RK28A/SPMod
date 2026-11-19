@@ -294,6 +294,7 @@ static void keepSweeping(void) {
     static NSUInteger tick;
     sg_sweeper = [NSTimer scheduledTimerWithTimeInterval:kSweepEvery repeats:YES block:^(NSTimer *timer) {
         tick++;
+        if (SGAppInBackground()) return;
         if (CACurrentMediaTime() - sg_lastChange > 20 && tick % 4) return;
         sweep(NO);
     }];

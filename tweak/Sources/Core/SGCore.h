@@ -1,6 +1,7 @@
 #import "SGRuntime.h"
 #import "SGLog.h"
 #import "SGLoopGuard.h"
+#import "SGAppState.h"
 #import "SGPrefs.h"
 #import "SGViewTree.h"
 #import "SGGlass.h"

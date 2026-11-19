@@ -219,7 +219,9 @@ static UIImageView *glyph(NSString *symbol) {
     [self refreshFromSystem];
     if (_poll) return;
     __weak SGRVolumeRow *weakSelf = self;
-    _poll = [NSTimer timerWithTimeInterval:0.25 repeats:YES block:^(NSTimer *timer) { [weakSelf refreshFromSystem]; }];
+    _poll = [NSTimer timerWithTimeInterval:0.25 repeats:YES block:^(NSTimer *timer) {
+        if (!SGAppInBackground()) [weakSelf refreshFromSystem];
+    }];
     _poll.tolerance = 0.1;
     [NSRunLoop.mainRunLoop addTimer:_poll forMode:NSRunLoopCommonModes];
 }

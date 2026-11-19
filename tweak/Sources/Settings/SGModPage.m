@@ -574,7 +574,8 @@ void (*SGModCellDecorator)(UITableViewCell *cell, BOOL first, BOOL last);
     }
     if (!_live) return;
     [_ticker invalidate];
-    _ticker = [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(readValues) userInfo:nil repeats:YES];
+    _ticker = [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(tick) userInfo:nil repeats:YES];
+    _ticker.tolerance = 0.3;
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
@@ -585,6 +586,10 @@ void (*SGModCellDecorator)(UITableViewCell *cell, BOOL first, BOOL last);
 }
 
 // Rows that come and go on their own (a download finishing brings its Remove row) follow here too.
+- (void)tick {
+    if (!SGAppInBackground() && self.view.window) [self readValues];
+}
+
 - (void)readValues {
     [self showRowsThen:nil];
     for (UITableViewCell *cell in self.tableView.visibleCells) {
