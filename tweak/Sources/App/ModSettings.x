@@ -314,6 +314,12 @@ static UIViewController *modSettingsPage(void) {
     }
     else [parts addObject:pageRow(@"Home & Library", @"house", ^UIViewController *{ return SGHomeSettingsPage(); })];
     [parts addObject:pageRow(@"Misc", @"ellipsis.circle", ^UIViewController *{ return miscSettingsPage(); })];
+    SGModRow *location = pageRow(@"Location", @"location", ^UIViewController *{ return SGLocationPage(); });
+    location.value = ^NSString *{
+        NSString *set = [NSUserDefaults.standardUserDefaults stringForKey:SGKeyLocationSet];
+        return set.length ? SGLocationName(set) : @"";
+    };
+    [parts addObject:location];
     [parts addObject:pageRow(@"Developer", @"hammer", ^UIViewController *{ return SGDeveloperPage(); })];
     // Sing's microphone is the redesigned player's, so Karaoke is the redesign's; its row follows a download.
     if (SGRedesignedUIStored()) {
@@ -322,13 +328,7 @@ static UIViewController *modSettingsPage(void) {
         karaoke.refreshOn = SGSingModelDidChangeNotification;
         [sections addObject:SGSection(nil, @[karaoke])];
     }
-    SGModRow *location = pageRow(@"Location", @"location", ^UIViewController *{ return SGLocationPage(); });
-    location.value = ^NSString *{
-        NSString *set = [NSUserDefaults.standardUserDefaults stringForKey:SGKeyLocationSet];
-        return set.length ? SGLocationName(set) : @"";
-    };
     [sections addObjectsFromArray:@[
-        SGSection(@"Account", @[location]),
         SGSection(nil, parts),
         SGSection(nil, @[
             pageRow(@"Premium, ads & privacy", @"crown", ^UIViewController *{ return SGAdsSettingsPage(); }),

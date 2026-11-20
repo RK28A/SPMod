@@ -168,6 +168,9 @@ static SGLocationRun *sg_run;
 @implementation SGLocationRun {
     NSString *_code;   // empty: where Spotify places the phone
     BOOL _done, _shown;
+@public
+    BOOL _quiet;   // the check at launch: a banner only for a change made, no sign-in sheet
+@private
     WKWebView *_web;
     int _tries;
 }
@@ -227,7 +230,7 @@ static SGLocationRun *sg_run;
 }
 
 - (void)endSaying:(NSString *)text {
-    if (text) banner(text);
+    if (text && !_quiet) banner(text);
     [_web stopLoading];
     if (_shown) [self.navigationController dismissViewControllerAnimated:YES completion:nil];
     [_web removeFromSuperview];
@@ -243,6 +246,11 @@ static SGLocationRun *sg_run;
     if (_done || !_web.URL) return;
     NSString *path = _web.URL.path.lowercaseString ?: @"";
     if (![_web.URL.host containsString:@"spotify.com"] || [path containsString:@"login"] || ![path containsString:@"account"]) {
+        if (_quiet) {
+            SGLog(@"location: launch check skipped, the account page wants a sign-in (done once from Settings > Location)");
+            [self endSaying:nil];
+            return;
+        }
         [self showToSignIn];
         return;
     }
@@ -281,6 +289,7 @@ static SGLocationRun *sg_run;
         }
         [NSUserDefaults.standardUserDefaults setObject:code forKey:SGKeyLocationSet];
         if ([res[@"before"] isEqual:res[@"after"]]) {
+            if (me->_quiet) SGLog(@"location: launch check, the account is already %@", code);
             [me endSaying:[NSString stringWithFormat:@"Your account is already set to %@.", SGLocationName(code)]];
             return;
         }
@@ -294,6 +303,16 @@ static SGLocationRun *sg_run;
     }];
 }
 @end
+
+// Once a launch, a moment after the app comes up: the account is put where Spotify places the phone if it
+// isn't there, quietly (a banner only when it changed something).
+static void checkAtLaunch(void) {
+    if (!SGFlag(SGKeyLocationAuto, YES) || sg_run || SGAppInBackground()) return;
+    SGLog(@"location: launch check");
+    sg_run = [[SGLocationRun alloc] initWithCountry:@""];
+    sg_run->_quiet = YES;
+    [sg_run start];
+}
 
 void SGLocationChange(NSString *code, BOOL save) {
     (void)save;
@@ -363,7 +382,7 @@ void SGLocationChange(NSString *code, BOOL save) {
 
 UIViewController *SGLocationPage(void) {
     SGModRow *automatic = SGSwitchRow(@"Match my country automatically",
-        @"When Spotify says your location doesn't match your profile, the account is set to where you are, without leaving the app",
+        @"At each launch, and when Spotify says your location doesn't match your profile, the account is set to where you are, without leaving the app",
         SGKeyLocationAuto);
     SGModRow *now = SGActionRow(@"Set to where I am", @"The country Spotify places you in by your network", ^{ SGLocationChange(@"", YES); });
     now.symbol = @"location.fill";
@@ -432,6 +451,12 @@ static void checkPresented(UIViewController *presented) {
 %end
 
 %ctor {
+    __block id watcher = [NSNotificationCenter.defaultCenter addObserverForName:UIApplicationDidBecomeActiveNotification object:nil
+                                                                          queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
+        [NSNotificationCenter.defaultCenter removeObserver:watcher];
+        watcher = nil;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ checkAtLaunch(); });
+    }];
     SGDebug(@"module Shared/Location/Location.x on");
     %init;
 }

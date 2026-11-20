@@ -47,10 +47,11 @@ static CGRect jamFrame(UIView *host) {
         SGLog(@"web jam: no Start a Jam button among the picker's %lu elements (%@), its place at the foot of the sheet is used", (unsigned long)elements.count,
               [labels componentsJoinedByString:@" | "]);
     }
-    // The recorded sheet: Start a Jam is the left of the two buttons along its foot.
+    // The recorded sheet (7893e7c3, 390 x 568): Start a Jam is the left of the two buttons along its foot,
+    // 16 in, 102 up from the bottom, 60 tall, half the width less 20 (the Bluetooth button 8 to its right).
     CGSize size = host.bounds.size;
     if (size.height < 200) return CGRectNull;
-    return CGRectMake(16, size.height - 118, size.width / 2 - 24, 70);
+    return CGRectMake(16, size.height - 102, size.width / 2 - 20, 60);
 }
 
 @interface SGWebJamPress : UILongPressGestureRecognizer
@@ -153,7 +154,9 @@ static char kOverlayKey;
 static void markJam(UIView *host) {
     CGRect frame = jamFrame(host);
     // The element's frame runs above the drawn button (its label's line spacing); the button is the foot of it.
-    if (!CGRectIsNull(frame) && frame.size.height > 62) frame = CGRectMake(frame.origin.x, CGRectGetMaxY(frame) - 58, frame.size.width, 56);
+    if (!CGRectIsNull(frame) && frame.size.height > 64) frame = CGRectMake(frame.origin.x, CGRectGetMaxY(frame) - 60, frame.size.width, 60);
+    // A point over on every side, so none of Spotify's button shows round the edge.
+    if (!CGRectIsNull(frame)) frame = CGRectInset(frame, -1, -1);
     SGWebJamOverlay *overlay = objc_getAssociatedObject(host, &kOverlayKey);
     UIView *holder = host.superview;
     if (CGRectIsNull(frame) || !holder) {
@@ -174,7 +177,7 @@ static void markJam(UIView *host) {
     UIColor *accent = (SGFusionAccent ? SGFusionAccent() : nil) ?: SGAccentMark();
     // While the Web Jam runs the button is a solid accent pill drawn over Spotify's, with its own glyph and
     // words in white; otherwise the overlay is clear and Spotify's button shows through as it is.
-    overlay.layer.cornerRadius = MIN(20, inHolder.size.height / 2);
+    overlay.layer.cornerRadius = MIN(22, inHolder.size.height / 2);
     overlay.layer.cornerCurve = kCACornerCurveContinuous;
     overlay.clipsToBounds = YES;
     overlay.layer.borderWidth = 0;
