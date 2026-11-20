@@ -18,7 +18,7 @@
 #import "Shared/Player/PlayerState.h"
 #import "Player.h"
 
-static const CGFloat kSide = 32, kCoverGap = 16, kControlSide = 44, kColumnShare = 0.38;
+static const CGFloat kSide = 32, kCoverGap = 16, kControlSide = 44, kColumnShare = 0.5;
 static const NSTimeInterval kLandscapeRest = 4;
 static const CGFloat kScrub = 36;   // the time bar and its two times under it
 
@@ -301,22 +301,30 @@ static NSString *clockText(double seconds) {
         [self layoutWithoutLines:safe];
         return;
     }
-    CGFloat column = round(safe.size.width * kColumnShare);
+    // The left half: a large cover with the title, time bar and controls beside it; the lyrics on the right half.
+    CGFloat half = round(safe.size.width * kColumnShare);
     CGFloat left = CGRectGetMinX(safe) + kSide;
     CGFloat titleHeight = ceil(_title.font.lineHeight), artistHeight = ceil(_artist.font.lineHeight);
-    CGFloat textHeight = MAX(titleHeight + artistHeight, kControlSide), controlsHeight = kControlSide;
-    CGFloat side = MIN(column - kSide, safe.size.height - 2 * kSide - textHeight - controlsHeight - 3 * kCoverGap - kScrub);
-    CGFloat top = CGRectGetMidY(safe) - (side + kCoverGap + textHeight + kCoverGap + kScrub + kCoverGap + controlsHeight) / 2;
-    _cover.frame = CGRectMake(left, top, side, side);
-    // The close button at the text's trailing end, its glyph (about 20pt in the 44pt square) at the cover's edge.
-    CGFloat textTop = CGRectGetMaxY(_cover.frame) + kCoverGap;
-    _close.frame = CGRectMake(left + side - kControlSide + 12, textTop + (textHeight - kControlSide) / 2, kControlSide, kControlSide);
-    _title.frame = CGRectMake(left, textTop + (textHeight - titleHeight - artistHeight) / 2, side - kControlSide, titleHeight);
-    _artist.frame = CGRectMake(left, CGRectGetMaxY(_title.frame), side - kControlSide, artistHeight);
-    [self placeScrubAt:textTop + textHeight + kCoverGap left:left width:side];
-    _controls.frame = CGRectMake(left + side * 0.1, CGRectGetMaxY(_scrub.frame) + 16 + kCoverGap, side * 0.8, controlsHeight);
+    CGFloat room = half - kSide;
+    CGFloat side = MIN(safe.size.height - 2 * kSide, room * 0.5);
+    CGFloat columnLeft = left + side + 24;
+    CGFloat width = room - side - 24;
+    if (width < 150) {
+        side = MAX(120, room - 24 - 150);
+        columnLeft = left + side + 24;
+        width = room - side - 24;
+    }
+    _cover.frame = CGRectMake(left, CGRectGetMidY(safe) - side / 2, side, side);
+    CGFloat block = titleHeight + artistHeight + kCoverGap + kScrub + kCoverGap + kControlSide;
+    CGFloat top = CGRectGetMidY(safe) - block / 2;
+    _title.frame = CGRectMake(columnLeft, top, width - kControlSide + 8, titleHeight);
+    _artist.frame = CGRectMake(columnLeft, CGRectGetMaxY(_title.frame), width - kControlSide + 8, artistHeight);
+    _close.frame = CGRectMake(columnLeft + width - kControlSide + 12, top + (titleHeight + artistHeight - kControlSide) / 2, kControlSide, kControlSide);
+    [self placeScrubAt:CGRectGetMaxY(_artist.frame) + kCoverGap left:columnLeft width:width];
+    CGFloat controlsWidth = MIN(width, 220);
+    _controls.frame = CGRectMake(columnLeft + (width - controlsWidth) / 2, CGRectGetMaxY(_scrub.frame) + 16 + kCoverGap, controlsWidth, kControlSide);
     [self placeClip];
-    CGFloat linesLeft = left + side + kSide;
+    CGFloat linesLeft = CGRectGetMinX(safe) + half + 8;
     _stage.frame = CGRectMake(linesLeft, CGRectGetMinY(safe), CGRectGetMaxX(safe) - linesLeft, safe.size.height);
     _lyrics.frame = _stage.bounds;
 }
