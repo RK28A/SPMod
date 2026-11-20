@@ -1,3 +1,4 @@
+#import "DeviceStats.h"
 #import "Core/SGCore.h"
 #import "Redesigned/Kit/SGRAccent.h"
 #import "Core/SGLog.h"
@@ -265,6 +266,7 @@ UIViewController *SGDeveloperPage(void) {
     ], @"Tap the tree button on the screen you want: its tree is copied to the clipboard. Drag it out of the way; hold it to put it away.");
 
     SGModSection *logs = SGSection(@"Logs & diagnostics", @[
+        SGWithSymbol(SGPageRow(@"Phone & app stats", ^UIViewController *{ return SGDeviceStatsPage(); }), @"gauge.with.dots.needle.67percent"),
         SGWithSymbol(SGPageRow(@"Device logs", ^UIViewController *{ return SGDeviceLogsPage(); }), @"doc.text.magnifyingglass"),
         SGWithSymbol(SGActionRow(@"Copy diagnostics", @"App and device versions", ^{ copyDiagnostics(); }), @"info.circle"),
         SGWithSymbol(SGSwitchRow(@"Debug logs", @"Each module says when it starts and what it first does", SGKeyDebugLogs), @"ladybug"),
