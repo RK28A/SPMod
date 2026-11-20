@@ -459,8 +459,9 @@ static void updateTickInterval(void) {
     CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
     BOOL requested = SGLyricsHasRecentDemand(now, sg_askedAt)
         || SGLyricsHasRecentDemand(now, sg_previewAskedAt);
-    BOOL active = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
-    uint64_t interval = (uint64_t)((active || requested ? kTick : 1.0) * NSEC_PER_SEC);
+    // The lines are drawn only on the lock screen: with the app in front nobody sees them, so the fast beat
+    // waits for the lock screen to ask (it asks as soon as it shows).
+    uint64_t interval = (uint64_t)((requested ? kTick : 1.0) * NSEC_PER_SEC);
     if (sg_timerPeriod == interval) return;
     sg_timerPeriod = interval;
     dispatch_source_set_timer(sg_timer, dispatch_time(DISPATCH_TIME_NOW, interval), interval, 10 * NSEC_PER_MSEC);

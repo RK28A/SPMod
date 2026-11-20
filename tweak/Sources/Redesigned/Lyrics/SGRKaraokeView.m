@@ -1511,7 +1511,8 @@ typedef struct {
     if (!self.window || _link) return;
     if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
     _link = [CADisplayLink displayLinkWithTarget:self selector:@selector(tick)];
-    _link.preferredFrameRateRange = CAFrameRateRangeMake(80, 120, 120);
+    // 60 a second is smooth for a word's sweep and half the power; 120 stays allowed for whatever else moves.
+    _link.preferredFrameRateRange = CAFrameRateRangeMake(30, 60, 120);
     [_link addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
 }
 

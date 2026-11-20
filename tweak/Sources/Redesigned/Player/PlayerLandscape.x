@@ -168,6 +168,9 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     _remaining.textAlignment = NSTextAlignmentRight;
     SGAddPlayerStateObserver(self);
     [self playerStateDidChange:SGPlayerState()];
+    // The clip stops decoding while the app is not in front (locked, another app); it picks up after.
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(clipRests) name:UIApplicationWillResignActiveNotification object:nil];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(clipWakes) name:UIApplicationDidBecomeActiveNotification object:nil];
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(artworkChanged)
                                                name:SGRNowPlayingArtworkDidChangeNotification object:nil];
     // The shield is hidden from VoiceOver, so turning it on brings the controls back and keeps them.
@@ -180,6 +183,21 @@ static UIButton *controlButton(NSString *symbol, CGFloat size, NSString *label, 
     [_rest invalidate];
     [_clock invalidate];
     [_clipPlayer pause];
+}
+
+- (void)clipRests {
+    [_clipPlayer pause];
+    [_clock invalidate];
+    _clock = nil;
+}
+
+- (void)clipWakes {
+    if (!self.view.window) return;
+    [self updateClip:SGPlayerState().isPaused];
+    if (_clock) return;
+    __weak SGRLandscapeLyricsController *weakSelf = self;
+    _clock = [NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer *timer) { [weakSelf tick]; }];
+    _clock.tolerance = 0.1;
 }
 
 - (UIImage *)thumb {

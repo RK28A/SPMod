@@ -320,7 +320,7 @@ static CAGradientLayer *fill(CAShapeLayer *shape) {
         // Calmer behind the lyrics, whose own link runs at the display's rate, and calmest with Reduce Motion.
         // While a playing song sends nothing (a stall, or no tap at all), a few frames a second watch for it.
         float most = _idle ? 4 : SGRReduceMotion() ? 15 : _lyricsBlur.effect ? 30 : 60;
-        _link.preferredFrameRateRange = CAFrameRateRangeMake(most / 2, most, most);
+        _link.preferredFrameRateRange = CAFrameRateRangeMake(30, MIN(60, most), most);
     } else if (_link) {
         [_link invalidate];
         _link = nil;
